@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: noxdev123
+      POSTGRES_DB: fivem_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nox-network
+    ports:
+      - "5432:5432"
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: apps/orchestrator/railway/Dockerfile
+    container_name: nox-orchestrator
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:noxdev123@postgres:5432/fivem_dev
+      DIRECT_URL: postgresql://postgres:noxdev123@postgres:5432/fivem_dev
+      ORCHESTRATOR_PORT: "3001"
+      JWT_SECRET: nox-jwt-secret-change-this-to-random-32chars
+      CLERK_JWKS_DOMAIN: relevant-ram-9120.clerk.accounts.dev
+      CLERK_JWT_AUDIENCE: ""
+      CORS_ORIGINS: http://158.101.167.118:3000,http://localhost:3000,https://nox-fivem.vercel.app
+      OMNIROUTE_BASE_URL: https://strict-souls-interesting-amazing.trycloudflare.com/v1
+      OMNI_KEY: omni-key
+      NODE_ENV: production
+    depends_on:
+      - postgres
+    networks:
+      - nox-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3001:3001"
+
+volumes:
+  postgres_data:
+
+networks:
+  nox-network:
+    driver: bridge

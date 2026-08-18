@@ -6,7 +6,7 @@ const configSchema = z.object({
   databaseUrl: z.string().url(),
   directUrl: z.string().url().optional(),
   jwtSecret: z.string().min(32),
-  anthropicApiKey: z.string().startsWith('sk-ant-'),
+  anthropicApiKey: z.string().optional().default(''),
   corsOrigins: z.array(z.string()).default(['http://localhost:3000']),
 });
 

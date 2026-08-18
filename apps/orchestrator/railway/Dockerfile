@@ -1,6 +1,12 @@
-FROM node:20-alpine
+FROM node:20-slim
 
-RUN apk add --no-cache git python3 make g++
+RUN apt-get update && apt-get install -y \
+    git \
+    python3 \
+    make \
+    g++ \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g pnpm@9
 
@@ -12,11 +18,11 @@ COPY package.json pnpm-lock.yaml ./
 COPY packages/ ./packages/
 COPY apps/orchestrator/ ./apps/orchestrator/
 
-# Install ALL deps (including devDeps) so tsx and prisma are available
+# Install ALL deps
 RUN pnpm install --frozen-lockfile
 
-# Generate Prisma client from the db package directory
-RUN cd packages/db && npx prisma generate
+# Generate Prisma client for Linux binary
+RUN cd packages/db && npx prisma generate --schema=./prisma/schema.prisma
 
 EXPOSE 3001
 
