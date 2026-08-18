@@ -1,7 +1,0 @@
-{
-  "buildCommand": "pnpm --filter @fivem-ai/web build",
-  "outputDirectory": "apps/web/.next",
-  "framework": "nextjs",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "devCommand": "pnpm --filter @fivem-ai/web dev"
-}
