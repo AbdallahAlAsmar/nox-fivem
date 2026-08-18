@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { CreditCard, TrendingUp, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { CreditCard, TrendingUp, Zap, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fetchOrg } from '@/lib/api';
 
@@ -12,34 +12,73 @@ const PLANS = [
     name: 'Starter',
     price: '$0',
     period: '/month',
-    actions: 100,
+    description: 'Perfect for trying out NOX',
     servers: 1,
+    actions: 100,
+    aiModels: 'Basic models',
+    support: 'Community',
     color: 'text-white',
     border: 'border-[rgba(255,255,255,0.15)]',
-    bg: 'bg-[rgba(255,255,255,0.04)]',
+    bg: 'bg-[rgba(255,255,255,0.02)]',
+    features: [
+      { name: '1 Server', included: true },
+      { name: '100 AI actions/month', included: true },
+      { name: 'Basic AI models', included: true },
+      { name: 'Community support', included: true },
+      { name: 'Unlimited servers', included: false },
+      { name: 'Priority support', included: false },
+      { name: 'Custom AI models', included: false },
+      { name: '24/7 support', included: false },
+    ],
   },
   {
     tier: 'pro',
     name: 'Pro',
     price: '$19',
     period: '/month',
-    actions: 1000,
+    description: 'For serious FiveM developers',
     servers: 5,
+    actions: 1000,
+    aiModels: 'All models',
+    support: 'Priority',
     color: 'text-[#5E6AD2]',
     border: 'border-[rgba(94,106,210,0.5)]',
-    bg: 'bg-[rgba(94,106,210,0.1)]',
+    bg: 'bg-[rgba(94,106,210,0.08)]',
     highlighted: true,
+    features: [
+      { name: '5 Servers', included: true },
+      { name: '1,000 AI actions/month', included: true },
+      { name: 'All AI models', included: true },
+      { name: 'Priority support', included: true },
+      { name: 'Unlimited servers', included: false },
+      { name: 'Custom AI models', included: false },
+      { name: '24/7 support', included: false },
+      { name: 'Advanced analytics', included: false },
+    ],
   },
   {
     tier: 'enterprise',
     name: 'Enterprise',
     price: '$49',
     period: '/month',
-    actions: Infinity,
+    description: 'For teams and agencies',
     servers: Infinity,
+    actions: Infinity,
+    aiModels: 'All + Custom',
+    support: '24/7',
     color: 'text-white',
     border: 'border-[rgba(255,255,255,0.15)]',
-    bg: 'bg-[rgba(255,255,255,0.04)]',
+    bg: 'bg-[rgba(255,255,255,0.02)]',
+    features: [
+      { name: 'Unlimited Servers', included: true },
+      { name: 'Unlimited AI actions', included: true },
+      { name: 'All AI models', included: true },
+      { name: 'Custom AI models', included: true },
+      { name: '24/7 Priority support', included: true },
+      { name: 'Advanced analytics', included: true },
+      { name: 'Team collaboration', included: true },
+      { name: 'Dedicated account manager', included: true },
+    ],
   },
 ];
 
@@ -61,12 +100,12 @@ export default function BillingPage() {
   const isNearLimit = usagePercent >= 80;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0F0F14] p-6">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="flex-1 overflow-y-auto bg-[#0F0F14] dark:bg-[#0F0F14] light:bg-gray-50 p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-white">Billing</h1>
-          <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-1">
+          <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-white dark:text-white light:text-gray-900">Billing</h1>
+          <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500 mt-1">
             Manage your plan and usage
           </p>
         </div>
@@ -74,13 +113,13 @@ export default function BillingPage() {
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] h-24 animate-pulse" />
+              <div key={i} className="bg-[#16161E] dark:bg-[#16161E] light:bg-white light:border light:border-gray-200 border border-[rgba(255,255,255,0.08)] h-24 animate-pulse" />
             ))}
           </div>
-        ) : org ? (
+        ) : (
           <>
             {/* Current plan card */}
-            <div className={`bg-[#16161E] border ${currentPlan.border} p-6`}>
+            <div className={`bg-[#16161E] dark:bg-[#16161E] light:bg-white light:border light:border-gray-200 border ${currentPlan.border} p-6`}>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -89,60 +128,57 @@ export default function BillingPage() {
                     </span>
                     {currentPlan.highlighted && (
                       <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#5E6AD2]">
+                        Recommended
+                      </span>
+                    )}
+                    {org?.planTier === currentPlan.tier && (
+                      <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(34,197,94,0.2)] border border-[rgba(34,197,94,0.4)] text-[#22c55e]">
                         Current
                       </span>
                     )}
                   </div>
                   <div className="flex items-baseline gap-1 mt-2">
-                    <span className="font-mono text-3xl font-medium text-white">{currentPlan.price}</span>
-                    <span className="font-mono text-sm text-[rgba(255,255,255,0.4)]">{currentPlan.period}</span>
+                    <span className="font-mono text-3xl font-medium text-white dark:text-white light:text-gray-900">{currentPlan.price}</span>
+                    <span className="font-mono text-sm text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500">{currentPlan.period}</span>
                   </div>
-                  <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-2">
+                  <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500 mt-2">
                     {currentPlan.servers === Infinity ? 'Unlimited servers' : `${currentPlan.servers} server${currentPlan.servers > 1 ? 's' : ''} included`}
                     {' · '}
                     {currentPlan.actions === Infinity ? 'Unlimited AI actions' : `${formatNumber(currentPlan.actions)} AI actions/month`}
                   </p>
                 </div>
-                <CreditCard className="w-5 h-5 text-[rgba(255,255,255,0.3)]" />
+                <CreditCard className="w-5 h-5 text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-400" />
               </div>
             </div>
 
             {/* Usage */}
-            <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
+            <div className="bg-[#16161E] dark:bg-[#16161E] light:bg-white light:border light:border-gray-200 border border-[rgba(255,255,255,0.08)] p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-[rgba(255,255,255,0.4)]" />
-                  <span className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)]">
+                  <TrendingUp className="w-4 h-4 text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-400" />
+                  <span className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)] dark:text-[rgba(255,255,255,0.6)] light:text-gray-600">
                     Monthly Usage
                   </span>
                 </div>
-                <span className={`font-mono text-sm ${isNearLimit ? 'text-[#f59e0b]' : 'text-white'}`}>
-                  {org.monthlyActionCount} / {org.monthlyActionLimit ?? '∞'}
+                <span className={`font-mono text-sm ${isNearLimit ? 'text-[#f59e0b]' : 'text-white dark:text-white light:text-gray-900'}`}>
+                  {org?.monthlyActionCount ?? 0} / {org?.monthlyActionLimit ?? '∞'}
                 </span>
               </div>
 
-              {/* Progress bar */}
-              <div className="h-2 bg-[rgba(255,255,255,0.06)] overflow-hidden">
+              <div className="h-2 bg-[rgba(255,255,255,0.06)] dark:bg-[rgba(255,255,255,0.06)] light:bg-gray-200 overflow-hidden rounded-full">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${usagePercent}%` }}
                   transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                  className={`h-full ${
-                    isNearLimit
-                      ? 'bg-[#f59e0b]'
-                      : 'bg-[#5E6AD2]'
-                  }`}
+                  className={`h-full rounded-full ${isNearLimit ? 'bg-[#f59e0b]' : 'bg-[#5E6AD2]'}`}
                 />
               </div>
 
               {isNearLimit && (
                 <div className="flex items-center gap-2 mt-3">
                   <AlertCircle className="w-4 h-4 text-[#f59e0b] flex-shrink-0" />
-                  <p className="font-sans text-xs text-[rgba(255,255,255,0.5)]">
-                    You are approaching your action limit. {org.monthlyActionLimit && org.monthlyActionCount >= org.monthlyActionLimit * 0.9
-                      ? 'Upgrade to Pro or Enterprise to continue.'
-                      : 'Upgrade if you need more capacity.'
-                    }
+                  <p className="font-sans text-xs text-[rgba(255,255,255,0.5)] dark:text-[rgba(255,255,255,0.5)] light:text-gray-600">
+                    You are approaching your action limit. Upgrade to continue.
                   </p>
                 </div>
               )}
@@ -150,21 +186,24 @@ export default function BillingPage() {
 
             {/* Plan comparison */}
             <div>
-              <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[rgba(255,255,255,0.4)] mb-3">
-                All Plans
+              <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500 mb-4">
+                Compare Plans
               </h2>
-              <div className="grid gap-3">
+              <div className="grid gap-4 md:grid-cols-3">
                 {PLANS.map((plan) => (
-                  <div
+                  <motion.div
                     key={plan.tier}
-                    className={`bg-[#16161E] border p-5 ${
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: PLANS.indexOf(plan) * 0.05 }}
+                    className={`bg-[#16161E] dark:bg-[#16161E] light:bg-white light:border light:border-gray-200 border p-5 flex flex-col ${
                       plan.highlighted
                         ? plan.border
-                        : 'border-[rgba(255,255,255,0.08)]'
+                        : 'border-[rgba(255,255,255,0.08)] dark:border-[rgba(255,255,255,0.08)] light:border-gray-200'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
                         <span className={`font-mono text-xs uppercase tracking-wider ${plan.color}`}>
                           {plan.name}
                         </span>
@@ -175,50 +214,45 @@ export default function BillingPage() {
                         )}
                       </div>
                       <div className="flex items-baseline gap-1">
-                        <span className="font-mono text-xl font-medium text-white">{plan.price}</span>
-                        <span className="font-mono text-xs text-[rgba(255,255,255,0.4)]">{plan.period}</span>
+                        <span className="font-mono text-2xl font-medium text-white dark:text-white light:text-gray-900">{plan.price}</span>
+                        <span className="font-mono text-xs text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500">{plan.period}</span>
                       </div>
+                      <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500 mt-1">
+                        {plan.description}
+                      </p>
                     </div>
 
-                    <div className="space-y-2">
-                      {[
-                        { label: 'Servers', value: plan.servers === Infinity ? 'Unlimited' : `${plan.servers}` },
-                        { label: 'AI Actions', value: plan.actions === Infinity ? 'Unlimited' : formatNumber(plan.actions) },
-                        { label: 'Support', value: plan.tier === 'enterprise' ? '24/7' : plan.tier === 'pro' ? 'Priority' : 'Community' },
-                      ].map((feat) => (
-                        <div key={feat.label} className="flex items-center justify-between">
-                          <span className="font-sans text-xs text-[rgba(255,255,255,0.5)]">{feat.label}</span>
-                          <span className="font-mono text-xs text-white">{feat.value}</span>
+                    <div className="space-y-2 flex-1">
+                      {plan.features.map((feat) => (
+                        <div key={feat.name} className="flex items-center gap-2">
+                          {feat.included ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0" />
+                          ) : (
+                            <XCircle className="w-3.5 h-3.5 text-[rgba(255,255,255,0.2)] dark:text-[rgba(255,255,255,0.2)] light:text-gray-300 flex-shrink-0" />
+                          )}
+                          <span className={`font-sans text-xs ${feat.included ? 'text-white dark:text-white light:text-gray-900' : 'text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-400'}`}>
+                            {feat.name}
+                          </span>
                         </div>
                       ))}
                     </div>
 
-                    {plan.tier !== org.planTier && (
-                      <button className="mt-4 w-full py-2 font-mono text-xs uppercase tracking-wider border border-[rgba(255,255,255,0.15)] text-white hover:border-[rgba(255,255,255,0.3)] hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100">
-                        {plan.tier === 'starter' ? 'Downgrade' : 'Upgrade'}
+                    {org?.planTier !== plan.tier && (
+                      <button className="mt-4 w-full py-2 font-mono text-xs uppercase tracking-wider border border-[rgba(255,255,255,0.15)] dark:border-[rgba(255,255,255,0.15)] light:border-gray-300 text-white dark:text-white light:text-gray-900 hover:bg-[rgba(255,255,255,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)] light:hover:bg-gray-100 transition-colors duration-100">
+                        {plan.tier === 'starter' ? 'Downgrade' : plan.tier === 'pro' ? 'Upgrade' : 'Upgrade'}
                       </button>
                     )}
-                    {plan.tier === org.planTier && (
+                    {org?.planTier === plan.tier && (
                       <div className="mt-4 flex items-center gap-2 font-mono text-xs text-[#22c55e]">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Current plan</span>
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
           </>
-        ) : (
-          <div className="text-center py-20 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
-            <AlertCircle className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-4" />
-            <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">
-              No billing data
-            </h3>
-            <p className="font-sans text-xs text-[rgba(255,255,255,0.4)]">
-              Contact support to set up your billing account.
-            </p>
-          </div>
         )}
       </div>
     </div>
