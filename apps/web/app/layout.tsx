@@ -11,7 +11,7 @@ const inter = Inter({
   preload: true,
 });
 
-export const metadata = {\
+export const metadata = {
   title: {
     default: 'NOX // FiveM',
     template: '%s | NOX // FiveM',
