@@ -1,10 +1,9 @@
 [build]
-# Skip build step - tsx runs TypeScript directly
-builder = "nixpacks"
-buildCommand = "exit 0"
+builder = "docker"
+dockerfile = "railway/Dockerfile"
+dockerfileContext = "."
 
 [deploy]
-# Run TypeScript directly via tsx (no build step)
-startCommand = "pnpm --filter @fivem-ai/orchestrator exec tsx src/index.ts"
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3
+start_command = "pnpm --filter @fivem-ai/orchestrator exec tsx src/index.ts"
+restart_policy_type = "ON_FAILURE"
+restart_policy_max_retries = 3
