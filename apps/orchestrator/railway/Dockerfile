@@ -12,10 +12,10 @@ COPY package.json pnpm-lock.yaml ./
 COPY packages/ ./packages/
 COPY apps/orchestrator/ ./apps/orchestrator/
 
-# Install deps WITH dev deps so tsx is available
-RUN pnpm install --frozen-lockfile --filter @fivem-ai/orchestrator --filter @fivem-ai/db --filter @fivem-ai/shared
+# Install ALL deps (including devDeps) so tsx and prisma are available
+RUN pnpm install --frozen-lockfile
 
-# Generate Prisma client from the package/db directory
+# Generate Prisma client from the db package directory
 RUN cd packages/db && npx prisma generate
 
 EXPOSE 3001
