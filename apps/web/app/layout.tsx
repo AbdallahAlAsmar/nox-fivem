@@ -29,8 +29,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Use test keys if no publishable key is set (development fallback)
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_placeholder';
+  
   return (
     <ClerkProvider
+      publishableKey={publishableKey}
       afterSignUpUrl="/dashboard"
       afterSignInUrl="/dashboard"
     >
