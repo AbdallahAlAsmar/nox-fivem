@@ -49,7 +49,6 @@ export default function SidebarNav() {
     return () => window.removeEventListener('keydown', close);
   }, []);
 
-  // Close mobile menu on navigation
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
@@ -87,7 +86,6 @@ export default function SidebarNav() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="lg:hidden fixed top-0 left-0 z-50 w-64 bg-[#16161E] border-r border-[rgba(255,255,255,0.08)] flex flex-col"
             >
-              {/* Mobile header */}
               <div className="flex items-center justify-between px-5 h-14 border-b border-[rgba(255,255,255,0.08)]">
                 <div className="flex items-center gap-2 font-mono">
                   <img src="/nox-avatar.svg" alt="NOX" className="w-6 h-6 opacity-90" />
@@ -97,8 +95,6 @@ export default function SidebarNav() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
-              {/* Nav */}
               <nav className="flex-1 px-3 py-4 space-y-1">
                 {navItems.map((item) => {
                   const active = isActive(item.href);
@@ -121,16 +117,10 @@ export default function SidebarNav() {
                   );
                 })}
               </nav>
-
-              {/* Footer */}
               <div className="px-3 py-4 border-t border-[rgba(255,255,255,0.08)]">
                 <SignedIn>
                   <div className="flex items-center gap-2 px-3 py-2">
-                    <img
-                      src="/nox-avatar.svg"
-                      alt="avatar"
-                      className="w-7 h-7 flex-shrink-0 opacity-80"
-                    />
+                    <img src="/nox-avatar.svg" alt="avatar" className="w-7 h-7 flex-shrink-0 opacity-80" />
                     <div className="flex-1 min-w-0">
                       <p className="font-mono text-xs text-[rgba(255,255,255,0.6)] truncate uppercase tracking-wider">User</p>
                       <p className="font-mono text-[10px] text-[rgba(255,255,255,0.25)] uppercase tracking-wider">Connected</p>
@@ -158,27 +148,26 @@ export default function SidebarNav() {
         )}
       </AnimatePresence>
 
-      {/* Always-visible icon-only sidebar that expands on hover */}
+      {/* Desktop sidebar — icons only, expands on hover */}
       <div
         className="hidden lg:flex fixed top-0 left-0 bottom-0 z-40"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* Icon-only bar (always visible, 48px wide) */}
         <motion.aside
           animate={{ width: hovered ? 224 : 48 }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
           className="h-full bg-[#16161E] border-r border-[rgba(255,255,255,0.08)] flex flex-col overflow-hidden"
         >
           {/* Logo */}
-          <div className="h-14 flex items-center px-0 border-b border-[rgba(255,255,255,0.08)]">
-            <div className="flex items-center gap-0 min-w-[48px] px-5">
+          <div className="h-14 flex items-center border-b border-[rgba(255,255,255,0.08)]">
+            <div className="flex items-center gap-3 w-full px-5">
               <img src="/nox-avatar.svg" alt="NOX" className="w-6 h-6 opacity-90 flex-shrink-0" />
               <motion.span
                 initial={false}
                 animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
                 transition={{ duration: 0.15 }}
-                className="font-mono text-white font-medium text-sm tracking-[0.2em] ml-1.5 whitespace-nowrap overflow-hidden"
+                className="font-mono text-white font-medium text-sm tracking-[0.2em] whitespace-nowrap overflow-hidden"
               >
                 NOX<span className="font-normal opacity-60">.</span>
               </motion.span>
@@ -186,7 +175,7 @@ export default function SidebarNav() {
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 px-0 py-4 space-y-1">
+          <nav className="flex-1 px-3 py-4 space-y-1">
             {navItems.map((item) => {
               const active = isActive(item.href);
               const Icon = item.icon;
@@ -195,53 +184,39 @@ export default function SidebarNav() {
                   key={item.href}
                   href={item.href}
                   title={item.label}
-                  className={`flex items-center w-full transition-colors duration-100 ${
+                  className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                     active
                       ? 'text-white bg-[rgba(94,106,210,0.15)] border-l-2 border-[#5E6AD2]'
                       : 'text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)]'
                   }`}
                 >
-                  <div className="flex items-center min-w-[48px]">
-                    <div className="flex items-center justify-center w-full px-3">
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                    </div>
-                  </div>
+                  <Icon className="w-4 h-4 flex-shrink-0" />
                   <motion.span
                     initial={false}
                     animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
                     transition={{ duration: 0.15 }}
-                    className="font-mono text-xs uppercase tracking-wider overflow-hidden whitespace-nowrap flex-1"
+                    className="overflow-hidden whitespace-nowrap"
                   >
                     {item.label}
                   </motion.span>
-                  {active && hovered && (
-                    <ChevronRight className="w-3 h-3 opacity-50 mr-3 flex-shrink-0" />
-                  )}
+                  {active && hovered && <ChevronRight className="w-3 h-3 opacity-50 ml-auto" />}
                 </Link>
               );
             })}
           </nav>
 
           {/* Footer */}
-          <div className="px-0 py-4 border-t border-[rgba(255,255,255,0.08)]">
+          <div className="px-3 py-4 border-t border-[rgba(255,255,255,0.08)]">
             <SignedIn>
-              <div className="flex items-center w-full">
-                <div className="flex items-center min-w-[48px]">
-                  <div className="flex items-center justify-center w-full px-3">
-                    <img
-                      src="/nox-avatar.svg"
-                      alt="avatar"
-                      className="w-7 h-7 flex-shrink-0 opacity-80"
-                    />
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <img src="/nox-avatar.svg" alt="avatar" className="w-7 h-7 flex-shrink-0 opacity-80" />
                 <motion.div
                   initial={false}
                   animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
                   transition={{ duration: 0.15 }}
                   className="flex-1 min-w-0 overflow-hidden"
                 >
-                  <div className="px-3 py-2">
+                  <div className="px-1">
                     <p className="font-mono text-xs text-[rgba(255,255,255,0.6)] truncate uppercase tracking-wider">User</p>
                     <p className="font-mono text-[10px] text-[rgba(255,255,255,0.25)] uppercase tracking-wider">Connected</p>
                   </div>
@@ -251,7 +226,7 @@ export default function SidebarNav() {
                   animate={{ opacity: hovered ? 1 : 0 }}
                   transition={{ duration: 0.15 }}
                   onClick={() => signOut({ redirectUrl: '/' })}
-                  className="text-[rgba(255,255,255,0.3)] hover:text-white transition-colors duration-100 mr-3 flex-shrink-0"
+                  className="text-[rgba(255,255,255,0.3)] hover:text-white transition-colors duration-100"
                   title="Sign out"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -259,25 +234,19 @@ export default function SidebarNav() {
               </div>
             </SignedIn>
             <SignedOut>
-              <div className="flex items-center w-full">
-                <div className="flex items-center min-w-[48px]">
-                  <div className="flex items-center justify-center w-full px-3">
-                    <LogOut className="w-4 h-4" />
-                  </div>
-                </div>
-                <motion.div
-                  initial={false}
-                  animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="flex-1 overflow-hidden"
-                >
-                  <SignInButton mode="modal">
-                    <button className="w-full flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white transition-colors duration-100">
-                      Sign In
-                    </button>
-                  </SignInButton>
-                </motion.div>
-              </div>
+              <SignInButton mode="modal">
+                <button className="w-full flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white transition-colors duration-100">
+                  <LogOut className="w-4 h-4" />
+                  <motion.span
+                    initial={false}
+                    animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="overflow-hidden whitespace-nowrap"
+                  >
+                    Sign In
+                  </motion.span>
+                </button>
+              </SignInButton>
             </SignedOut>
           </div>
         </motion.aside>
