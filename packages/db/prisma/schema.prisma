@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Organization {
+  id                        String    @id @default(cuid())
+  name                      String
+  stripe_customer_id        String?   @unique
+  plan_tier                 String?   @default("starter")
+  monthly_action_limit      Int?      @default(500)
+  monthly_cost_cap_usd      Decimal?  @default(20.00) @db.Decimal
+  conversation_cost_cap_usd Decimal?  @default(2.00) @db.Decimal
+  created_at                DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("organizations")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model announcements {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title      String?
+  message    String?
+  channel_id String?
+  sent_at    DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model checkout_sessions {
+  id                  String    @id @db.Uuid
+  provider_payment_id String?   @unique
+  status              String    @default("pending")
+  user_id             String?
+  email               String
+  total               Decimal   @db.Decimal(12, 2)
+  currency            String    @default("USD")
+  items               Json      @default("[]")
+  coupon_code         String?
+  metadata            Json      @default("{}")
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  fulfilled_at        DateTime? @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model coupons {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code       String    @unique
+  type       String
+  value      Decimal   @db.Decimal
+  max_uses   Int?
+  uses       Int       @default(0)
+  active     Boolean   @default(true)
+  starts_at  DateTime? @db.Timestamptz(6)
+  ends_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model licenses {
+  id               Int       @id @default(autoincrement())
+  license_key      String    @unique
+  discord_user_id  String
+  discord_username String?
+  server_ip        String
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  last_ip_change   DateTime? @db.Timestamptz(6)
+  is_active        Boolean?  @default(true)
+  product_id       String?
+  user_id          String?
+  order_id         String?
+  products         products? @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([discord_user_id], map: "idx_discord_user_id")
+  @@index([license_key], map: "idx_license_key")
+  @@index([server_ip], map: "idx_server_ip")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model order_lines {
+  id         String    @id @default(dbgenerated("gen_random_uuid()"))
+  order_id   String?
+  product_id String?
+  quantity   Int
+  price      Decimal   @db.Decimal
+  orders     orders?   @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products   products? @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([order_id, product_id], map: "order_lines_order_product_uidx")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model orders {
+  id           String        @id @default(dbgenerated("gen_random_uuid()"))
+  user_id      String?
+  email        String?
+  total        Decimal       @db.Decimal
+  status       String?       @default("paid")
+  created_at   DateTime?     @default(now()) @db.Timestamptz(6)
+  admin_note   String?
+  delivered_at DateTime?     @db.Timestamptz(6)
+  order_lines  order_lines[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payments {
+  id                String   @id
+  status            String?
+  status_tag        String?
+  currency          String?
+  total_amount      Decimal? @db.Decimal
+  seller_public_key String?
+  raw               Json?
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model products {
+  id                String        @id
+  name              String
+  description       String?
+  price             Decimal       @db.Decimal
+  category          String?
+  requires_login    Boolean?      @default(false)
+  download_url      String?
+  image             String?
+  popular           Boolean?      @default(false)
+  created_at        DateTime?     @default(now()) @db.Timestamptz(6)
+  slug              String?
+  tags              String[]
+  bundle_items      Json          @default("[]")
+  video_url         String?
+  short_description String?
+  features          String[]
+  licenses          licenses[]
+  order_lines       order_lines[]
+
+  @@index([slug])
+}
+
+// ============================================
+// NOX // FiveM — Server Management Models
+// ============================================
+
+model Server {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  framework   String   @default("unknown")
+  status      String   @default("unpaired")
+  rootLabel   String?
+  lastSeenAt  DateTime?
+  lastScanAt  DateTime?
+  playerCount Int      @default(0)
+  maxPlayers  Int      @default(64)
+  fps         Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agentDevices AgentDevice[]
+  resources    ResourceIndex[]
+  threads      ChatThread[]
+  changes      Change[]
+  players      Player[]
+
+  @@map("servers")
+}
+
+model AgentDevice {
+  id               String   @id @default(cuid())
+  serverId         String
+  name             String?
+  pairingTokenHash String?
+  publicKey        String?
+  agentVersion     String?
+  platform         String   @default("unknown")
+  status           String   @default("pending")
+  lastHeartbeatAt  DateTime?
+  lastIp           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("agent_devices")
+}
+
+model ResourceIndex {
+  id            String   @id @default(cuid())
+  serverId      String
+  resourceName  String
+  relativePath  String
+  manifestPath  String?
+  manifestHash  String?
+  dependencies  Json     @default("[]")
+  provides      Json     @default("[]")
+  files         Json     @default("[]")
+  metadata      Json     @default("{}")
+  lastScannedAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, resourceName])
+  @@map("resource_index")
+}
+
+model ChatThread {
+  id        String   @id @default(cuid())
+  serverId  String
+  userId    String
+  title     String?
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  server   Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+  changes  Change[]
+
+  @@map("chat_threads")
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  threadId    String
+  role        String
+  content     String   @db.Text
+  toolCalls   Json     @default("[]")
+  model       String?
+  tokensIn    Int      @default(0)
+  tokensOut   Int      @default(0)
+  costUsd     Decimal  @default(0) @db.Decimal(10, 6)
+  createdAt   DateTime @default(now())
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("chat_messages")
+}
+
+model Change {
+  id               String   @id @default(cuid())
+  serverId         String
+  threadId         String?
+  createdByUserId  String?
+  approvedByUserId String?
+  filesTouched     Json     @default("[]")
+  diff             String   @db.Text
+  status           String   @default("pending")
+  gitCheckpointSha String?
+  gitCommitSha     String?
+  applyResult      Json     @default("{}")
+  rollbackResult   Json     @default("{}")
+  createdAt        DateTime @default(now())
+  approvedAt       DateTime?
+  appliedAt        DateTime?
+  rolledBackAt     DateTime?
+  updatedAt        DateTime @updatedAt
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  thread ChatThread? @relation(fields: [threadId], references: [id], onDelete: SetNull)
+
+  @@index([serverId, status])
+  @@map("changes")
+}
+
+model Player {
+  id          String   @id @default(cuid())
+  serverId    String
+  playerId    String   // FiveM player identifier (e.g. "steam:110000123456789")
+  name        String
+  license     String?
+  groupId     String?
+  isBanned    Boolean  @default(false)
+  banReason   String?
+  bannedAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("players")
+}

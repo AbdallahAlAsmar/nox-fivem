@@ -1,0 +1,24 @@
+{
+  "name": "@fivem-ai/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/client.ts",
+  "types": "./src/client.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "push": "prisma db push",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "studio": "prisma studio",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "@prisma/client": "^5.15.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.15.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}

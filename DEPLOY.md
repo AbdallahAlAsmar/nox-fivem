@@ -18,7 +18,7 @@
                          ▼
          ┌───────────────────────────────────┐
          │  Cloudflare Quick Tunnel          │
-         │  https://ought-lambda-makes-photograph.trycloudflare.com
+         │  https://undergraduate-surprise-cameras-fighting.trycloudflare.com
          │  → proxy → localhost:20128        │
          └───────────────────────────────────┘
                          │
@@ -43,7 +43,7 @@ Everything else is hosted.
 |------|--------|---------------|
 | GitHub account | ✅ | Logged in as `AbdallahAlAsmar` |
 | GitHub CLI (`gh`) | ✅ | `gh auth status` shows active |
-| Cloudflare Tunnel | ✅ | Tunnel running → `https://ought-lambda-makes-photograph.trycloudflare.com` |
+| Cloudflare Tunnel | ✅ | Tunnel running → `https://undergraduate-surprise-cameras-fighting.trycloudflare.com` |
 | OmniRoute running | ✅ | `localhost:20128` responds (643 models) |
 | Railway account | ❌ | Sign up at https://railway.app |
 | Vercel account | ❌ | Sign up at https://vercel.com |
@@ -92,7 +92,7 @@ This creates `https://github.com/AbdallahAlAsmar/nox-fivem` and pushes your enti
 | `JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | Run locally, copy output |
 | `CLERK_JWKS_DOMAIN` | `relevant-ram-9120.clerk.accounts.dev` | Clerk Dashboard → API Keys |
 | `CORS_ORIGINS` | `https://your-app.vercel.app,http://localhost:3000,http://localhost:1420` | Your Vercel URL (add after Step 4) |
-| `OMNIROUTE_BASE_URL` | `https://ought-lambda-makes-photograph.trycloudflare.com/v1` | This is your live tunnel URL |
+| `OMNIROUTE_BASE_URL` | `https://undergraduate-surprise-cameras-fighting.trycloudflare.com/v1` | This is your live tunnel URL |
 | `OMNI_KEY` | `omni-key` | Default in your .env |
 | `ANTHROPIC_API_KEY` | *(leave empty)* | Not using Anthropic |
 | `NODE_ENV` | `production` | |
