@@ -1,5 +1,4 @@
 import { Inter } from 'next/font/google';
-import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -29,50 +28,35 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  
-  // Only wrap with ClerkProvider if we have a valid key
-  const withClerk = !!publishableKey;
-  
-  const providerProps = withClerk ? {
-    publishableKey,
-    afterSignUpUrl: '/dashboard',
-    afterSignInUrl: '/dashboard',
-  } : {};
-  
-  const Provider = withClerk ? ClerkProvider : ({ children }: { children: React.ReactNode }) => <>{children}</>;
-  
   return (
-    <Provider {...providerProps}>
-      <html
-        lang="en"
-        className="dark"
-        style={{ colorScheme: 'dark' }}
+    <html
+      lang="en"
+      className="dark"
+      style={{ colorScheme: 'dark' }}
+    >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+      </head>
+      <body
+        className={`${inter.variable} font-sans min-h-screen`}
+        style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
       >
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-        </head>
-        <body
-          className={`${inter.variable} font-sans min-h-screen`}
-          style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-        >
-          {children}
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: '#16161E',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: '#FFFFFF',
-                borderRadius: '0px',
-                fontFamily: "'JetBrains Mono', monospace",
-              },
-            }}
-          />
-        </body>
-      </html>
-    </Provider>
+        {children}
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: '#16161E',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: '#FFFFFF',
+              borderRadius: '0px',
+              fontFamily: "'JetBrains Mono', monospace",
+            },
+          }}
+        />
+      </body>
+    </html>
   );
 }
