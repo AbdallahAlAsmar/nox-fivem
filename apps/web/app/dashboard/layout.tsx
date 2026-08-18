@@ -14,7 +14,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-[#0F0F14]">
       <SidebarNav />
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden ml-[48px] transition-all duration-300">
         {children}
       </main>
     </div>

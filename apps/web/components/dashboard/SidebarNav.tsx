@@ -148,16 +148,16 @@ export default function SidebarNav() {
         )}
       </AnimatePresence>
 
-      {/* Desktop sidebar — icons only, expands on hover */}
-      <div
-        className="hidden lg:flex fixed top-0 left-0 bottom-0 z-40"
+      {/* Desktop sidebar — part of layout, not fixed overlay */}
+      <aside
+        className="hidden lg:block h-full bg-[#16161E] border-r border-[rgba(255,255,255,0.08)] flex flex-col overflow-hidden"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <motion.aside
+        <motion.div
           animate={{ width: hovered ? 224 : 48 }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="h-full bg-[#16161E] border-r border-[rgba(255,255,255,0.08)] flex flex-col overflow-hidden"
+          className="h-full flex flex-col"
         >
           {/* Logo */}
           <div className="h-14 flex items-center border-b border-[rgba(255,255,255,0.08)]">
@@ -249,8 +249,8 @@ export default function SidebarNav() {
               </SignInButton>
             </SignedOut>
           </div>
-        </motion.aside>
-      </div>
+        </motion.div>
+      </aside>
     </>
   );
 }
