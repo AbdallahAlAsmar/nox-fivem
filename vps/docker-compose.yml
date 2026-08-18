@@ -29,7 +29,7 @@ services:
       JWT_SECRET: nox-jwt-secret-change-this-to-random-32chars
       CLERK_JWKS_DOMAIN: relevant-ram-9120.clerk.accounts.dev
       CLERK_JWT_AUDIENCE: ""
-      CORS_ORIGINS: http://158.101.167.118:3000,http://localhost:3000,https://nox-fivem.vercel.app
+      CORS_ORIGINS: http://158.101.167.118:3000,http://localhost:3000,https://nox-fivem.vercel.app,https://nations-organizing-cheapest-acute.trycloudflare.com
       OMNIROUTE_BASE_URL: https://strict-souls-interesting-amazing.trycloudflare.com/v1
       OMNI_KEY: omni-key
       NODE_ENV: production
@@ -41,6 +41,14 @@ services:
       - "host.docker.internal:host-gateway"
     ports:
       - "3001:3001"
+
+  cloudflared-orchestrator:
+    image: cloudflare/cloudflared:latest
+    container_name: nox-cloudflared-orchestrator
+    restart: unless-stopped
+    command: tunnel --url http://localhost:3001
+    networks:
+      - nox-network
 
 volumes:
   postgres_data:
