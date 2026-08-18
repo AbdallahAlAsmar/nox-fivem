@@ -1,4 +1,5 @@
 import { Inter } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -28,35 +29,44 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Use test keys if no publishable key is set (development fallback)
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_placeholder';
+  
   return (
-    <html
-      lang="en"
-      className="dark"
-      style={{ colorScheme: 'dark' }}
+    <ClerkProvider
+      publishableKey={publishableKey}
+      afterSignUpUrl="/dashboard"
+      afterSignInUrl="/dashboard"
     >
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-      </head>
-      <body
-        className={`${inter.variable} font-sans min-h-screen`}
-        style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+      <html
+        lang="en"
+        className="dark"
+        style={{ colorScheme: 'dark' }}
       >
-        {children}
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            style: {
-              background: '#16161E',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#FFFFFF',
-              borderRadius: '0px',
-              fontFamily: "'JetBrains Mono', monospace",
-            },
-          }}
-        />
-      </body>
-    </html>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+        </head>
+        <body
+          className={`${inter.variable} font-sans min-h-screen`}
+          style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+        >
+          {children}
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: '#16161E',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#FFFFFF',
+                borderRadius: '0px',
+                fontFamily: "'JetBrains Mono', monospace",
+              },
+            }}
+          />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
