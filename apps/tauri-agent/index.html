@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/nox-avatar.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NOX // FiveM</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+    <!-- Publishable key must be set before ClerkJS loads -->
+    <script>
+      window.__clerk_publishable_key = 'pk_test_cmVsZXZhbnQtcmFtLTkxMjAuY2xlcmsuYWNjb3VudHMuZGV2JA';
+      window.__nox_clerk_user = null;
+      window.__nox_clerk_token = null;
+    </script>
+    <!-- Clerk JS SDK -->
+    <script src="https://cdn.clerk.com/clerk@5.25.2.browser.min.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

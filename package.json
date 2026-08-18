@@ -1,0 +1,29 @@
+{
+  "name": "fivem-ai-developer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FiveM AI Developer SaaS - Chat with your FiveM server",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:generate": "pnpm --filter @fivem-ai/db generate",
+    "db:push": "pnpm --filter @fivem-ai/db push",
+    "db:migrate": "pnpm --filter @fivem-ai/db migrate",
+    "db:studio": "pnpm --filter @fivem-ai/db studio"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "vite": "5",
+    "vitest": "2.1.8"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

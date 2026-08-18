@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── NOX Design Tokens ─────────────────────────────────────────── */
+@layer base {
+  :root {
+    --nox-bg-primary:      #0F0F14;
+    --nox-bg-elevated:     #16161E;
+    --nox-bg-inset:        #0A0A0F;
+
+    --nox-fg-primary:      #FFFFFF;
+    --nox-fg-secondary:    rgba(255,255,255,0.7);
+    --nox-fg-muted:        rgba(255,255,255,0.4);
+    --nox-fg-disabled:     rgba(255,255,255,0.2);
+
+    --nox-border-default:  rgba(255,255,255,0.08);
+    --nox-border-strong:   rgba(255,255,255,0.18);
+    --nox-accent:          #5E6AD2;
+    --nox-accent-muted:    rgba(94,106,210,0.15);
+
+    --radius-none: 0px;
+  }
+}
+
+/* ─── Tailwind theme extension ──────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-[var(--nox-border-default)];
+  }
+  body {
+    @apply bg-[var(--nox-bg-primary)] text-[var(--nox-fg-primary)];
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ─── Component primitives ──────────────────────────────────────── */
+@layer components {
+  .nox-border { border-color: var(--nox-border-default); }
+  .nox-border-strong { border-color: var(--nox-border-strong); }
+
+  .nox-btn-primary {
+    background: #FFFFFF;
+    color: #0F0F14;
+    font-family: 'Geist Mono', 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 0px;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: opacity 100ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .nox-btn-primary:hover { opacity: 0.85; }
+
+  .nox-btn-ghost {
+    background: transparent;
+    color: #FFFFFF;
+    font-family: 'Geist Mono', 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 0px;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: border-color 100ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .nox-btn-ghost:hover { border-color: rgba(255,255,255,0.4); }
+
+  .nox-card {
+    background: var(--nox-bg-elevated);
+    border: 1px solid var(--nox-border-default);
+    border-radius: 0px;
+    padding: 24px;
+  }
+
+  .nox-input {
+    background: transparent;
+    border: 1px solid var(--nox-border-default);
+    border-radius: 0px;
+    color: var(--nox-fg-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 100ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .nox-input:focus { border-color: var(--nox-accent); }
+  .nox-input::placeholder { color: var(--nox-fg-disabled); }
+
+  .nox-badge {
+    font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 0px;
+    padding: 4px 8px;
+    display: inline-block;
+  }
+
+  /* No shadows — NOX has zero elevation */
+  .nox-no-shadow { box-shadow: none !important; }
+}
+
+/* ─── Keyframes ─────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50%        { opacity: 0.5; }
+}
+
+/* ─── Animation classes ─────────────────────────────────────────── */
+.animate-fade-in       { animation: fadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-slide-up      { animation: slideUp 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-slide-down    { animation: slideDown 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-pulse-subtle  { animation: pulse-subtle 2.5s ease-in-out infinite; }
+
+/* ─── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;700&amp;display=swap');</style>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0F0F14" rx="0"/>
+  <!-- Logo Mark: Terminal Cursor -->
+  <rect x="186" y="200" width="12" height="112" fill="#FFFFFF" rx="0"/>
+  <!-- Wordmark: NOX. -->
+  <text x="260" y="288" font-family="'Geist Mono', 'Courier New', monospace" font-size="96" font-weight="500" fill="#FFFFFF" letter-spacing="8">NOX<tspan font-weight="400">.</tspan></text>
+  <!-- Subtle underline -->
+  <rect x="186" y="320" width="220" height="2" fill="rgba(255,255,255,0.15)"/>
+</svg>

@@ -1,0 +1,8 @@
+[build]
+builder = "docker"
+dockerfile = "railway/Dockerfile"
+
+[deploy]
+start_command = "pnpm --filter @fivem-ai/orchestrator exec tsx src/index.ts"
+restart_policy_type = "ON_FAILURE"
+restart_policy_max_retries = 3

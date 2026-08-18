@@ -1,0 +1,7 @@
+[build]
+builder = "docker"
+dockerfile = "railway/Dockerfile"
+
+[deploy]
+start_command = "pnpm --filter @fivem-ai/web start"
+# Railway handles Next.js automatically
