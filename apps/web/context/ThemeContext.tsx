@@ -22,22 +22,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('nox-theme') as Theme | null;
     if (saved) {
       setTheme(saved);
-      document.documentElement.classList.toggle('light', saved === 'light');
     } else {
       const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
       if (prefersLight) {
         setTheme('light');
-        document.documentElement.classList.add('light');
       }
     }
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (mounted) {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add(theme);
+      document.documentElement.style.colorScheme = theme;
+    }
+  }, [theme, mounted]);
+
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     localStorage.setItem('nox-theme', newTheme);
-    document.documentElement.classList.toggle('light', newTheme === 'light');
   };
 
   if (!mounted) {

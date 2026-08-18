@@ -2,31 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dark theme (default) */
 :root {
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 15, 15, 20;
   --background-end-rgb: 15, 15, 20;
+  --surface-rgb: 22, 22, 30;
+  --border-rgb: 255, 255, 255, 0.08;
 }
 
+/* Light theme */
 .light {
   --foreground-rgb: 17, 24, 39;
   --background-start-rgb: 249, 250, 251;
   --background-end-rgb: 249, 250, 251;
+  --surface-rgb: 255, 255, 255;
+  --border-rgb: 229, 231, 235;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgb(var(--background-end-rgb))
-  )
-  rgb(var(--background-start-rgb));
+  background: rgb(var(--background-start-rgb));
 }
 
 /* Smooth transitions for theme changes */
 * {
-  transition: background-color 0.2s ease, color 0.15s ease, border-color 0.2s ease;
+  transition: background-color 0.15s ease, color 0.1s ease, border-color 0.15s ease;
 }
 
 /* Custom scrollbar */
@@ -40,18 +41,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(128, 128, 128, 0.3);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.light ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.light ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(128, 128, 128, 0.5);
 }
