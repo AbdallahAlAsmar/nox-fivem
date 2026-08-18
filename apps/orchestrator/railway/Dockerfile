@@ -1,6 +1,3 @@
-# Railway entrypoint — runs the orchestrator via tsx (no build step).
-# tsx is a devDependency, so we must install WITH dev deps (not --prod).
-
 FROM node:20-alpine
 
 RUN apk add --no-cache git python3 make g++
@@ -18,8 +15,11 @@ COPY apps/orchestrator/ ./apps/orchestrator/
 # Install deps WITH dev deps so tsx is available
 RUN pnpm install --frozen-lockfile --filter @fivem-ai/orchestrator --filter @fivem-ai/db --filter @fivem-ai/shared
 
-# Generate Prisma client
-RUN pnpm --filter @fivem-ai/db generate
+# Generate Prisma client from the correct location
+WORKDIR /app/packages/db
+RUN npx prisma generate
+
+WORKDIR /app
 
 EXPOSE 3001
 

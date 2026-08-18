@@ -35,7 +35,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
         },
       });
 
-      return servers.map(server => ({
+      return servers.map((server: any) => ({
         id: server.id,
         name: server.name,
         framework: server.framework,
@@ -141,7 +141,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       resourceCount: server.resources?.length ?? 0,
       hasAgent: server.agentDevices.length > 0,
       agent: server.agentDevices[0] || null,
-      resources: server.resources.map(r => ({
+      resources: server.resources.map((r: any) => ({
         name: r.resourceName,
         path: r.relativePath,
         dependencies: r.dependencies as string[],
@@ -706,7 +706,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       take: parseInt(query.limit),
     });
 
-    return changes.map(c => ({
+    return changes.map((c: any) => ({
       ...c,
       serverName: c.server?.name,
       serverId: c.serverId,
