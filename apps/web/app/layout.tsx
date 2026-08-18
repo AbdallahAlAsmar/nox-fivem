@@ -29,15 +29,21 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Use test keys if no publishable key is set (development fallback)
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_placeholder';
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  // Only wrap with ClerkProvider if we have a valid key
+  const withClerk = !!publishableKey;
+  
+  const providerProps = withClerk ? {
+    publishableKey,
+    afterSignUpUrl: '/dashboard',
+    afterSignInUrl: '/dashboard',
+  } : {};
+  
+  const Provider = withClerk ? ClerkProvider : ({ children }: { children: React.ReactNode }) => <>{children}</>;
   
   return (
-    <ClerkProvider
-      publishableKey={publishableKey}
-      afterSignUpUrl="/dashboard"
-      afterSignInUrl="/dashboard"
-    >
+    <Provider {...providerProps}>
       <html
         lang="en"
         className="dark"
@@ -67,6 +73,6 @@ export default function RootLayout({
           />
         </body>
       </html>
-    </ClerkProvider>
+    </Provider>
   );
 }
