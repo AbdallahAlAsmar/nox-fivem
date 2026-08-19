@@ -27,6 +27,7 @@ export async function handleChatMessage(
     data: { threadId, role: 'user', content: userMessage },
   });
 
+  const isAgentConnected = gateway.isConnected(serverId);
   const context: ChatContext = {
     serverId,
     threadId,
@@ -35,6 +36,7 @@ export async function handleChatMessage(
     resources: server.resources,
     previousMessages,
     selectedSkills,
+    isAgentConnected,
   };
 
   let assistantContent = '';
@@ -46,6 +48,10 @@ export async function handleChatMessage(
         assistantContent += chunk.content;
         onStream({ type: 'text', content: chunk.content, skillUsed: chunk.skillUsed });
       } else if (chunk.type === 'tool_use') {
+        if (!isAgentConnected) {
+          onStream({ type: 'error', content: `Agent is not connected for server ${serverId}. Pair your server first to enable file operations.` });
+          return;
+        }
         const result = await handleToolCall(gateway, serverId, chunk.toolName!, chunk.toolArgs!);
         toolCalls.push({ id: crypto.randomUUID(), name: chunk.toolName, arguments: chunk.toolArgs, result });
         onStream({ type: 'tool_result', content: JSON.stringify(result) });

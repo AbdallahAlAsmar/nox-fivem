@@ -39,9 +39,23 @@ export async function registerChatRoutes(fastify: FastifyInstance) {
       if (chunk.type === 'error') lastError = chunk.content;
     });
 
-    if (!chunks.length && lastError) {
-      console.error('[chat] AI returned no text, error:', lastError);
-      return reply.status(500).send({ error: lastError });
+    if (!chunks.length) {
+      if (lastError) {
+        console.error('[chat] AI returned no text, error:', lastError);
+        return reply.status(500).send({ error: lastError });
+      }
+      // No text and no error — agent was likely disconnected, give a helpful message
+      const agentConnected = gateway.isConnected(thread.serverId);
+      if (!agentConnected) {
+        return reply.send({
+          threadId: params.threadId,
+          response: 'The AI has no response because no agent is connected to this server. Pair your FiveM server first to enable file operations and full AI assistance. You can still ask general FiveM questions.',
+        });
+      }
+      return reply.send({
+        threadId: params.threadId,
+        response: 'The AI did not return a response. Please try again.',
+      });
     }
 
     return { threadId: params.threadId, response: chunks.join('') };

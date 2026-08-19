@@ -3,7 +3,7 @@ import { prisma } from '@fivem-ai/db';
 import type { ChatMessage, ResourceIndex } from '@prisma/client';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'omni-key',
+  apiKey: proces..._KEY || 'omni-key',
   baseURL: process.env.OMNIROUTE_BASE_URL || 'http://localhost:20128/v1',
 });
 
@@ -15,6 +15,7 @@ export interface ChatContext {
   resources: ResourceIndex[];
   previousMessages: ChatMessage[];
   selectedSkills?: string[];
+  isAgentConnected?: boolean;
 }
 
 // Predefined skills
@@ -94,6 +95,10 @@ function buildSystemPrompt(context: ChatContext): string {
 ${skill.description}
 ${skill.systemPrompt}`).join('\n');
 
+  const agentStatus = context.isAgentConnected
+    ? '\n\n## Agent Status\nYour file-operation tools are available because an agent is connected to this server.'
+    : '\n\n## Agent Status\nNo agent is currently connected to this server. File-operation tools (read_remote_file, list_remote_directory, get_resource_index, propose_remote_write) will NOT work. You can still answer questions about FiveM configuration, explain errors, and provide general guidance without using any tools.';
+
   return `You are a FiveM development assistant helping a server owner make changes to their ${context.framework} server.
 
 ## Server Information
@@ -103,7 +108,7 @@ ${skill.systemPrompt}`).join('\n');
 ## Active Skills${skillsSection}
 
 ## Available Resources
-${resourcesList || 'No resources scanned yet'}
+${resourcesList || 'No resources scanned yet'}${agentStatus}
 
 ## Your Capabilities
 You can help with:
@@ -116,26 +121,11 @@ You can help with:
 ## Important Rules
 1. NEVER claim you've made changes to files - you can only PROPOSE changes
 2. When proposing a change, explain what files will be modified and why
-3. Always use the read_remote_file tool to see current content before proposing changes
+3. Always use the read_remote_file tool to see current content before proposing changes (ONLY if agent is connected)
 4. Be concise - FiveM developers want quick answers
 5. If you're unsure which resource contains something, ask clarifying questions
 6. Use framework-specific conventions (${context.framework})
-
-## Available Tools
-- read_remote_file: Read a file from the server
-- list_remote_directory: List files in a directory
-- get_resource_index: Get detailed info about a specific resource
-- propose_remote_write: PROPOSE a file change (does not write yet)
-
-## Format for Proposing Changes
-When you want to change a file, output in this format:
-
-\`\`\`propose
-file: path/to/file.lua
-reason: Brief explanation of why this change
-\`\`\`
-
-The actual diff will be generated and shown to the user for approval.`;
+7. If the agent is NOT connected, do NOT attempt to use any file-operation tools — just answer directly`;
 }
 
 function formatMessages(messages: ChatMessage[]): any[] {
@@ -195,72 +185,75 @@ export async function* streamChat(
     { role: 'user', content: userMessage },
   ];
 
+  // Only provide tools if agent is connected
+  const tools = context.isAgentConnected ? [
+    {
+      type: 'function' as const,
+      function: {
+        name: 'read_remote_file',
+        description: 'Read a file from the FiveM server.',
+        parameters: {
+          type: 'object' as const,
+          properties: {
+            path: { type: 'string', description: 'Relative path from server-data' },
+          },
+          required: ['path'],
+        },
+      },
+    },
+    {
+      type: 'function' as const,
+      function: {
+        name: 'list_remote_directory',
+        description: 'List files and directories.',
+        parameters: {
+          type: 'object' as const,
+          properties: {
+            path: { type: 'string', description: 'Relative path from server-data' },
+          },
+          required: ['path'],
+        },
+      },
+    },
+    {
+      type: 'function' as const,
+      function: {
+        name: 'get_resource_index',
+        description: 'Get detailed info about a resource.',
+        parameters: {
+          type: 'object' as const,
+          properties: {
+            resourceName: { type: 'string' },
+          },
+          required: ['resourceName'],
+        },
+      },
+    },
+    {
+      type: 'function' as const,
+      function: {
+        name: 'propose_remote_write',
+        description: 'PROPOSE a file change - does not write to disk.',
+        parameters: {
+          type: 'object' as const,
+          properties: {
+            path: { type: 'string' },
+            newContent: { type: 'string' },
+            reason: { type: 'string' },
+          },
+          required: ['path', 'newContent', 'reason'],
+        },
+      },
+    },
+  ] : undefined;
+
   try {
-    console.log('[streamChat] calling OmniRoute with model auto/best-coding');
+    console.log('[streamChat] calling OmniRoute with model auto/best-coding, tools:', tools ? 'enabled' : 'disabled');
     const stream = await openai.chat.completions.create({
       model: 'auto/best-coding',
       messages,
       stream: true,
-      tools: [
-        {
-          type: 'function' as const,
-          function: {
-            name: 'read_remote_file',
-            description: 'Read a file from the FiveM server.',
-            parameters: {
-              type: 'object' as const,
-              properties: {
-                path: { type: 'string', description: 'Relative path from server-data' },
-              },
-              required: ['path'],
-            },
-          },
-        },
-        {
-          type: 'function' as const,
-          function: {
-            name: 'list_remote_directory',
-            description: 'List files and directories.',
-            parameters: {
-              type: 'object' as const,
-              properties: {
-                path: { type: 'string', description: 'Relative path from server-data' },
-              },
-              required: ['path'],
-            },
-          },
-        },
-        {
-          type: 'function' as const,
-          function: {
-            name: 'get_resource_index',
-            description: 'Get detailed info about a resource.',
-            parameters: {
-              type: 'object' as const,
-              properties: {
-                resourceName: { type: 'string' },
-              },
-              required: ['resourceName'],
-            },
-          },
-        },
-        {
-          type: 'function' as const,
-          function: {
-            name: 'propose_remote_write',
-            description: 'PROPOSE a file change - does not write to disk.',
-            parameters: {
-              type: 'object' as const,
-              properties: {
-                path: { type: 'string' },
-                newContent: { type: 'string' },
-                reason: { type: 'string' },
-              },
-              required: ['path', 'newContent', 'reason'],
-            },
-          },
-        },
-      ],
+      ...(tools ? { tools } : {}),
     });
 
     for await (const chunk of stream) {
