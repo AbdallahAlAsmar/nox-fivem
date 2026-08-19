@@ -1,10 +1,10 @@
 // Desktop app API — talks directly to the orchestrator HTTP API
 // Uses Clerk session token for auth when available
 
-// The orchestrator runs on localhost:3001 (web app uses 3000)
+// The orchestrator runs on VPS (Oracle 158.101.167.118) via Cloudflare tunnel
 // Override at build time with VITE_ORCHESTRATOR_URL env var
 const ORCHESTRATOR_URL = import.meta.env?.VITE_ORCHESTRATOR_URL
-  || 'http://localhost:3001'
+  || 'https://nations-organizing-cheapest-acute.trycloudflare.com'
 
 // ─── Clerk auth helpers ────────────────────────────────────────────────────────
 

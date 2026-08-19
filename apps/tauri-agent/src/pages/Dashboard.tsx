@@ -40,7 +40,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion'
 import * as api from '../api'
 
-const ORC = 'http://localhost:3001'
+const ORC = 'https://nations-organizing-cheapest-acute.trycloudflare.com'
 
 interface ServerCardData {
   id: string
