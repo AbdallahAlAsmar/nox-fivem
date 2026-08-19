@@ -340,6 +340,8 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
   const [newServerDir, setNewServerDir] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [inspectResult, setInspectResult] = useState<{ hasServerCfg: boolean; hasResources: boolean; frameworkHint?: string; error?: string } | null>(null)
+  const [isInspecting, setIsInspecting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   const fetchServers = useCallback(async () => {
@@ -380,6 +382,10 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
 
   const handleAddServer = async () => {
     if (!newServerName.trim() || !newServerDir.trim()) return
+    if (!inspectResult?.hasServerCfg) {
+      setCreateError('server.cfg not found in the selected folder. Please select a valid FiveM server-data directory.')
+      return
+    }
     setIsCreating(true)
     setCreateError(null)
     try {
@@ -389,7 +395,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
         body: JSON.stringify({
           name: newServerName,
           directory: newServerDir,
-          framework: 'fxserver',
+          framework: inspectResult.frameworkHint?.toLowerCase() || 'fxserver',
         }),
       })
       if (!res.ok) {
@@ -400,6 +406,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
       setToast(`Server "${newServerName}" created successfully!`)
       setNewServerName('')
       setNewServerDir('')
+      setInspectResult(null)
       setShowAddModal(false)
       await fetchServers()
     } catch (e) {
@@ -414,6 +421,22 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
       const result = await invoke('open_folder_cmd') as string
       if (result && result.length > 0) {
         setNewServerDir(result)
+        setInspectResult(null)
+        // Inspect the directory automatically
+        setIsInspecting(true)
+        try {
+          const inspect = await invoke<{ has_server_cfg: boolean; has_resources_folder: boolean; framework_hint: string | null; error: string | null }>('inspect_server_dir', { path: result })
+          setInspectResult({
+            hasServerCfg: inspect.has_server_cfg,
+            hasResources: inspect.has_resources_folder,
+            frameworkHint: inspect.framework_hint ?? undefined,
+            error: inspect.error ?? undefined,
+          })
+        } catch (e) {
+          setInspectResult({ hasServerCfg: false, hasResources: false, error: String(e) })
+        } finally {
+          setIsInspecting(false)
+        }
         setToast('Folder selected')
       } else {
         setToast('No folder selected')
@@ -696,7 +719,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                   <input
                     type="text"
                     value={newServerDir}
-                    onChange={(e) => setNewServerDir(e.target.value)}
+                    onChange={(e) => { setNewServerDir(e.target.value); setInspectResult(null) }}
                     placeholder="C:/FXServer/server-data"
                     className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors"
                   />
@@ -708,6 +731,46 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                     Browse
                   </button>
                 </div>
+
+                {isInspecting && (
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)] mt-1.5">Inspecting folder…</p>
+                )}
+
+                {inspectResult && !isInspecting && (
+                  <div className={`mt-2 p-2.5 border ${
+                    inspectResult.hasServerCfg
+                      ? 'border-[rgba(34,197,94,0.2)] bg-[rgba(34,197,94,0.05)]'
+                      : 'border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.05)]'
+                  }`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      {inspectResult.hasServerCfg
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" />
+                        : <AlertCircle className="w-3.5 h-3.5 text-[#ef4444]" />
+                      }
+                      <span className={`font-mono text-[10px] uppercase tracking-wider ${
+                        inspectResult.hasServerCfg ? 'text-[#22c55e]' : 'text-[#ef4444]'
+                      }`}>
+                        {inspectResult.hasServerCfg ? 'Valid FiveM server' : 'Invalid server folder'}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">
+                        {inspectResult.hasServerCfg ? '✓' : '✗'} server.cfg {inspectResult.hasServerCfg ? 'found' : 'not found'}
+                      </p>
+                      <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">
+                        {inspectResult.hasResources ? '✓' : '✗'} resources/ {inspectResult.hasResources ? 'found' : 'not found'}
+                      </p>
+                      {inspectResult.frameworkHint && (
+                        <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">
+                          Framework: {inspectResult.frameworkHint}
+                        </p>
+                      )}
+                      {inspectResult.error && !inspectResult.hasServerCfg && (
+                        <p className="font-mono text-[10px] text-[#ef4444] mt-1">{inspectResult.error}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {createError && (
@@ -724,7 +787,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
               </button>
               <button
                 onClick={handleAddServer}
-                disabled={isCreating || !newServerName.trim() || !newServerDir.trim()}
+                disabled={isCreating || !newServerName.trim() || !newServerDir.trim() || !inspectResult?.hasServerCfg}
                 className="flex-1 px-4 py-2.5 bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-wider font-medium hover:opacity-85 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 {isCreating ? 'Creating…' : 'Create Server'}
