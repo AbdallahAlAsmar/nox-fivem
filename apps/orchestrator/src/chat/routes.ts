@@ -41,8 +41,8 @@ export async function registerChatRoutes(fastify: FastifyInstance) {
 
     if (!chunks.length) {
       if (lastError) {
-        console.error('[chat] AI returned no text, error:', lastError);
-        return reply.status(500).send({ error: lastError });
+        console.log('[chat] AI returned no text, error:', lastError);
+        return reply.send({ threadId: params.threadId, response: lastError });
       }
       // No text and no error — agent was likely disconnected, give a helpful message
       const agentConnected = gateway.isConnected(thread.serverId);
