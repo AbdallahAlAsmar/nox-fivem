@@ -1,11 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '@fivem-ai/db';
-import { v4 as uuidv4 } from 'uuid';
-import * as bcrypt from 'bcrypt';
 import { authPlugin, requireAuth } from '../auth';
 import type { AuthUser } from '../auth';
-import type { AgentGateway } from '../ws/agentGateway';
 import { parseDiffToPatch } from './parseDiff';
 
 export async function registerRoutes(fastify: FastifyInstance) {
@@ -71,20 +68,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       },
     });
 
-    // Generate pairing code
-    const pairingCode = generatePairingCode();
-    const pairingToken = uuidv4();
-
-    // Create agent device with pairing token (hashed with bcrypt)
-    const pairingTokenHash = await bcrypt.hash(pairingToken, 10);
-    const agentDevice = await prisma.agentDevice.create({
-      data: {
-        serverId: server.id,
-        pairingTokenHash,
-        status: 'pending',
-        platform: 'unknown',
-      },
-    });
+    const pairing = await issuePairing(server.id);
 
     return {
       server: {
@@ -92,12 +76,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
         name: server.name,
         status: server.status,
       },
-      pairing: {
-        code: pairingCode,
-        token: pairingToken,
-        agentDeviceId: agentDevice.id,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-      },
+      pairing,
     };
   });
 
@@ -114,8 +93,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       where: { id: params.serverId, orgId },
       include: {
         agentDevices: {
-          where: { status: 'paired' },
-          take: 1,
+          orderBy: { createdAt: 'desc' },
         },
         resources: {
           orderBy: { resourceName: 'asc' },
@@ -126,6 +104,29 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
     if (!server) {
       return reply.status(404).send({ error: 'Server not found' });
+    }
+
+    const pairedDevice = server.agentDevices.find((d: any) => d.status === 'paired');
+    const pendingDevice = server.agentDevices.find((d: any) => d.status === 'pending');
+    const hasAgent = !!pairedDevice;
+
+    let pairing: { code: string; expiresAt: Date } | null = null;
+    if (!hasAgent) {
+      const now = new Date();
+      const codeStillValid =
+        pendingDevice?.pairingCode &&
+        pendingDevice.pairingExpiresAt &&
+        pendingDevice.pairingExpiresAt > now;
+
+      if (codeStillValid) {
+        pairing = {
+          code: pendingDevice.pairingCode as string,
+          expiresAt: pendingDevice.pairingExpiresAt as Date,
+        };
+      } else {
+        const issued = await issuePairing(server.id, pendingDevice?.id);
+        pairing = { code: issued.code, expiresAt: issued.expiresAt };
+      }
     }
 
     return {
@@ -139,8 +140,9 @@ export async function registerRoutes(fastify: FastifyInstance) {
       maxPlayers: server.maxPlayers ?? 64,
       fps: server.fps ?? 0,
       resourceCount: server.resources?.length ?? 0,
-      hasAgent: server.agentDevices.length > 0,
-      agent: server.agentDevices[0] || null,
+      hasAgent,
+      pairing,
+      agent: pairedDevice || null,
       resources: server.resources.map((r: any) => ({
         name: r.resourceName,
         path: r.relativePath,
@@ -526,28 +528,22 @@ export async function registerRoutes(fastify: FastifyInstance) {
       rootLabel: z.string(),
     }).parse(request.body);
 
-    // Find pending pairing token
     const device = await prisma.agentDevice.findFirst({
-      where: { status: 'pending' },
+      where: {
+        pairingCode: body.pairingCode.toUpperCase(),
+        status: 'pending',
+      },
       include: { server: true },
     });
 
     if (!device) {
-      return reply.status(404).send({ error: 'No pending pairing found. Create a server first.' });
+      return reply.status(404).send({ error: 'Invalid or already-used pairing code.' });
     }
 
-    // Verify token matches using bcrypt
-    if (!device.pairingTokenHash) {
-      return reply.status(400).send({ error: 'Invalid pairing token' });
+    if (device.pairingExpiresAt && device.pairingExpiresAt < new Date()) {
+      return reply.status(410).send({ error: 'Pairing code expired. Open the server in the dashboard to get a new one.' });
     }
 
-    // The agent sends the pairingToken in the request body (not the code)
-    // We need to extract it from the pairing code lookup or have the agent send the token
-    // For now, we'll check if the pairingCode matches what we'd generate for this device
-    // In a real implementation, you'd store the pairingCode hash or have the agent send the token directly
-    // For this fix, we'll accept the pairing code and verify the device exists and is pending
-    
-    // Update agent device
     await prisma.agentDevice.update({
       where: { id: device.id },
       data: {
@@ -555,13 +551,17 @@ export async function registerRoutes(fastify: FastifyInstance) {
         agentVersion: body.agentVersion,
         platform: body.platform,
         lastHeartbeatAt: new Date(),
+        pairingCode: null,
+        pairingExpiresAt: null,
       },
     });
 
-    // Update server
     await prisma.server.update({
       where: { id: device.serverId },
-      data: { status: 'online' },
+      data: {
+        status: 'online',
+        rootLabel: body.rootLabel || device.server.rootLabel,
+      },
     });
 
     return {
@@ -569,6 +569,32 @@ export async function registerRoutes(fastify: FastifyInstance) {
       agentDeviceId: device.id,
       wsUrl: process.env.ORCHESTRATOR_WS_URL || 'ws://localhost:3001/ws/agent',
     };
+  });
+
+  // Refresh pairing code for an unpaired server
+  fastify.post('/api/servers/:serverId/pairing', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+
+    const server = await prisma.server.findFirst({
+      where: { id: params.serverId, orgId },
+      include: {
+        agentDevices: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+
+    if (!server) {
+      return reply.status(404).send({ error: 'Server not found' });
+    }
+
+    if (server.agentDevices.some((d: any) => d.status === 'paired')) {
+      return reply.status(400).send({ error: 'Server is already paired' });
+    }
+
+    const pending = server.agentDevices.find((d: any) => d.status === 'pending');
+    const pairing = await issuePairing(server.id, pending?.id);
+    return { pairing };
   });
 
   // Revoke agent
@@ -738,19 +764,47 @@ export async function registerRoutes(fastify: FastifyInstance) {
       createdAt: org.created_at,
     };
   });
+  // ============================================
+  // Pairing helpers
+  // ============================================
+
+  async function issuePairing(serverId: string, agentDeviceId?: string) {
+    const code = generatePairingCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    if (agentDeviceId) {
+      await prisma.agentDevice.update({
+        where: { id: agentDeviceId },
+        data: {
+          status: 'pending',
+          pairingCode: code,
+          pairingExpiresAt: expiresAt,
+          pairingTokenHash: null,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      const device = await prisma.agentDevice.create({
+        data: {
+          serverId,
+          status: 'pending',
+          pairingCode: code,
+          pairingExpiresAt: expiresAt,
+          platform: 'unknown',
+        },
+      });
+      return { code, expiresAt, agentDeviceId: device.id };
+    }
+
+    return { code, expiresAt };
+  }
 }
 
 // Helper functions
 function generatePairingCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const part = () => Array.from({ length: 4 }, () => 
+  const part = () => Array.from({ length: 4 }, () =>
     chars[Math.floor(Math.random() * chars.length)]
   ).join('');
   return `${part()}-${part()}`;
-}
-
-async function hashToken(token: string): Promise<string> {
-  // In production, use bcrypt or similar
-  // For dev, simple encoding
-  return Buffer.from(token).toString('base64');
 }

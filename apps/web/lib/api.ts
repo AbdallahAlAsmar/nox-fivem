@@ -141,10 +141,18 @@ export async function fetchPlayers(serverId: string): Promise<any[]> {
 }
 
 /** Ban a player */
-export async function banPlayer(serverId: string, playerId: string, reason?: string): Promise<any> {
+export async function banPlayer(
+  serverId: string,
+  playerId: string,
+  reason?: string,
+): Promise<any> {
   const res = await fetch(
     `${ORCHESTRATOR_URL}/api/servers/${serverId}/players/${playerId}/ban`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) },
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    },
   );
   if (!res.ok) throw new Error(`Failed to ban player: ${res.status}`);
   return res.json();

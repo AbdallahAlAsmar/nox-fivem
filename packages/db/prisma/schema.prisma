@@ -177,6 +177,8 @@ model AgentDevice {
   serverId         String
   name             String?
   pairingTokenHash String?
+  pairingCode      String?  @unique
+  pairingExpiresAt DateTime?
   publicKey        String?
   agentVersion     String?
   platform         String   @default("unknown")

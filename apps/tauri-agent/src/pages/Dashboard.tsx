@@ -34,12 +34,15 @@ import {
   Users as UsersIcon,
   CreditCard,
   X,
+  Loader2,
+  Download,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
+import * as api from '../api'
 
 const ORC = 'http://localhost:3001'
 
-interface Server {
+interface ServerCardData {
   id: string
   name: string
   directory?: string
@@ -51,6 +54,8 @@ interface Server {
   maxPlayers: number
   fps: number
   lastSeenAt?: string
+  pairingCode?: string
+  pairingExpiresAt?: string
 }
 
 interface Change {
@@ -146,10 +151,10 @@ function ServerCard({
   onStart,
   onStop,
 }: {
-  server: Server
+  server: ServerCardData
   onScan: (id: string) => void
-  onStart: (s: Server) => void
-  onStop: (s: Server) => void
+  onStart: (server: ServerCardData) => void
+  onStop: (server: ServerCardData) => void
 }) {
   const [scanning, setScanning] = useState(false)
 
@@ -163,7 +168,7 @@ function ServerCard({
   }
 
   return (
-    <div className="group bg-[#16161E] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] transition-colors duration-100">
+    <div className="group block bg-[#16161E] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] transition-colors duration-100">
       {/* Header row */}
       <div className="flex items-start justify-between px-5 pt-4 pb-3">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -176,7 +181,7 @@ function ServerCard({
                 : 'bg-[#f59e0b] animate-pulse'
             }`}
           />
-          <h3 className="font-mono text-xs uppercase tracking-wider truncate text-white">
+          <h3 className="font-mono text-xs uppercase tracking-wider truncate group-hover:text-white transition-colors duration-100 text-white">
             {server.name}
           </h3>
         </div>
@@ -196,7 +201,9 @@ function ServerCard({
               </span>
             </div>
             <div className="font-mono text-sm text-white">
-              {server.playerCount}
+              {server.status === 'online' && server.hasAgent
+                ? server.playerCount
+                : '0'}
               <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)] ml-1">
                 /{server.maxPlayers}
               </span>
@@ -210,12 +217,12 @@ function ServerCard({
               </span>
             </div>
             <div className="font-mono text-sm text-white">
-              {server.status === 'online' ? server.fps : '—'}
+              {server.status === 'online' && server.hasAgent ? server.fps : '—'}
             </div>
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1">
-              <FileDiff className="w-3 h-3 text-[rgba(255,255,255,0.3)]" />
+              <Package className="w-3 h-3 text-[rgba(255,255,255,0.3)]" />
               <span className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)]">
                 Resources
               </span>
@@ -244,7 +251,7 @@ function ServerCard({
       {/* Quick actions */}
       <div className="flex border-t border-[rgba(255,255,255,0.06)]">
         <button
-          onClick={() => handleScan()}
+          onClick={handleScan}
           disabled={scanning || server.status !== 'online'}
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 disabled:opacity-30 disabled:cursor-not-allowed border-r border-[rgba(255,255,255,0.06)]"
         >
@@ -252,11 +259,17 @@ function ServerCard({
           Scan
         </button>
         <button
-          onClick={() => server.status === 'online' ? onStop(server) : onStart(server)}
+          onClick={() =>
+            server.status === 'online' ? onStop(server) : onStart(server)
+          }
           disabled={server.status === 'connecting'}
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 disabled:opacity-30 disabled:cursor-not-allowed border-r border-[rgba(255,255,255,0.06)]"
         >
-          {server.status === 'online' ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+          {server.status === 'online' ? (
+            <Square className="w-3 h-3" />
+          ) : (
+            <Play className="w-3 h-3" />
+          )}
           {server.status === 'online' ? 'Stop' : 'Start'}
         </button>
         <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 disabled:opacity-30 disabled:cursor-not-allowed">
@@ -312,7 +325,8 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         No servers yet
       </h2>
       <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mb-6 max-w-md mx-auto leading-[1.6]">
-        Add your first FiveM server to start chatting with AI and making changes safely.
+        Add your first FiveM server to start chatting with AI and making changes
+        safely.
       </p>
       <button
         onClick={onAdd}
@@ -331,7 +345,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps) {
-  const [servers, setServers] = useState<Server[]>([])
+  const [servers, setServers] = useState<ServerCardData[]>([])
   const [changes, setChanges] = useState<Change[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -340,16 +354,27 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
   const [newServerDir, setNewServerDir] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  const [inspectResult, setInspectResult] = useState<{ hasServerCfg: boolean; hasResources: boolean; frameworkHint?: string; error?: string } | null>(null)
+  const [inspectResult, setInspectResult] = useState<{
+    hasServerCfg: boolean
+    hasResources: boolean
+    frameworkHint?: string
+    error?: string
+  } | null>(null)
   const [isInspecting, setIsInspecting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
+  // Pairing modal state
+  const [pairingServer, setPairingServer] = useState<ServerCardData | null>(null)
+  const [pairingCode, setPairingCode] = useState<string | null>(null)
+  const [pairingLoading, setPairingLoading] = useState(false)
+  const [pairingError, setPairingError] = useState<string | null>(null)
+  const [pairingPath, setPairingPath] = useState('')
+  const [isPairing, setIsPairing] = useState(false)
+
   const fetchServers = useCallback(async () => {
     try {
-      const res = await fetch(`${ORC}/api/servers`)
-      if (!res.ok) throw new Error('Failed to fetch servers')
-      const data = await res.json()
-      setServers(data.servers || data)
+      const data = await api.fetchServers()
+      setServers(data as ServerCardData[])
       setError(null)
     } catch (e) {
       console.error('Fetch servers error:', e)
@@ -361,10 +386,8 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
 
   const fetchChanges = useCallback(async () => {
     try {
-      const res = await fetch(`${ORC}/api/changes`)
-      if (!res.ok) throw new Error('Failed to fetch changes')
-      const data = await res.json()
-      setChanges(data.changes || data)
+      const data = await api.fetchChanges()
+      setChanges(data)
     } catch (e) {
       console.error('Fetch changes error:', e)
     }
@@ -383,32 +406,40 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
   const handleAddServer = async () => {
     if (!newServerName.trim() || !newServerDir.trim()) return
     if (!inspectResult?.hasServerCfg) {
-      setCreateError('server.cfg not found in the selected folder. Please select a valid FiveM server-data directory.')
+      setCreateError(
+        'server.cfg not found in the selected folder. Please select a valid FiveM server-data directory.',
+      )
       return
     }
     setIsCreating(true)
     setCreateError(null)
     try {
-      const res = await fetch(`${ORC}/api/servers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newServerName,
-          directory: newServerDir,
-          framework: inspectResult.frameworkHint?.toLowerCase() || 'fxserver',
-        }),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to create server')
-      }
-      const data = await res.json()
-      setToast(`Server "${newServerName}" created successfully!`)
+      const result = await api.createServer(newServerName, newServerDir)
+      setToast(`Server "${newServerName}" created!`)
       setNewServerName('')
       setNewServerDir('')
       setInspectResult(null)
       setShowAddModal(false)
       await fetchServers()
+
+      // Auto-open pairing for the newly created server
+      const newServer = result.id
+        ? (servers.find((s) => s.id === result.id) || {
+            id: result.id,
+            name: newServerName,
+            status: 'offline' as const,
+            hasAgent: false,
+            resourceCount: 0,
+            playerCount: 0,
+            maxPlayers: 64,
+            fps: 0,
+            pairingCode: result.pairingCode,
+          })
+        : null
+      if (newServer) {
+        setPairingServer(newServer)
+        setPairingCode(newServer.pairingCode || null)
+      }
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : 'Failed to create server')
     } finally {
@@ -418,14 +449,20 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
 
   const handlePickDirectoryFromModal = async () => {
     try {
-      const result = await invoke('open_folder_cmd') as string
+      const result = (await invoke('open_folder_cmd')) as string
       if (result && result.length > 0) {
         setNewServerDir(result)
         setInspectResult(null)
-        // Inspect the directory automatically
         setIsInspecting(true)
         try {
-          const inspect = await invoke<{ has_server_cfg: boolean; has_resources_folder: boolean; framework_hint: string | null; error: string | null }>('inspect_server_dir', { path: result })
+          const inspect = (await invoke('inspect_server_dir', {
+            path: result,
+          })) as {
+            has_server_cfg: boolean
+            has_resources_folder: boolean
+            framework_hint: string | null
+            error: string | null
+          }
           setInspectResult({
             hasServerCfg: inspect.has_server_cfg,
             hasResources: inspect.has_resources_folder,
@@ -433,7 +470,11 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
             error: inspect.error ?? undefined,
           })
         } catch (e) {
-          setInspectResult({ hasServerCfg: false, hasResources: false, error: String(e) })
+          setInspectResult({
+            hasServerCfg: false,
+            hasResources: false,
+            error: String(e),
+          })
         } finally {
           setIsInspecting(false)
         }
@@ -449,10 +490,9 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     }
   }
 
-  const handleStartServer = async (server: Server) => {
+  const handleStartServer = async (server: ServerCardData) => {
     try {
-      const res = await fetch(`${ORC}/api/servers/${server.id}/start`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to start server')
+      await api.startServer(server.id)
       setToast(`Starting ${server.name}...`)
       setTimeout(() => setToast(null), 3000)
       await fetchServers()
@@ -462,10 +502,9 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     }
   }
 
-  const handleStopServer = async (server: Server) => {
+  const handleStopServer = async (server: ServerCardData) => {
     try {
-      const res = await fetch(`${ORC}/api/servers/${server.id}/stop`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to stop server')
+      await api.stopServer(server.id)
       setToast(`Stopping ${server.name}...`)
       setTimeout(() => setToast(null), 3000)
       await fetchServers()
@@ -475,35 +514,124 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     }
   }
 
+  const handlePickDirectoryForPairing = async () => {
+    try {
+      const result = (await invoke('open_folder_cmd')) as string
+      if (result && result.length > 0) {
+        setPairingPath(result)
+        setToast('Folder selected')
+      } else {
+        setToast('No folder selected')
+      }
+      setTimeout(() => setToast(null), 3000)
+    } catch (e) {
+      console.log('Could not open folder:', e)
+      setToast('Could not open folder dialog')
+      setTimeout(() => setToast(null), 3000)
+    }
+  }
+
+  const handlePairServer = async () => {
+    if (!pairingServer || !pairingCode || !pairingPath.trim()) return
+    setIsPairing(true)
+    setPairingError(null)
+    try {
+      const res = await fetch(`${ORC}/api/pairing/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pairingCode: pairingCode.toUpperCase(),
+          agentVersion: '1.0.0',
+          platform: 'windows',
+          rootLabel: pairingPath,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      setToast(`Server "${pairingServer.name}" paired successfully!`)
+      setPairingServer(null)
+      setPairingCode(null)
+      setPairingPath('')
+      setTimeout(() => setToast(null), 3000)
+      await fetchServers()
+    } catch (e) {
+      setPairingError(e instanceof Error ? e.message : 'Failed to pair server')
+    } finally {
+      setIsPairing(false)
+    }
+  }
+
+  const handleRegeneratePairing = async () => {
+    if (!pairingServer) return
+    setPairingLoading(true)
+    setPairingError(null)
+    try {
+      const pairing = await api.regeneratePairing(pairingServer.id)
+      setPairingCode(pairing.code)
+    } catch (e) {
+      setPairingError(
+        e instanceof Error ? e.message : 'Failed to regenerate pairing code',
+      )
+    } finally {
+      setPairingLoading(false)
+    }
+  }
+
   const displayServers = servers
   const hasError = !!error
   const allChanges = changes
 
   const totalServers = displayServers.length
-  const onlineServers = displayServers.filter((s) => s.status === 'online' && s.hasAgent).length
-  const pendingChanges = allChanges.filter((c: Change) => c.status === 'pending').length
+  const onlineServers = displayServers.filter(
+    (s) => s.status === 'online' && s.hasAgent,
+  ).length
+  const pendingChanges = allChanges.filter(
+    (c: Change) => c.status === 'pending',
+  ).length
 
   const activityItems: ActivityItem[] = [
-    ...allChanges.filter((c: Change) => c.status === 'pending').slice(0, 5).map((c: Change) => ({
-      id: `change_${c.id}`, type: 'change' as const, message: `AI proposed change to ${c.file}`,
-      serverName: c.serverName || 'Unknown', timestamp: new Date(c.createdAt).getTime(),
-    })),
-    ...allChanges.filter((c: Change) => c.status === 'applied').slice(0, 3).map((c: Change) => ({
-      id: `applied_${c.id}`, type: 'change' as const, message: `Applied change to ${c.file}`,
-      serverName: c.serverName || 'Unknown', timestamp: new Date(c.createdAt).getTime(),
-    })),
+    ...allChanges
+      .filter((c: Change) => c.status === 'pending')
+      .slice(0, 5)
+      .map((c: Change) => ({
+        id: `change_${c.id}`,
+        type: 'change' as const,
+        message: `AI proposed change to ${c.file}`,
+        serverName: c.serverName || 'Unknown',
+        timestamp: new Date(c.createdAt).getTime(),
+      })),
+    ...allChanges
+      .filter((c: Change) => c.status === 'applied')
+      .slice(0, 3)
+      .map((c: Change) => ({
+        id: `applied_${c.id}`,
+        type: 'change' as const,
+        message: `Applied change to ${c.file}`,
+        serverName: c.serverName || 'Unknown',
+        timestamp: new Date(c.createdAt).getTime(),
+      })),
   ]
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 8)
 
   if (activityItems.length < 3) {
-    displayServers.filter((s) => s.status === 'online' && s.hasAgent).slice(0, 3).forEach((s) => {
-      activityItems.push({
-        id: `heartbeat_${s.id}`, type: 'scan' as const,
-        message: `${s.name} heartbeat received`, serverName: s.name,
-        timestamp: s.lastSeenAt ? new Date(s.lastSeenAt).getTime() : Date.now() - 60000,
+    displayServers
+      .filter((s) => s.status === 'online' && s.hasAgent)
+      .slice(0, 3)
+      .forEach((s) => {
+        activityItems.push({
+          id: `heartbeat_${s.id}`,
+          type: 'scan' as const,
+          message: `${s.name} heartbeat received`,
+          serverName: s.name,
+          timestamp: s.lastSeenAt
+            ? new Date(s.lastSeenAt).getTime()
+            : Date.now() - 60000,
+        })
       })
-    })
   }
 
   return (
@@ -555,7 +683,11 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
             />
             <StatCard
               label="AI Messages"
-              value={allChanges.filter((c) => new Date(c.createdAt).toDateString() === new Date().toDateString()).length}
+              value={allChanges.filter(
+                (c) =>
+                  new Date(c.createdAt).toDateString() ===
+                  new Date().toDateString(),
+              ).length}
               icon={MessageSquare}
               color="text-[#5E6AD2]"
               sub="today"
@@ -564,8 +696,12 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
               label="Pending Changes"
               value={pendingChanges}
               icon={FileDiff}
-              color={pendingChanges > 0 ? 'text-[#f59e0b]' : 'text-[rgba(255,255,255,0.5)]'}
-              sub={pendingChanges > 0 ? 'awaiting review' : 'all applied'}
+              color={
+                pendingChanges > 0 ? 'text-[#f59e0b]' : 'text-[rgba(255,255,255,0.5)]'
+              }
+              sub={
+                pendingChanges > 0 ? 'awaiting review' : 'all applied'
+              }
             />
           </div>
         )}
@@ -637,7 +773,8 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                 Connection failed
               </h3>
               <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-1">
-                Could not connect to the orchestrator. Make sure it is running on port 3001.
+                Could not connect to the orchestrator. Make sure it is running
+                on port 3001.
               </p>
             </div>
             <button
@@ -667,7 +804,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                 server={server}
                 onScan={async (id) => {
                   try {
-                    await fetch(`${ORC}/api/servers/${id}/scan`, { method: 'POST' })
+                    await api.scanResources(id)
                     await fetchServers()
                   } catch (e) {
                     setToast('Scan failed')
@@ -685,10 +822,15 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
       {/* Add Server Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80" onClick={() => setShowAddModal(false)} />
+          <div
+            className="absolute inset-0 bg-black/80"
+            onClick={() => setShowAddModal(false)}
+          />
           <div className="relative w-full max-w-lg bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-mono text-sm uppercase tracking-[0.2em] text-white">Add New Server</h3>
+              <h3 className="font-mono text-sm uppercase tracking-[0.2em] text-white">
+                Add New Server
+              </h3>
               <button
                 onClick={() => setShowAddModal(false)}
                 className="text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
@@ -719,7 +861,10 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                   <input
                     type="text"
                     value={newServerDir}
-                    onChange={(e) => { setNewServerDir(e.target.value); setInspectResult(null) }}
+                    onChange={(e) => {
+                      setNewServerDir(e.target.value)
+                      setInspectResult(null)
+                    }}
                     placeholder="C:/FXServer/server-data"
                     className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors"
                   />
@@ -733,41 +878,60 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                 </div>
 
                 {isInspecting && (
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)] mt-1.5">Inspecting folder…</p>
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)] mt-1.5">
+                    Inspecting folder…
+                  </p>
                 )}
 
                 {inspectResult && !isInspecting && (
-                  <div className={`mt-2 p-2.5 border ${
-                    inspectResult.hasServerCfg
-                      ? 'border-[rgba(34,197,94,0.2)] bg-[rgba(34,197,94,0.05)]'
-                      : 'border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.05)]'
-                  }`}>
+                  <div
+                    className={`mt-2 p-2.5 border ${
+                      inspectResult.hasServerCfg
+                        ? 'border-[rgba(34,197,94,0.2)] bg-[rgba(34,197,94,0.05)]'
+                        : 'border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.05)]'
+                    }`}
+                  >
                     <div className="flex items-center gap-1.5 mb-1">
-                      {inspectResult.hasServerCfg
-                        ? <CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" />
-                        : <AlertCircle className="w-3.5 h-3.5 text-[#ef4444]" />
-                      }
-                      <span className={`font-mono text-[10px] uppercase tracking-wider ${
-                        inspectResult.hasServerCfg ? 'text-[#22c55e]' : 'text-[#ef4444]'
-                      }`}>
-                        {inspectResult.hasServerCfg ? 'Valid FiveM server' : 'Invalid server folder'}
+                      {inspectResult.hasServerCfg ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 text-[#ef4444]" />
+                      )}
+                      <span
+                        className={`font-mono text-[10px] uppercase tracking-wider ${
+                          inspectResult.hasServerCfg
+                            ? 'text-[#22c55e]'
+                            : 'text-[#ef4444]'
+                        }`}
+                      >
+                        {inspectResult.hasServerCfg
+                          ? 'Valid FiveM server'
+                          : 'Invalid server folder'}
                       </span>
                     </div>
                     <div className="space-y-0.5">
                       <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">
-                        {inspectResult.hasServerCfg ? '✓' : '✗'} server.cfg {inspectResult.hasServerCfg ? 'found' : 'not found'}
+                        {inspectResult.hasServerCfg ? '✓' : '✗'} server.cfg{' '}
+                        {inspectResult.hasServerCfg ? 'found' : 'not found'}
                       </p>
                       <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">
-                        {inspectResult.hasResources ? '✓' : '✗'} resources/ {inspectResult.hasResources ? 'found' : 'not found'}
+                        {inspectResult.hasResources
+                          ? '✓'
+                          : '✗'}{' '}
+                        resources/{' '}
+                        {inspectResult.hasResources ? 'found' : 'not found'}
                       </p>
                       {inspectResult.frameworkHint && (
                         <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">
                           Framework: {inspectResult.frameworkHint}
                         </p>
                       )}
-                      {inspectResult.error && !inspectResult.hasServerCfg && (
-                        <p className="font-mono text-[10px] text-[#ef4444] mt-1">{inspectResult.error}</p>
-                      )}
+                      {inspectResult.error &&
+                        !inspectResult.hasServerCfg && (
+                          <p className="font-mono text-[10px] text-[#ef4444] mt-1">
+                            {inspectResult.error}
+                          </p>
+                        )}
                     </div>
                   </div>
                 )}
@@ -787,12 +951,205 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
               </button>
               <button
                 onClick={handleAddServer}
-                disabled={isCreating || !newServerName.trim() || !newServerDir.trim() || !inspectResult?.hasServerCfg}
+                disabled={
+                  isCreating ||
+                  !newServerName.trim() ||
+                  !newServerDir.trim() ||
+                  !inspectResult?.hasServerCfg
+                }
                 className="flex-1 px-4 py-2.5 bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-wider font-medium hover:opacity-85 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 {isCreating ? 'Creating…' : 'Create Server'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pairing Modal */}
+      {pairingServer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/80"
+            onClick={() => {
+              setPairingServer(null)
+              setPairingCode(null)
+              setPairingPath('')
+              setPairingError(null)
+            }}
+          />
+          <div className="relative w-full max-w-lg bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.3)] flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-[#22c55e]" />
+                </div>
+                <div>
+                  <h3 className="font-mono text-sm uppercase tracking-[0.2em] text-white">
+                    Connect Desktop Agent
+                  </h3>
+                  <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-0.5">
+                    Link the NOX agent to{' '}
+                    <span className="font-mono text-[rgba(255,255,255,0.6)]">
+                      {pairingServer.name}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setPairingServer(null)
+                  setPairingCode(null)
+                  setPairingPath('')
+                  setPairingError(null)
+                }}
+                className="text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Step 1: Directory */}
+              <div className="border border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.06)] p-4">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-[rgba(94,106,210,0.06)] border border-[rgba(94,106,210,0.3)] flex items-center justify-center">
+                    <span className="font-mono text-[10px] font-medium text-[#5E6AD2]">
+                      1
+                    </span>
+                  </div>
+                  <FolderOpen className="w-3.5 h-3.5 text-[#5E6AD2]" />
+                  <h4 className="font-mono text-xs uppercase tracking-[0.12em] text-white">
+                    Select Server Directory
+                  </h4>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={pairingPath}
+                    onChange={(e) => setPairingPath(e.target.value)}
+                    placeholder="C:/FXServer/server-data"
+                    className="flex-1 px-3 py-2 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors"
+                  />
+                  <button
+                    onClick={handlePickDirectoryForPairing}
+                    className="px-3 py-2 bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.1)] text-[rgba(255,255,255,0.6)] hover:text-white font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-2"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5" />
+                    Browse
+                  </button>
+                </div>
+                {pairingPath && (
+                  <p className="font-mono text-[10px] text-[rgba(34,197,94,0.7)] mt-1.5">
+                    ✓ {pairingPath}
+                  </p>
+                )}
+              </div>
+
+              {/* Step 2: Pairing Code */}
+              <div className="border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)] p-4">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-[rgba(245,158,11,0.06)] border border-[rgba(245,158,11,0.3)] flex items-center justify-center">
+                    <span className="font-mono text-[10px] font-medium text-[#f59e0b]">
+                      2
+                    </span>
+                  </div>
+                  <Download className="w-3.5 h-3.5 text-[#f59e0b]" />
+                  <h4 className="font-mono text-xs uppercase tracking-[0.12em] text-white">
+                    Pairing Code
+                  </h4>
+                </div>
+                {pairingError && (
+                  <p className="font-mono text-xs text-[#ef4444] mb-2">
+                    {pairingError}
+                  </p>
+                )}
+                {pairingCode ? (
+                  <div className="bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] p-3 flex items-center justify-between gap-3">
+                    <code className="font-mono text-sm text-[#5E6AD2] tracking-widest">
+                      {pairingCode}
+                    </code>
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(pairingCode!)
+                        setToast('Code copied!')
+                        setTimeout(() => setToast(null), 2000)
+                      }}
+                      className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white transition-colors duration-100 flex-shrink-0 px-2 py-1 border border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)]"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                ) : pairingLoading ? (
+                  <div className="flex items-center gap-2 text-[rgba(255,255,255,0.4)]">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="font-mono text-xs">
+                      Generating code…
+                    </span>
+                  </div>
+                ) : null}
+                {!pairingCode && !pairingLoading && (
+                  <button
+                    onClick={handleRegeneratePairing}
+                    className="font-mono text-xs text-[rgba(255,255,255,0.5)] hover:text-white transition-colors"
+                  >
+                    Generate pairing code
+                  </button>
+                )}
+              </div>
+
+              {/* Step 3: Connect */}
+              <div className="border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] p-4">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-[rgba(34,197,94,0.06)] border border-[rgba(34,197,94,0.3)] flex items-center justify-center">
+                    <span className="font-mono text-[10px] font-medium text-[#22c55e]">
+                      3
+                    </span>
+                  </div>
+                  <Zap className="w-3.5 h-3.5 text-[#22c55e]" />
+                  <h4 className="font-mono text-xs uppercase tracking-[0.12em] text-white">
+                    Connect
+                  </h4>
+                </div>
+                <p className="font-sans text-xs text-[rgba(255,255,255,0.5)] leading-[1.6] mb-3">
+                  Click connect to pair this server with the NOX desktop agent.
+                  The agent will scan your server files and enable AI chat.
+                </p>
+                <button
+                  onClick={handlePairServer}
+                  disabled={
+                    isPairing ||
+                    !pairingCode ||
+                    !pairingPath.trim()
+                  }
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPairing ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Connecting…
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5" />
+                      Connect Agent
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setPairingServer(null)
+                setPairingCode(null)
+                setPairingPath('')
+                setPairingError(null)
+              }}
+              className="w-full mt-4 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white py-2 transition-colors"
+            >
+              I'll do this later
+            </button>
           </div>
         </div>
       )}
