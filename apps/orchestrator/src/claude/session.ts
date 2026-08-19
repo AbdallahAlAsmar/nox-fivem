@@ -3,7 +3,7 @@ import { prisma } from '@fivem-ai/db';
 import type { ChatMessage, ResourceIndex } from '@prisma/client';
 
 const openai = new OpenAI({
-  apiKey: proces..._KEY || 'omni-key',
+  apiKey: process.env.OMNIROUTE_API_KEY || 'omni-key',
   baseURL: process.env.OMNIROUTE_BASE_URL || 'http://localhost:20128/v1',
 });
 
