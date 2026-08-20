@@ -8,7 +8,7 @@ import {
 import { motion } from 'framer-motion'
 import { useClerk } from '../contexts/ClerkContext'
 
-const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
+const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
 
 export default function AccountPage() {
   const { user, signOut } = useClerk()

@@ -40,7 +40,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion'
 import * as api from '../api'
 
-const ORC = import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
+const ORC = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
 
 interface ServerCardData {
   id: string

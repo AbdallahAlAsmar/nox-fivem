@@ -306,7 +306,7 @@ function InstallResourceHandler() {
       const resource = (e as CustomEvent).detail as FiveMResource
       setMessage(`Requesting AI to install ${resource.name}...`)
       // Dispatch to orchestrator via API
-      fetch(`${import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'}/api/threads/thread_local/chat`, {
+      fetch(`${import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/threads/thread_local/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

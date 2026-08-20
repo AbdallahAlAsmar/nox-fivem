@@ -25,7 +25,7 @@ export default function Players({ serverId }: { serverId?: string }) {
   const [banReason, setBanReason] = useState('')
   const [showBanModal, setShowBanModal] = useState(false)
   const [actionResult, setActionResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
+const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
   const effectiveServerId = serverId || 'local'
 
   const loadPlayers = async () => {
