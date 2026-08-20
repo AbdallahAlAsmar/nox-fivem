@@ -36,7 +36,7 @@ export default function ServerConnectPage() {
     const load = async () => {
       try {
         const ORCH_URL =
-          process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://localhost:3001';
+          process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com';
         const res = await fetch(`${ORCH_URL}/api/servers/${serverId}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -78,7 +78,7 @@ export default function ServerConnectPage() {
     setPairingError(null);
     try {
       const ORCH_URL =
-        process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://localhost:3001';
+        process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com';
       const res = await fetch(
         `${ORCH_URL}/api/servers/${serverId}/pairing`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' } },
