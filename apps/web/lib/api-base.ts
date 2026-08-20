@@ -1,11 +1,11 @@
-const ORCHESTRATOR_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com';
+const ORCHESTRATOR_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || '/api/orchestrator';
 
 /**
  * Fetch servers from orchestrator
  */
 export async function fetchServers(): Promise<any[]> {
   try {
-    const response = await fetch(`${ORCHESTRATOR_URL}/api/servers`, {
+    const response = await fetch(`${ORCHESTRATOR_URL}/servers`, {
       headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) return [];
@@ -20,7 +20,7 @@ export async function fetchServers(): Promise<any[]> {
  */
 export async function fetchServer(serverId: string): Promise<any> {
   try {
-    const response = await fetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}`, {
+    const response = await fetch(`${ORCHESTRATOR_URL}/servers/${serverId}`, {
       headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) return null;
@@ -35,7 +35,7 @@ export async function fetchServer(serverId: string): Promise<any> {
  */
 export async function fetchMessages(threadId: string): Promise<any[]> {
   try {
-    const response = await fetch(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`, {
+    const response = await fetch(`${ORCHESTRATOR_URL}/threads/${threadId}/messages`, {
       headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) return [];
@@ -50,7 +50,7 @@ export async function fetchMessages(threadId: string): Promise<any[]> {
  */
 export async function fetchChanges(serverId: string): Promise<any[]> {
   try {
-    const response = await fetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}/changes`, {
+    const response = await fetch(`${ORCHESTRATOR_URL}/servers/${serverId}/changes`, {
       headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) return [];
@@ -64,7 +64,7 @@ export async function fetchChanges(serverId: string): Promise<any[]> {
  * Create a new server
  */
 export async function createServer(name: string): Promise<{ id: string; pairingCode: string }> {
-  const response = await fetch(`${ORCHESTRATOR_URL}/api/servers`, {
+  const response = await fetch(`${ORCHESTRATOR_URL}/servers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -77,7 +77,7 @@ export async function createServer(name: string): Promise<{ id: string; pairingC
  * Send a chat message
  */
 export async function sendChatMessage(threadId: string, message: string): Promise<any> {
-  const response = await fetch(`${ORCHESTRATOR_URL}/api/threads/${threadId}/chat`, {
+  const response = await fetch(`${ORCHESTRATOR_URL}/threads/${threadId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),
@@ -90,7 +90,7 @@ export async function sendChatMessage(threadId: string, message: string): Promis
  * Apply a change
  */
 export async function applyChange(changeId: string): Promise<any> {
-  const response = await fetch(`${ORCHESTRATOR_URL}/api/changes/${changeId}/apply`, {
+  const response = await fetch(`${ORCHESTRATOR_URL}/changes/${changeId}/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -102,7 +102,7 @@ export async function applyChange(changeId: string): Promise<any> {
  * Scan resources for a server
  */
 export async function scanResources(serverId: string): Promise<any> {
-  const response = await fetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}/scan`, {
+  const response = await fetch(`${ORCHESTRATOR_URL}/servers/${serverId}/scan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });

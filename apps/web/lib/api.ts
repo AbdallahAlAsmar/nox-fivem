@@ -1,5 +1,5 @@
 const ORCHESTRATOR_URL =
-  process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com';
+  process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || '/api/orchestrator';
 
 // ─── SWR-based hooks ──────────────────────────────────────────────────────────
 
@@ -14,7 +14,7 @@ const swrFetcher = (url: string) =>
 /** Fetch all servers */
 export async function fetchServers(): Promise<any[]> {
   try {
-    const data = await swrFetcher(`${ORCHESTRATOR_URL}/api/servers`);
+    const data = await swrFetcher(`${ORCHESTRATOR_URL}/servers`);
     return data;
   } catch {
     return [];
@@ -24,7 +24,7 @@ export async function fetchServers(): Promise<any[]> {
 /** Fetch a single server */
 export async function fetchServer(serverId: string): Promise<any> {
   try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}`);
+    return await swrFetcher(`${ORCHESTRATOR_URL}/servers/${serverId}`);
   } catch {
     return null;
   }
@@ -33,7 +33,7 @@ export async function fetchServer(serverId: string): Promise<any> {
 /** Fetch chat messages for a thread */
 export async function fetchMessages(threadId: string): Promise<any[]> {
   try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`);
+    return await swrFetcher(`${ORCHESTRATOR_URL}/threads/${threadId}/messages`);
   } catch {
     return [];
   }
@@ -42,7 +42,7 @@ export async function fetchMessages(threadId: string): Promise<any[]> {
 /** Fetch pending changes for a server */
 export async function fetchChanges(serverId: string): Promise<any[]> {
   try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/changes`);
+    return await swrFetcher(`${ORCHESTRATOR_URL}/servers/${serverId}/changes`);
   } catch {
     return [];
   }
@@ -52,8 +52,8 @@ export async function fetchChanges(serverId: string): Promise<any[]> {
 export async function fetchAllChangesGlobal(serverId?: string): Promise<any[]> {
   try {
     const url = serverId
-      ? `${ORCHESTRATOR_URL}/api/changes?serverId=${serverId}&limit=100`
-      : `${ORCHESTRATOR_URL}/api/changes?limit=100`;
+      ? `${ORCHESTRATOR_URL}/changes?serverId=${serverId}&limit=100`
+      : `${ORCHESTRATOR_URL}/changes?limit=100`;
     return await swrFetcher(url);
   } catch {
     return [];
@@ -64,7 +64,7 @@ export async function fetchAllChangesGlobal(serverId?: string): Promise<any[]> {
 export async function createServer(
   name: string,
 ): Promise<{ id: string; pairingCode: string }> {
-  const res = await fetch(`${ORCHESTRATOR_URL}/api/servers`, {
+  const res = await fetch(`${ORCHESTRATOR_URL}/servers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -81,7 +81,7 @@ export async function sendChatMessage(
   userId?: string,
 ): Promise<any> {
   const res = await fetch(
-    `${ORCHESTRATOR_URL}/api/threads/${threadId}/chat`,
+    `${ORCHESTRATOR_URL}/threads/${threadId}/chat`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -95,7 +95,7 @@ export async function sendChatMessage(
 /** Apply a staged change */
 export async function applyChange(changeId: string): Promise<any> {
   const res = await fetch(
-    `${ORCHESTRATOR_URL}/api/changes/${changeId}/apply`,
+    `${ORCHESTRATOR_URL}/changes/${changeId}/apply`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' } },
   );
   if (!res.ok) throw new Error(`Failed to apply change: ${res.status}`);
@@ -105,7 +105,7 @@ export async function applyChange(changeId: string): Promise<any> {
 /** Scan resources for a server */
 export async function scanResources(serverId: string): Promise<any> {
   const res = await fetch(
-    `${ORCHESTRATOR_URL}/api/servers/${serverId}/scan`,
+    `${ORCHESTRATOR_URL}/servers/${serverId}/scan`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' } },
   );
   if (!res.ok) throw new Error(`Failed to scan resources: ${res.status}`);
@@ -115,7 +115,7 @@ export async function scanResources(serverId: string): Promise<any> {
 /** Restart a server via the agent */
 export async function restartServer(serverId: string): Promise<any> {
   const res = await fetch(
-    `${ORCHESTRATOR_URL}/api/servers/${serverId}/restart`,
+    `${ORCHESTRATOR_URL}/servers/${serverId}/restart`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' } },
   );
   if (!res.ok) throw new Error(`Failed to restart server: ${res.status}`);
@@ -125,7 +125,7 @@ export async function restartServer(serverId: string): Promise<any> {
 /** Fetch all resources for a server */
 export async function fetchServerResources(serverId: string): Promise<any[]> {
   try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/resources`);
+    return await swrFetcher(`${ORCHESTRATOR_URL}/servers/${serverId}/resources`);
   } catch {
     return [];
   }
@@ -134,7 +134,7 @@ export async function fetchServerResources(serverId: string): Promise<any[]> {
 /** Fetch players for a server */
 export async function fetchPlayers(serverId: string): Promise<any[]> {
   try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/players`);
+    return await swrFetcher(`${ORCHESTRATOR_URL}/servers/${serverId}/players`);
   } catch {
     return [];
   }
@@ -147,7 +147,7 @@ export async function banPlayer(
   reason?: string,
 ): Promise<any> {
   const res = await fetch(
-    `${ORCHESTRATOR_URL}/api/servers/${serverId}/players/${playerId}/ban`,
+    `${ORCHESTRATOR_URL}/servers/${serverId}/players/${playerId}/ban`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -161,7 +161,7 @@ export async function banPlayer(
 /** Unban a player */
 export async function unbanPlayer(serverId: string, playerId: string): Promise<any> {
   const res = await fetch(
-    `${ORCHESTRATOR_URL}/api/servers/${serverId}/players/${playerId}/unban`,
+    `${ORCHESTRATOR_URL}/servers/${serverId}/players/${playerId}/unban`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' } },
   );
   if (!res.ok) throw new Error(`Failed to unban player: ${res.status}`);
@@ -171,7 +171,7 @@ export async function unbanPlayer(serverId: string, playerId: string): Promise<a
 /** Fetch org billing info */
 export async function fetchOrg(): Promise<any> {
   try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/org`);
+    return await swrFetcher(`${ORCHESTRATOR_URL}/org`);
   } catch {
     return null;
   }

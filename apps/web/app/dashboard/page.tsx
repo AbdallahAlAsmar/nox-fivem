@@ -65,7 +65,7 @@ interface ActivityItem {
 const ORCH_URL = ORCHESTRATOR_URL;
 
 async function fetchServers() {
-  const res = await fetch(`${ORCH_URL}/api/servers`);
+  const res = await fetch(`${ORCH_URL}/servers`);
   if (!res.ok) throw new Error(res.status.toString());
   return res.json();
 }
@@ -74,7 +74,7 @@ async function fetchAllChanges(servers: any[]) {
   const results = await Promise.all(
     servers.map(async (s) => {
       try {
-        const res = await fetch(`${ORCH_URL}/api/servers/${s.id}/changes`);
+        const res = await fetch(`${ORCH_URL}/servers/${s.id}/changes`);
         if (!res.ok) return [];
         return (await res.json()).map((c: any) => ({ ...c, serverId: s.id, serverName: s.name }));
       } catch {
