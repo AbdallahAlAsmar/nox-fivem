@@ -1,3 +1,6 @@
+mod config;
+mod commands;
+
 use tauri::Manager;
 
 // Re-export commands
