@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Sun, Server, Cpu, Shield } from 'lucide-react'
 
 interface SettingsProps {
@@ -15,7 +15,6 @@ export default function Settings({ onThemeChange }: SettingsProps) {
     showCodeChanges: true,
     autoStart: false,
     agentPort: 0,
-    orchestratorUrl: 'http://localhost:3001',
   })
   const [saving, setSaving] = useState(false)
 
@@ -24,7 +23,6 @@ export default function Settings({ onThemeChange }: SettingsProps) {
   }, [])
 
   const loadSettings = async () => {
-    // Settings are now managed locally - no remote config needed
     try {
       const saved = localStorage.getItem('nox-settings')
       if (saved) {
@@ -39,7 +37,6 @@ export default function Settings({ onThemeChange }: SettingsProps) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // Save settings locally
       localStorage.setItem('nox-settings', JSON.stringify({
         theme: settings.theme,
         serverDirectory: settings.serverDirectory,
@@ -47,7 +44,6 @@ export default function Settings({ onThemeChange }: SettingsProps) {
         showFileTree: settings.showFileTree,
         showCodeChanges: settings.showCodeChanges,
         autoStart: settings.autoStart,
-        orchestratorUrl: settings.orchestratorUrl,
       }))
       onThemeChange(settings.theme)
     } catch (error) {
@@ -65,7 +61,7 @@ export default function Settings({ onThemeChange }: SettingsProps) {
       </div>
 
       {/* Appearance */}
-      <div className="bg-nox-surface border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
           <Sun className="w-4 h-4 text-[#5E6AD2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Appearance</h3>
@@ -95,7 +91,7 @@ export default function Settings({ onThemeChange }: SettingsProps) {
       </div>
 
       {/* Server */}
-      <div className="bg-nox-surface border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
           <Server className="w-4 h-4 text-[#5E6AD2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server</h3>
@@ -113,22 +109,11 @@ export default function Settings({ onThemeChange }: SettingsProps) {
               className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
             />
           </div>
-          <div>
-            <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)] mb-2">
-              Orchestrator URL
-            </label>
-            <input
-              type="text"
-              value={settings.orchestratorUrl}
-              onChange={(e) => setSettings(s => ({ ...s, orchestratorUrl: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white font-mono focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
-            />
-          </div>
         </div>
       </div>
 
       {/* AI Mode */}
-      <div className="bg-nox-surface border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
           <Cpu className="w-4 h-4 text-[#5E6AD2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">AI Mode</h3>
@@ -158,7 +143,7 @@ export default function Settings({ onThemeChange }: SettingsProps) {
       </div>
 
       {/* Display */}
-      <div className="bg-nox-surface border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="w-4 h-4 text-[#5E6AD2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Display</h3>
@@ -186,7 +171,7 @@ export default function Settings({ onThemeChange }: SettingsProps) {
       </div>
 
       {/* Keyboard Shortcuts */}
-      <div className="bg-nox-surface border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="w-4 h-4 text-[#5E6AD2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Keyboard Shortcuts</h3>

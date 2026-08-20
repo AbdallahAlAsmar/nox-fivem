@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { CreditCard, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-const ORCH_URL = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://localhost:3001'
+const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
 
 const PLANS = [
   { tier: 'starter', name: 'Starter', price: '$0', period: '/month', actions: 100, servers: 1, color: 'text-white', border: 'border-[rgba(255,255,255,0.15)]', bg: 'bg-[rgba(255,255,255,0.04)]' },
@@ -23,7 +23,7 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${ORCH_URL}/api/org`)
+    fetch(`${ORCH}/api/org`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setOrg(d))
       .catch(() => setOrg(null))

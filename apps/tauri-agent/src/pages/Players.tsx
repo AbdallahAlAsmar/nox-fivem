@@ -25,12 +25,13 @@ export default function Players({ serverId }: { serverId?: string }) {
   const [banReason, setBanReason] = useState('')
   const [showBanModal, setShowBanModal] = useState(false)
   const [actionResult, setActionResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
   const effectiveServerId = serverId || 'local'
 
   const loadPlayers = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`http://localhost:3001/api/servers/${effectiveServerId}/players`)
+      const res = await fetch(`${ORCH}/api/servers/${effectiveServerId}/players`)
       if (!res.ok) {
         setPlayers([])
         return
@@ -68,7 +69,7 @@ export default function Players({ serverId }: { serverId?: string }) {
   const confirmBan = async () => {
     if (!selectedPlayer) return
     try {
-      await fetch(`http://localhost:3001/api/servers/local/players/${selectedPlayer.id}/ban`, {
+      await fetch(`${ORCH}/api/servers/${effectiveServerId}/players/${selectedPlayer.id}/ban`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: banReason || 'No reason provided' })
@@ -85,7 +86,7 @@ export default function Players({ serverId }: { serverId?: string }) {
 
   const handleUnban = async (player: Player) => {
     try {
-      await fetch(`http://localhost:3001/api/servers/local/players/${player.id}/unban`, {
+      await fetch(`${ORCH}/api/servers/${effectiveServerId}/players/${player.id}/unban`, {
         method: 'POST'
       })
       setPlayers(prev => prev.map(p => 

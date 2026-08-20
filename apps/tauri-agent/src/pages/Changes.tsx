@@ -30,7 +30,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
       return
     }
     setLoading(true)
-    fetch(`http://localhost:3001/api/servers/${serverId}/changes`)
+    fetch(`${import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'}/api/servers/${serverId}/changes`)
       .then(r => r.ok ? r.json() : [])
       .then(data => {
         const mapped: Change[] = data.map((c: any) => ({

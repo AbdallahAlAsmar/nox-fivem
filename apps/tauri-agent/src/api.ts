@@ -4,7 +4,7 @@
 // The orchestrator runs on VPS (Oracle 158.101.167.118) via Cloudflare tunnel
 // Override at build time with VITE_ORCHESTRATOR_URL env var
 const ORCHESTRATOR_URL = import.meta.env?.VITE_ORCHESTRATOR_URL
-  || 'https://nations-organizing-cheapest-acute.trycloudflare.com'
+  || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
 
 // ─── Clerk auth helpers ────────────────────────────────────────────────────────
 
@@ -91,6 +91,38 @@ export async function createServer(
   if (!res.ok) throw new Error(`Failed to create server: ${res.status}`)
   const data = await res.json()
   return { id: data.server.id, pairingCode: data.pairing.code }
+}
+
+export async function autoPairServer(
+  name: string,
+  directory: string,
+): Promise<{ id: string }> {
+  // Create server and immediately claim pairing in one flow
+  const res = await fetch(`${ORCHESTRATOR_URL}/api/servers`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name, directory }),
+  })
+  if (!res.ok) throw new Error(`Failed to create server: ${res.status}`)
+  const data = await res.json()
+  const pairingCode = data.pairing.code
+
+  // Immediately claim the pairing
+  const claimRes = await fetch(`${ORCHESTRATOR_URL}/api/pairing/claim`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      pairingCode: pairingCode.toUpperCase(),
+      agentVersion: '1.0.0',
+      platform: 'windows',
+      rootLabel: directory,
+    }),
+  })
+  if (!claimRes.ok) {
+    // Server was created but pairing failed — return id anyway so user can retry
+    return { id: data.server.id }
+  }
+  return { id: data.server.id }
 }
 
 export async function fetchServerDetail(

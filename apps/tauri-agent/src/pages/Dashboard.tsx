@@ -40,7 +40,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion'
 import * as api from '../api'
 
-const ORC = 'https://nations-organizing-cheapest-acute.trycloudflare.com'
+const ORC = import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
 
 interface ServerCardData {
   id: string
@@ -150,11 +150,13 @@ function ServerCard({
   onScan,
   onStart,
   onStop,
+  onSelect,
 }: {
   server: ServerCardData
   onScan: (id: string) => void
   onStart: (server: ServerCardData) => void
   onStop: (server: ServerCardData) => void
+  onSelect: (id: string) => void
 }) {
   const [scanning, setScanning] = useState(false)
 
@@ -168,7 +170,7 @@ function ServerCard({
   }
 
   return (
-    <div className="group block bg-[#16161E] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] transition-colors duration-100">
+    <div onClick={() => onSelect(server.id)} className="group block bg-[#16161E] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] transition-colors duration-100 cursor-pointer">
       {/* Header row */}
       <div className="flex items-start justify-between px-5 pt-4 pb-3">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -414,32 +416,14 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     setIsCreating(true)
     setCreateError(null)
     try {
-      const result = await api.createServer(newServerName, newServerDir)
-      setToast(`Server "${newServerName}" created!`)
+      // Create server AND auto-pair in one step — no modal needed
+      const result = await api.autoPairServer(newServerName, newServerDir)
+      setToast(`Server "${newServerName}" created & connected!`)
       setNewServerName('')
       setNewServerDir('')
       setInspectResult(null)
       setShowAddModal(false)
       await fetchServers()
-
-      // Auto-open pairing for the newly created server
-      const newServer = result.id
-        ? (servers.find((s) => s.id === result.id) || {
-            id: result.id,
-            name: newServerName,
-            status: 'offline' as const,
-            hasAgent: false,
-            resourceCount: 0,
-            playerCount: 0,
-            maxPlayers: 64,
-            fps: 0,
-            pairingCode: result.pairingCode,
-          })
-        : null
-      if (newServer) {
-        setPairingServer(newServer)
-        setPairingCode(newServer.pairingCode || null)
-      }
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : 'Failed to create server')
     } finally {
@@ -802,6 +786,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
               <ServerCard
                 key={server.id}
                 server={server}
+                onSelect={(id) => onServerSelect(id)}
                 onScan={async (id) => {
                   try {
                     await api.scanResources(id)

@@ -1,0 +1,28 @@
+{
+  "services": {
+    "orchestrator": {
+      "root": "apps/orchestrator",
+      "entrypoint": "src/index.ts"
+    },
+    "web": {
+      "root": "apps/web",
+      "framework": "nextjs"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/orchestrator(/.*)?",
+      "destination": {
+        "type": "service",
+        "service": "orchestrator"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "web"
+      }
+    }
+  ]
+}

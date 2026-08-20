@@ -8,7 +8,7 @@ import {
 import { motion } from 'framer-motion'
 import { useClerk } from '../contexts/ClerkContext'
 
-const ORCH_URL = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://localhost:3001'
+const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
 
 export default function AccountPage() {
   const { user, signOut } = useClerk()
@@ -16,7 +16,7 @@ export default function AccountPage() {
   const [orgLoading, setOrgLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${ORCH_URL}/api/org`)
+    fetch(`${ORCH}/api/org`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setOrg(d))
       .catch(() => setOrg(null))

@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, type ReactNode } from 'react'
+import { useAuth, useUser } from '@clerk/clerk-react'
 
 interface ClerkUser {
   id: string
@@ -14,6 +14,9 @@ interface ClerkContextType {
   signOut: () => void
 }
 
+// Simple context using @clerk/clerk-react hooks directly
+import { createContext, useContext, useEffect, useState } from 'react'
+
 const ClerkContext = createContext<ClerkContextType>({
   user: null,
   token: null,
@@ -26,84 +29,56 @@ export function useClerk() {
   return useContext(ClerkContext)
 }
 
-export function ClerkProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<ClerkUser | null>(null)
+export function ClerkProvider({ children }: { children: React.ReactNode }) {
+  const { user, isLoaded: clerkLoaded } = useUser()
+  const { getToken, signOut: clerkSignOut } = useAuth()
   const [token, setToken] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    const ck = (window as any).__noxClerk
+    if (!clerkLoaded) return
+    setIsLoaded(true)
 
-    // Check session once Clerk is ready
-    const checkSession = async (c: any) => {
-      try {
-        // Wait for Clerk to be fully initialized
-        const waitForReady = () =>
-          new Promise<void>((resolve) => {
-            if (c.loaded) { resolve(); return }
-            const poll = setInterval(() => {
-              if (c.loaded) { clearInterval(poll); resolve() }
-            }, 200)
-            setTimeout(() => { clearInterval(poll); resolve() }, 8000)
-          })
+    if (user) {
+      const clerkUser: ClerkUser = {
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress ?? '',
+        name: user.fullName ?? user.username ?? user.id,
+      }
+      window.__nox_clerk_user = clerkUser
+      window.__nox_clerk_token = null // will be set after getToken
+      ;(window as any).__nox_clerk_user = clerkUser
 
-        await waitForReady()
-
-        if (c.user) {
-          const clerkUser: ClerkUser = {
-            id: c.user.id,
-            email: c.user.emailAddresses?.[0]?.emailAddress || '',
-            name: c.user.fullName || c.user.firstName || c.user.id,
-          }
-          setUser(clerkUser)
-          window.__nox_clerk_user = clerkUser
-        }
-        const t = await c.getToken?.()
+      getToken?.().then((t) => {
         if (t) {
           setToken(t)
           window.__nox_clerk_token = t
         }
-      } catch (e) {
-        console.warn('Clerk session check failed:', e)
-      }
-      setIsLoaded(true)
-    }
-
-    if (ck) {
-      // Clerk already loaded — check session immediately
-      ck.load?.().catch(console.warn)
-      checkSession(ck)
+      }).catch(() => {})
     } else {
-      // Wait for Clerk to appear
-      const poll = setInterval(() => {
-        const c = (window as any).__noxClerk
-        if (c) {
-          clearInterval(poll)
-          c.load?.().catch(console.warn)
-          checkSession(c)
-        }
-      }, 200)
-      setTimeout(() => clearInterval(poll), 8000)
+      window.__nox_clerk_user = null
+      window.__nox_clerk_token = null
+      setToken(null)
     }
-  }, [])
+  }, [user, clerkLoaded, getToken])
 
   const signIn = () => {
-    ;(window as any).__noxClerk?.navigate?.('/sign-in')
+    // Clerk redirects are handled by ClerkProvider's afterSignInUrl
+    window.location.href = '/sign-in'
   }
 
   const signOut = async () => {
-    const ck = (window as any).__noxClerk
-    if (ck?.signOut) {
-      try { await ck.signOut() } catch (e) { console.warn('Clerk signOut failed:', e) }
+    try {
+      await clerkSignOut?.()
+    } catch (e) {
+      console.warn('Clerk signOut failed:', e)
     }
-    setUser(null)
-    setToken(null)
     window.__nox_clerk_user = null
     window.__nox_clerk_token = null
   }
 
   return (
-    <ClerkContext.Provider value={{ user, token, isLoaded, signIn, signOut }}>
+    <ClerkContext.Provider value={{ user: user ? { id: user.id, email: user.primaryEmailAddress?.emailAddress ?? '', name: user.fullName ?? user.username ?? user.id } : null, token, isLoaded, signIn, signOut }}>
       {children}
     </ClerkContext.Provider>
   )

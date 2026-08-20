@@ -49,8 +49,8 @@ export default function Layout({ children, currentPage, onNavigate, selectedServ
           </div>
         </header>
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden">
+        {/* Content — allow scroll */}
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
       </main>

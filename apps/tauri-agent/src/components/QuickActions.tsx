@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Play, RotateCcw, Terminal, Users, 
+import {
+  Play, RotateCcw, Terminal, Users,
   Ban, RefreshCw, AlertCircle, CheckCircle2,
   X, Eye, MessageSquare
 } from 'lucide-react'
+
+const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com'
 
 interface QuickAction {
   id: string
@@ -47,7 +49,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
       label: 'Restart Server',
       icon: RotateCcw,
       action: async () => {
-        await fetch(`http://localhost:3001/api/servers/${serverId}/restart`, { method: 'POST' })
+        await fetch(`${ORCH}/api/servers/${serverId}/restart`, { method: 'POST' })
       },
       variant: 'default',
     },
@@ -56,7 +58,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
       label: 'Scan Resources',
       icon: RefreshCw,
       action: async () => {
-        await fetch(`http://localhost:3001/api/servers/${serverId}/scan`, { method: 'POST' })
+        await fetch(`${ORCH}/api/servers/${serverId}/scan`, { method: 'POST' })
       },
       variant: 'default',
     },
@@ -81,7 +83,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
       label: 'Server Status',
       icon: Eye,
       action: async () => {
-        const res = await fetch(`http://localhost:3001/api/servers/${serverId}`)
+        const res = await fetch(`${ORCH}/api/servers/${serverId}`)
         const data = await res.json()
         setResult({ type: 'info', message: `Status: ${data.status} | Framework: ${data.framework}` })
       },
@@ -94,7 +96,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
       action: async () => {
         const playerId = prompt('Enter player identifier:')
         if (playerId) {
-          await fetch(`http://localhost:3001/api/servers/${serverId}/players/${playerId}/ban`, { method: 'POST' })
+          await fetch(`${ORCH}/api/servers/${serverId}/players/${playerId}/ban`, { method: 'POST' })
           setResult({ type: 'success', message: `Player ${playerId} banned` })
         }
       },
@@ -193,7 +195,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
                     <span className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)]">
                       Online Players ({players.length})
                     </span>
-                    <button onClick={() => { fetch(`http://localhost:3001/api/servers/${serverId}/players`).then(r => r.json()).then(setPlayers) }} className="text-[rgba(255,255,255,0.3)] hover:text-white">
+                    <button onClick={() => { fetch(`${ORCH}/api/servers/${serverId}/players`).then(r => r.json()).then(setPlayers) }} className="text-[rgba(255,255,255,0.3)] hover:text-white">
                       <RefreshCw className="w-3 h-3" />
                     </button>
                   </div>
