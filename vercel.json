@@ -1,14 +1,25 @@
 {
-  "services": {
-    "web": {
-      "root": "apps/web",
-      "framework": "nextjs"
-    }
+  "buildCommand": "pnpm install --frozen-lockfile && cd apps/web && next build",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs",
+  "devCommand": "pnpm dev",
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "NODE_ENV": "production"
   },
-  "rewrites": [
+  "headers": [
     {
-      "source": "/api/orchestrator/(.*)",
-      "destination": "http://158.101.167.118:3001/$1"
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
     }
+  ],
+  "rewrites": [
+    { "source": "/api/orchestrator/(.*)", "destination": "http://158.101.167.118:3001/$1" },
+    { "source": "/clerk.browser.js", "destination": "/clerk.browser.js" },
+    { "source": "/dist/:path*", "destination": "/dist/:path*" }
   ]
 }
