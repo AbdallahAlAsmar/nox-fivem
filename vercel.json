@@ -9,10 +9,6 @@
     {
       "source": "/api/orchestrator/(.*)",
       "destination": "http://158.101.167.118:3001/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "https://nox-fivem.vercel.app/$1"
     }
   ]
 }
