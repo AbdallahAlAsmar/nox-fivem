@@ -1,6 +1,7 @@
 const ORCHESTRATOR_URL =
-  process.env.NEXT_PUBLIC_ORCHESTRATOR_URL ||
-  (process.env.VERCEL ? '/api/orchestrator' : 'http://158.101.167.118:3001');
+  process.env.VERCEL
+    ? '/api/orchestrator'
+    : process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
 
 // ─── SWR-based hooks ──────────────────────────────────────────────────────────
 

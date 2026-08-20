@@ -51,8 +51,9 @@ export default function ServerDetailPage() {
   const [headerMessage, setHeaderMessage] = useState<string | null>(null);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const ORCH_URL = ORCHESTRATOR_URL || process.env.NEXT_PUBLIC_ORCHESTRATOR_URL ||
-    (process.env.VERCEL ? '/api/orchestrator' : 'http://158.101.167.118:3001');
+  const ORCH_URL = ORCHESTRATOR_URL || process.env.VERCEL
+    ? '/api/orchestrator'
+    : process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
 
   const stopPolling = () => {
     if (pollRef.current) {
