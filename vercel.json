@@ -1,8 +1,8 @@
 {
-  "buildCommand": "cd apps/web && pnpm install --frozen-lockfile && next build",
-  "outputDirectory": "apps/web/.next",
+  "buildCommand": "pnpm install --frozen-lockfile && next build",
+  "outputDirectory": ".next",
   "framework": "nextjs",
-  "devCommand": "cd apps/web && pnpm dev",
+  "devCommand": "pnpm dev",
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1",
     "NODE_ENV": "production"
