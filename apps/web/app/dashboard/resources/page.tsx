@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { fetchServers } from '@/lib/api';
 import { fetchServerResources } from '@/lib/api';
 
-const ORCH_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || '/api/orchestrator';
+const ORCH_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com';
 
 function timeAgo(date: string | number): string {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);

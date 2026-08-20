@@ -37,7 +37,7 @@ export default function ServerDetailPage() {
   const [regenerating, setRegenerating] = useState(false);
   const [pairingError, setPairingError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const ORCH_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || '/api/orchestrator';
+  const ORCH_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'https://gazette-hurricane-hung-calibration.trycloudflare.com';
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 2000);
@@ -46,7 +46,7 @@ export default function ServerDetailPage() {
 
   const loadServer = async () => {
     try {
-      const res = await fetch(`${ORCH_URL}/servers/${serverId}`);
+      const res = await fetch(`${ORCH_URL}/api/servers/${serverId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setServer(data);
