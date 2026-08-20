@@ -19,6 +19,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/orchestrator/(.*)", "destination": "http://158.101.167.118:3001/$1" },
     { "source": "/clerk.browser.js", "destination": "/clerk.browser.js" },
     { "source": "/dist/:path*", "destination": "/dist/:path*" }
   ]

@@ -1,9 +1,5 @@
 {
   "services": {
-    "orchestrator": {
-      "root": "apps/orchestrator",
-      "entrypoint": "src/index.ts"
-    },
     "web": {
       "root": "apps/web",
       "framework": "nextjs"
@@ -11,18 +7,12 @@
   },
   "rewrites": [
     {
-      "source": "/api/orchestrator(/.*)?",
-      "destination": {
-        "type": "service",
-        "service": "orchestrator"
-      }
+      "source": "/api/orchestrator/(.*)",
+      "destination": "http://158.101.167.118:3001/$1"
     },
     {
       "source": "/(.*)",
-      "destination": {
-        "type": "service",
-        "service": "web"
-      }
+      "destination": "https://nox-fivem.vercel.app/$1"
     }
   ]
 }

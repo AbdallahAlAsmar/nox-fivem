@@ -1,3 +1,7 @@
-/** Base orchestrator URL — override with NEXT_PUBLIC_ORCHESTRATOR_URL env var */
-export const ORCHESTRATOR_URL =
-  process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
+/** Base orchestrator URL — override with NEXT_PUBLIC_ORCHESTRATOR_URL env var.
+ *  On Vercel, point at the proxy so the browser stays on HTTPS. */
+const ORCHESTRATOR_URL =
+  process.env.NEXT_PUBLIC_ORCHESTRATOR_URL ||
+  (process.env.VERCEL ? '/api/orchestrator' : 'http://158.101.167.118:3001');
+
+export default ORCHESTRATOR_URL;
