@@ -3,6 +3,10 @@ const nextConfig = {
   async rewrites() {
     return [
       {
+        source: '/api/orchestrator/:path*',
+        destination: `${process.env.ORCHESTRATOR_BACKEND_URL || 'http://158.101.167.118:3001'}/:path*`,
+      },
+      {
         source: '/clerk.browser.js',
         destination: '/clerk.browser.js',
       },

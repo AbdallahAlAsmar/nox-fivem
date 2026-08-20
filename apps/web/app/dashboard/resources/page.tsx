@@ -7,9 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { fetchServers } from '@/lib/api';
 import { fetchServerResources } from '@/lib/api';
 
-const ORCH_URL = process.env.VERCEL
-  ? '/api/orchestrator'
-  : process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
 
 function timeAgo(date: string | number): string {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);

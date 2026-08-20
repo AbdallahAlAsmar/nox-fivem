@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { scanResources } from '@/lib/api';
+import { ORCHESTRATOR_URL } from '@/lib/config';
 import { PairingSetupView } from '@/components/dashboard/PairingSetupView';
 
 export default function ServerConnectPage() {
@@ -35,11 +36,7 @@ export default function ServerConnectPage() {
 
     const load = async () => {
       try {
-        const ORCH_URL =
-          process.env.VERCEL
-            ? '/api/orchestrator'
-            : process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
-        const res = await fetch(`${ORCH_URL}/api/servers/${serverId}`);
+        const res = await fetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
@@ -79,12 +76,8 @@ export default function ServerConnectPage() {
     setRegenerating(true);
     setPairingError(null);
     try {
-      const ORCH_URL =
-        process.env.VERCEL
-          ? '/api/orchestrator'
-          : process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
       const res = await fetch(
-        `${ORCH_URL}/api/servers/${serverId}/pairing`,
+        `${ORCHESTRATOR_URL}/api/servers/${serverId}/pairing`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' } },
       );
       if (!res.ok) {

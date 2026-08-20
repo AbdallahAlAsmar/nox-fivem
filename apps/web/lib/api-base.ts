@@ -1,6 +1,5 @@
-const ORCHESTRATOR_URL = process.env.VERCEL
-  ? '/api/orchestrator'
-  : process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
+import { ORCHESTRATOR_URL } from './config';
+
 
 /**
  * Fetch servers from orchestrator
