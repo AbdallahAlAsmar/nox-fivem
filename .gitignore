@@ -43,7 +43,6 @@ Thumbs.db
 
 # Tauri
 apps/*/src-tauri/target/
-apps/*/src-tauri/.gitignore
 
 # Next.js
 apps/web/.next/
