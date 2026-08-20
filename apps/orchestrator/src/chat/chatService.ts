@@ -43,30 +43,70 @@ export async function handleChatMessage(
   const toolCalls: any[] = [];
 
   try {
-    for await (const chunk of streamChat(context, userMessage)) {
-      if (chunk.type === 'text') {
-        assistantContent += chunk.content;
-        onStream({ type: 'text', content: chunk.content, skillUsed: chunk.skillUsed });
-      } else if (chunk.type === 'tool_use') {
-        if (!isAgentConnected) {
-          onStream({ type: 'error', content: `Agent is not connected for server ${serverId}. Pair your server first to enable file operations.` });
-          return;
+    let currentTurnMessages: any[] = [{ role: 'user', content: userMessage }];
+
+    while (true) {
+      let assistantContent = '';
+      const toolCalls: any[] = [];
+      let hasToolCalls = false;
+      let toolError = false;
+
+      for await (const chunk of streamChat(context, currentTurnMessages)) {
+        if (chunk.type === 'text') {
+          assistantContent += chunk.content;
+          onStream({ type: 'text', content: chunk.content, skillUsed: chunk.skillUsed });
+        } else if (chunk.type === 'tool_use') {
+          hasToolCalls = true;
+          if (!isAgentConnected) {
+            onStream({ type: 'error', content: `Agent is not connected for server ${serverId}. Pair your server first to enable file operations.` });
+            toolError = true;
+            break;
+          }
+          const result = await handleToolCall(gateway, serverId, chunk.toolName!, chunk.toolArgs!);
+          toolCalls.push({ id: chunk.toolId || crypto.randomUUID(), name: chunk.toolName, arguments: chunk.toolArgs, result });
+          onStream({ type: 'tool_result', content: JSON.stringify(result) });
         }
-        const result = await handleToolCall(gateway, serverId, chunk.toolName!, chunk.toolArgs!);
-        toolCalls.push({ id: crypto.randomUUID(), name: chunk.toolName, arguments: chunk.toolArgs, result });
-        onStream({ type: 'tool_result', content: JSON.stringify(result) });
+      }
+
+      if (toolError) break;
+
+      // Save assistant message to DB
+      await prisma.chatMessage.create({
+        data: {
+          threadId,
+          role: 'assistant',
+          content: assistantContent,
+          toolCalls,
+          model: 'auto/best-coding',
+        },
+      });
+
+      if (hasToolCalls) {
+        // Save tool results as separate messages so the LLM remembers them
+        for (const tc of toolCalls) {
+          await prisma.chatMessage.create({
+            data: {
+              threadId,
+              role: 'tool',
+              content: typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result),
+              toolCalls: [tc],
+              model: 'auto/best-coding',
+            },
+          });
+        }
+
+        // Update context to include the new messages from DB
+        context.previousMessages = await prisma.chatMessage.findMany({
+          where: { threadId },
+          orderBy: { createdAt: 'asc' },
+        });
+        
+        // Reset turn messages, streamChat will use context.previousMessages
+        currentTurnMessages = [];
+      } else {
+        break; // No tool calls, we're done
       }
     }
-
-    await prisma.chatMessage.create({
-      data: {
-        threadId,
-        role: 'assistant',
-        content: assistantContent,
-        toolCalls,
-        model: 'auto/best-coding',
-      },
-    });
   } catch (error: any) {
     onStream({ type: 'error', content: error.message });
   }

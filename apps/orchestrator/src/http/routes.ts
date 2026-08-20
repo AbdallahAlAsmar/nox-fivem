@@ -4,6 +4,7 @@ import { prisma } from '@fivem-ai/db';
 import { authPlugin, requireAuth } from '../auth';
 import type { AuthUser } from '../auth';
 import { parseDiffToPatch } from './parseDiff';
+import type { AgentGateway } from '../ws/agentGateway';
 
 export async function registerRoutes(fastify: FastifyInstance) {
   // Register auth plugin

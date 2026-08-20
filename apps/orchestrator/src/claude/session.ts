@@ -169,12 +169,13 @@ function formatMessages(messages: ChatMessage[]): any[] {
 
 export async function* streamChat(
   context: ChatContext,
-  userMessage: string
+  turnMessages: any[] = []
 ): AsyncGenerator<{
   type: 'text' | 'tool_use' | 'error';
   content: string;
   toolName?: string;
   toolArgs?: any;
+  toolId?: string;
   skillUsed?: string;
 }> {
   const systemPrompt = buildSystemPrompt(context);
@@ -182,7 +183,7 @@ export async function* streamChat(
   const messages: any[] = [
     { role: 'system', content: systemPrompt },
     ...previousMessages,
-    { role: 'user', content: userMessage },
+    ...turnMessages,
   ];
 
   // Only provide tools if agent is connected
@@ -256,6 +257,8 @@ export async function* streamChat(
       ...(tools ? { tools } : {}),
     });
 
+    const toolCallsMap = new Map<number, any>();
+
     for await (const chunk of stream) {
       const choice = chunk.choices[0];
       if (!choice) continue;
@@ -267,15 +270,27 @@ export async function* streamChat(
 
       if (delta?.tool_calls) {
         for (const tc of delta.tool_calls) {
-          if (tc.function?.name) {
-            yield {
-              type: 'tool_use',
-              content: '',
-              toolName: tc.function.name,
-              toolArgs: JSON.parse(tc.function.arguments || '{}'),
-            };
+          if (!toolCallsMap.has(tc.index)) {
+            toolCallsMap.set(tc.index, { id: tc.id, name: tc.function?.name, arguments: tc.function?.arguments || '' });
+          } else {
+            const existing = toolCallsMap.get(tc.index);
+            if (tc.function?.arguments) {
+              existing.arguments += tc.function.arguments;
+            }
           }
         }
+      }
+    }
+
+    for (const tc of toolCallsMap.values()) {
+      if (tc.name) {
+        yield {
+          type: 'tool_use',
+          content: '',
+          toolName: tc.name,
+          toolArgs: JSON.parse(tc.arguments || '{}'),
+          toolId: tc.id,
+        };
       }
     }
   } catch (error: any) {
