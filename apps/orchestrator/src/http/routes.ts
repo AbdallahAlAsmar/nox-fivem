@@ -479,6 +479,61 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Direct sync of scanned resources from desktop agent
+  fastify.post('/api/servers/:serverId/resources/sync', async (request, reply) => {
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+    const body = z.object({
+      framework: z.string().optional(),
+      resources: z.array(z.object({
+        name: z.string(),
+        relativePath: z.string(),
+        manifestPath: z.string().optional(),
+        dependencies: z.array(z.string()).optional(),
+        provides: z.array(z.string()).optional(),
+        files: z.array(z.string()).optional(),
+      })),
+    }).parse(request.body);
+
+    for (const resource of body.resources) {
+      await prisma.resourceIndex.upsert({
+        where: {
+          serverId_resourceName: {
+            serverId: params.serverId,
+            resourceName: resource.name,
+          },
+        },
+        update: {
+          relativePath: resource.relativePath,
+          manifestPath: resource.manifestPath || '',
+          dependencies: resource.dependencies || [],
+          provides: resource.provides || [],
+          files: resource.files || [],
+          lastScannedAt: new Date(),
+        },
+        create: {
+          serverId: params.serverId,
+          resourceName: resource.name,
+          relativePath: resource.relativePath,
+          manifestPath: resource.manifestPath || '',
+          dependencies: resource.dependencies || [],
+          provides: resource.provides || [],
+          files: resource.files || [],
+        },
+      });
+    }
+
+    await prisma.server.update({
+      where: { id: params.serverId },
+      data: {
+        framework: body.framework || 'unknown',
+        lastScanAt: new Date(),
+        status: 'online',
+      },
+    });
+
+    return { ok: true, synced: body.resources.length, framework: body.framework };
+  });
+
   // Restart a server (sends command to agent)
   fastify.post('/api/servers/:serverId/restart', async (request, reply) => {
     const user = requireAuth(request, reply);

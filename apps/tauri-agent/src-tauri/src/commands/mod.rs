@@ -3,6 +3,7 @@ pub mod server;
 pub mod filesystem;
 pub mod git;
 pub mod agent;
+pub mod scanner;
 
 pub use config::{get_config_cmd, update_config_cmd, set_theme, set_ai_mode};
 pub use server::{create_server_cmd, get_servers_cmd, remove_server_cmd, scan_resources_cmd, open_folder_cmd, inspect_server_dir};

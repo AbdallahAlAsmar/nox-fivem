@@ -76,7 +76,7 @@ static CONFIG: LazyLock<Mutex<Config>> = LazyLock::new(|| {
         show_code_changes: true,
         auto_start: false,
         agent_port: 3001,
-        orchestrator_url: "http://localhost:3001".to_string(),
+        orchestrator_url: "http://158.101.167.118:3001".to_string(),
     })
 });
 

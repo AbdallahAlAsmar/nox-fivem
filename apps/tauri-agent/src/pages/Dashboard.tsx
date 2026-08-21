@@ -151,12 +151,14 @@ function ServerCard({
   onStart,
   onStop,
   onSelect,
+  onConnect,
 }: {
   server: ServerCardData
   onScan: (id: string) => void
   onStart: (server: ServerCardData) => void
   onStop: (server: ServerCardData) => void
   onSelect: (id: string) => void
+  onConnect: (server: ServerCardData) => void
 }) {
   const [scanning, setScanning] = useState(false)
 
@@ -242,28 +244,44 @@ function ServerCard({
             <span>{timeAgo(server.lastSeenAt)}</span>
           </div>
         )}
-        {server.hasAgent && (
+        {server.hasAgent ? (
           <div className="flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-[#22c55e] flex-shrink-0" />
-            <span className="text-[#22c55e]">Agent</span>
+            <span className="text-[#22c55e]">Agent Connected</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-[#f59e0b] flex-shrink-0" />
+            <span className="text-[#f59e0b]">Agent Disconnected</span>
           </div>
         )}
       </div>
 
       {/* Quick actions */}
       <div className="flex border-t border-[rgba(255,255,255,0.06)]">
+        {server.status === 'online' && server.hasAgent ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleScan(); }}
+            disabled={scanning}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 border-r border-[rgba(255,255,255,0.06)]"
+          >
+            <RefreshCw className={`w-3 h-3 ${scanning ? 'animate-spin' : ''}`} />
+            Scan
+          </button>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); onConnect(server); }}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[#5E6AD2] bg-[rgba(94,106,210,0.08)] hover:bg-[rgba(94,106,210,0.18)] transition-colors duration-100 border-r border-[rgba(255,255,255,0.06)] font-semibold"
+          >
+            <Zap className="w-3 h-3 text-[#5E6AD2]" />
+            Connect
+          </button>
+        )}
         <button
-          onClick={handleScan}
-          disabled={scanning || server.status !== 'online'}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 disabled:opacity-30 disabled:cursor-not-allowed border-r border-[rgba(255,255,255,0.06)]"
-        >
-          <RefreshCw className={`w-3 h-3 ${scanning ? 'animate-spin' : ''}`} />
-          Scan
-        </button>
-        <button
-          onClick={() =>
+          onClick={(e) => {
+            e.stopPropagation()
             server.status === 'online' ? onStop(server) : onStart(server)
-          }
+          }}
           disabled={server.status === 'connecting'}
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 disabled:opacity-30 disabled:cursor-not-allowed border-r border-[rgba(255,255,255,0.06)]"
         >
@@ -274,9 +292,12 @@ function ServerCard({
           )}
           {server.status === 'online' ? 'Stop' : 'Start'}
         </button>
-        <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 disabled:opacity-30 disabled:cursor-not-allowed">
-          <Terminal className="w-3 h-3" />
-          Console
+        <button
+          onClick={(e) => { e.stopPropagation(); onSelect(server.id); }}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <MessageSquare className="w-3 h-3" />
+          Chat
         </button>
       </div>
     </div>
@@ -378,6 +399,23 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
       const data = await api.fetchServers()
       setServers(data as ServerCardData[])
       setError(null)
+
+      // Auto-reconnect paired servers if saved locally
+      for (const s of data) {
+        const savedDevId = localStorage.getItem(`agent_device_${s.id}`)
+        const savedDir = localStorage.getItem(`server_dir_${s.id}`) || s.directory
+        if (savedDevId && savedDir && s.status !== 'online') {
+          try {
+            await invoke('connect_agent_cmd', {
+              serverId: s.id,
+              agentDeviceId: savedDevId,
+              serverDirectory: savedDir,
+            })
+          } catch (connErr) {
+            console.debug('Auto-connect attempt:', connErr)
+          }
+        }
+      }
     } catch (e) {
       console.error('Fetch servers error:', e)
       setError('Failed to connect to orchestrator')
@@ -416,8 +454,27 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     setIsCreating(true)
     setCreateError(null)
     try {
-      // Create server AND auto-pair in one step — no modal needed
+      // Create server AND auto-pair in one step
       const result = await api.autoPairServer(newServerName, newServerDir)
+
+      // Connect agent WebSocket via Tauri
+      await invoke('connect_agent_cmd', {
+        serverId: result.id,
+        agentDeviceId: result.agentDeviceId,
+        serverDirectory: newServerDir,
+      })
+
+      // Store device ID & directory locally
+      localStorage.setItem(`agent_device_${result.id}`, result.agentDeviceId)
+      localStorage.setItem(`server_dir_${result.id}`, newServerDir)
+
+      // Trigger initial scan so resources and framework are immediately indexed
+      try {
+        await api.scanResources(result.id)
+      } catch (scanErr) {
+        console.warn('Initial scan error:', scanErr)
+      }
+
       setToast(`Server "${newServerName}" created & connected!`)
       setNewServerName('')
       setNewServerDir('')
@@ -498,6 +555,73 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     }
   }
 
+  const handleConnectServer = async (server: ServerCardData) => {
+    // Pick the server directory if not already saved
+    let directory = localStorage.getItem(`server_dir_${server.id}`) || ''
+    if (!directory) {
+      try {
+        const picked = (await invoke('open_folder_cmd')) as string
+        if (!picked) {
+          setToast('Select your server-data folder to connect')
+          setTimeout(() => setToast(null), 3000)
+          return
+        }
+        directory = picked
+      } catch (e) {
+        setToast('Could not open folder dialog')
+        setTimeout(() => setToast(null), 3000)
+        return
+      }
+    }
+
+    setToast(`Connecting to "${server.name}"...`)
+    const savedDeviceId = localStorage.getItem(`agent_device_${server.id}`)
+
+    try {
+      let agentDeviceId = savedDeviceId
+
+      if (!agentDeviceId) {
+        // First time: go through pairing claim flow
+        const data = await api.connectExistingServer(server.id, directory)
+        agentDeviceId = data.agentDeviceId
+        localStorage.setItem(`agent_device_${server.id}`, agentDeviceId)
+        localStorage.setItem(`server_dir_${server.id}`, directory)
+      }
+
+      // Connect WebSocket directly using the stored agentDeviceId
+      await invoke('connect_agent_cmd', {
+        serverId: server.id,
+        agentDeviceId,
+        serverDirectory: directory,
+      })
+
+      // Run local scan
+      let resourceCount = 0
+      try {
+        const localScan = (await invoke('scan_server_resources_cmd', {
+          serverDirectory: directory,
+        })) as { resources: any[]; framework: string }
+        resourceCount = localScan?.resources?.length ?? 0
+      } catch (lErr) {
+        console.warn('Local scan notice:', lErr)
+      }
+
+      // Trigger cloud scan sync
+      try {
+        await api.scanResources(server.id)
+      } catch (scanErr) {
+        console.warn('Scan sync notice:', scanErr)
+      }
+
+      setToast(`"${server.name}" connected! (${resourceCount} resources found)`)
+      setTimeout(() => setToast(null), 3500)
+      await fetchServers()
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'Failed to connect agent')
+      setTimeout(() => setToast(null), 4000)
+    }
+  }
+
   const handlePickDirectoryForPairing = async () => {
     try {
       const result = (await invoke('open_folder_cmd')) as string
@@ -520,22 +644,27 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     setIsPairing(true)
     setPairingError(null)
     try {
-      const res = await fetch(`${ORC}/api/pairing/claim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pairingCode: pairingCode.toUpperCase(),
-          agentVersion: '1.0.0',
-          platform: 'windows',
-          rootLabel: pairingPath,
-        }),
+      const data = await api.claimPairing(pairingCode, pairingPath)
+
+      // Connect agent WebSocket via Tauri
+      await invoke('connect_agent_cmd', {
+        serverId: data.serverId,
+        agentDeviceId: data.agentDeviceId,
+        serverDirectory: pairingPath,
       })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error || `HTTP ${res.status}`)
+
+      // Store device ID & directory locally
+      localStorage.setItem(`agent_device_${data.serverId}`, data.agentDeviceId)
+      localStorage.setItem(`server_dir_${data.serverId}`, pairingPath)
+
+      // Trigger initial scan
+      try {
+        await api.scanResources(data.serverId)
+      } catch (scanErr) {
+        console.warn('Initial scan error:', scanErr)
       }
-      const data = await res.json()
-      setToast(`Server "${pairingServer.name}" paired successfully!`)
+
+      setToast(`Server "${pairingServer.name}" paired & connected!`)
       setPairingServer(null)
       setPairingCode(null)
       setPairingPath('')
@@ -787,13 +916,41 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                 key={server.id}
                 server={server}
                 onSelect={(id) => onServerSelect(id)}
+                onConnect={handleConnectServer}
                 onScan={async (id) => {
                   try {
-                    await api.scanResources(id)
+                    const server = displayServers.find((s) => s.id === id)
+                    const directory = localStorage.getItem(`server_dir_${id}`) || server?.directory
+
+                    let resourceCount = 0
+                    if (directory) {
+                      try {
+                        const localScan = (await invoke('scan_server_resources_cmd', {
+                          serverDirectory: directory,
+                        })) as { resources: any[]; framework: string }
+                        resourceCount = localScan?.resources?.length ?? 0
+                      } catch (scanErr) {
+                        console.warn('Local scan notice:', scanErr)
+                      }
+                    }
+
+                    try {
+                      await api.scanResources(id)
+                    } catch (cloudErr) {
+                      console.warn('Cloud scan sync notice:', cloudErr)
+                    }
+
+                    if (resourceCount > 0) {
+                      setToast(`Scan complete: ${resourceCount} resources found!`)
+                    } else {
+                      setToast('Scan completed!')
+                    }
+                    setTimeout(() => setToast(null), 3500)
                     await fetchServers()
                   } catch (e) {
-                    setToast('Scan failed')
-                    setTimeout(() => setToast(null), 3000)
+                    console.error('Scan error:', e)
+                    setToast(e instanceof Error ? e.message : 'Scan failed')
+                    setTimeout(() => setToast(null), 4000)
                   }
                 }}
                 onStart={handleStartServer}

@@ -52,7 +52,9 @@ function AppContent() {
   const { user, isLoaded } = useUser()
   const { getToken } = useAuth()
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
-  const [selectedServerId, setSelectedServerId] = useState<string | undefined>(undefined)
+  const [selectedServerId, setSelectedServerId] = useState<string | undefined>(() => {
+    return localStorage.getItem('selected_server_id') || undefined
+  })
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
@@ -81,9 +83,9 @@ function AppContent() {
   }
 
   const handleSelectServer = (serverId: string) => {
-    const newSelected = serverId === selectedServerId ? undefined : serverId
-    setSelectedServerId(newSelected)
+    setSelectedServerId(serverId)
     if (serverId) {
+      localStorage.setItem('selected_server_id', serverId)
       setCurrentPage('chat')
     }
   }

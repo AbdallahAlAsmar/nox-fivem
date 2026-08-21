@@ -82,9 +82,32 @@ export async function createServer(name: string, directory?: string): Promise<Se
   })
 }
 
-export async function autoPairServer(name: string, directory: string): Promise<{ id: string; pairingCode: string }> {
+export async function claimPairing(
+  pairingCode: string,
+  directory: string,
+): Promise<{ serverId: string; agentDeviceId: string; wsUrl: string }> {
+  return apiFetch('/api/pairing/claim', {
+    method: 'POST',
+    body: JSON.stringify({
+      pairingCode: pairingCode.toUpperCase(),
+      agentVersion: '0.1.0',
+      platform: 'windows',
+      rootLabel: directory,
+    }),
+  })
+}
+
+export async function autoPairServer(
+  name: string,
+  directory: string,
+): Promise<{ id: string; agentDeviceId: string; pairingCode: string }> {
   const result = await createServer(name, directory)
-  return { id: result.id, pairingCode: result.pairingCode }
+  const pairingCode = result.pairingCode
+  if (!pairingCode) {
+    throw new Error('No pairing code returned from server creation')
+  }
+  const claim = await claimPairing(pairingCode, directory)
+  return { id: claim.serverId, agentDeviceId: claim.agentDeviceId, pairingCode }
 }
 
 export async function startServer(serverId: string): Promise<any> {
@@ -95,12 +118,73 @@ export async function stopServer(serverId: string): Promise<any> {
   return apiFetch(`/api/servers/${serverId}/stop`, { method: 'POST' })
 }
 
-export async function regeneratePairing(serverId: string): Promise<{ code: string }> {
-  return apiFetch(`/api/servers/${serverId}/pairing/regenerate`, { method: 'POST' })
+export async function getPairingCode(serverId: string): Promise<{ code: string; expiresAt: string }> {
+  const data = await apiFetch(`/api/servers/${serverId}/pairing`, { method: 'POST' })
+  return data.pairing
+}
+
+export async function regeneratePairing(serverId: string): Promise<{ code: string; expiresAt: string }> {
+  return getPairingCode(serverId)
+}
+
+export async function connectExistingServer(
+  serverId: string,
+  directory: string,
+): Promise<{ serverId: string; agentDeviceId: string }> {
+  // 1. Fetch server details from orchestrator
+  const details = await apiFetch(`/api/servers/${serverId}`)
+
+  // 2. If already paired, use existing paired agent device ID directly
+  if (details?.agent?.id) {
+    return { serverId, agentDeviceId: details.agent.id }
+  }
+
+  // 3. If there is an active pairing code, claim it
+  if (details?.pairing?.code) {
+    const claim = await claimPairing(details.pairing.code, directory)
+    return { serverId: claim.serverId, agentDeviceId: claim.agentDeviceId }
+  }
+
+  // 4. Otherwise request a new pairing code and claim it
+  try {
+    const pairing = await getPairingCode(serverId)
+    if (pairing?.code) {
+      const claim = await claimPairing(pairing.code, directory)
+      return { serverId: claim.serverId, agentDeviceId: claim.agentDeviceId }
+    }
+  } catch (err) {
+    console.warn('Pairing code request note:', err)
+  }
+
+  throw new Error('Unable to obtain agent device credentials for this server')
 }
 
 export async function scanResources(serverId: string): Promise<any> {
   return apiFetch(`/api/servers/${serverId}/scan`, { method: 'POST' })
+}
+
+export async function syncResources(
+  serverId: string,
+  data: { framework?: string; resources: any[] }
+): Promise<any> {
+  const formattedResources = (data.resources || []).map((r: any) => ({
+    name: r.name,
+    relativePath: r.relativePath || r.relative_path || '',
+    manifestPath: r.manifestPath || r.manifest_path || '',
+    dependencies: r.dependencies || r.manifest?.dependencies || [],
+    provides: r.provides || r.manifest?.provides || [],
+    files: r.files || [],
+  }))
+
+  return apiFetch(`/api/servers/${serverId}/resources/sync`, {
+    method: 'POST',
+    body: JSON.stringify({
+      framework: data.framework || 'unknown',
+      resources: formattedResources,
+    }),
+  }).catch((e) => {
+    console.warn('Direct resource sync note:', e)
+  })
 }
 
 export async function restartServer(serverId: string): Promise<any> {

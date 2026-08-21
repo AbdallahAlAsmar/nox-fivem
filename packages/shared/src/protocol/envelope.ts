@@ -9,8 +9,8 @@ export const AgentMessageEnvelopeSchema = z.object({
   messageId: z.string().uuid(),
   type: z.string(),
   sentAt: z.string().datetime(),
-  serverId: z.string().uuid().optional(),
-  agentDeviceId: z.string().uuid().optional(),
+  serverId: z.string().min(1).optional(),
+  agentDeviceId: z.string().min(1).optional(),
   requestId: z.string().uuid().optional(),
   payload: z.unknown().optional(),
 });
