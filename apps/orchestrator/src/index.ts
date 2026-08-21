@@ -3,7 +3,6 @@ import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import { config } from './config';
 import { registerRoutes } from './http/routes';
-import { registerChatRoutes } from './chat/routes';
 import { AgentGateway } from './ws/agentGateway';
 
 async function main() {
@@ -31,7 +30,6 @@ async function main() {
 
   // Register HTTP routes
   await registerRoutes(fastify);
-  await registerChatRoutes(fastify);
 
   // WebSocket endpoint for agents
   fastify.register(async function (fastify) {
