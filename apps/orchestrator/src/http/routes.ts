@@ -779,23 +779,6 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // Players
   // ============================================
 
-  fastify.get('/api/servers/:serverId/players', async (request, reply) => {
-    const user = requireAuth(request, reply);
-    const params = z.object({ serverId: z.string() }).parse(request.params);
-
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-    if (!server) return reply.status(404).send({ error: 'Server not found' });
-
-    const players = await prisma.player.findMany({
-      where: { serverId: params.serverId },
-      orderBy: { name: 'asc' },
-    });
-
-    return players;
-  });
-
   fastify.post('/api/servers/:serverId/players/:playerId/ban', async (request, reply) => {
     const user = requireAuth(request, reply);
     const params = z.object({
