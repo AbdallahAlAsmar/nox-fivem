@@ -243,6 +243,99 @@ export async function registerRoutes(fastify: FastifyInstance) {
   });
 
   // ============================================
+  // Chat
+  // ============================================
+
+  // Get or create a thread for a server and user
+  fastify.get('/api/servers/:serverId/threads/:userId', async (request, reply) => {
+    const params = z.object({ serverId: z.string(), userId: z.string() }).parse(request.params);
+    const cached = cache.get(`thread:${params.serverId}:${params.userId}`);
+    if (cached) return cached;
+    let thread = await prisma.chatThread.findFirst({
+      where: { serverId: params.serverId, userId: params.userId },
+      include: { messages: { orderBy: { createdAt: 'asc' }, take: 50 } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!thread) {
+      thread = await prisma.chatThread.create({ data: { serverId: params.serverId, userId: params.userId, title: 'General Chat', status: 'open' }, include: { messages: { orderBy: { createdAt: 'asc' } } } });
+    }
+    cache.set(`thread:${params.serverId}:${params.userId}`, thread, 60000);
+    return thread;
+  });
+
+  // Non-streaming chat endpoint
+  fastify.post('/api/threads/:threadId/chat', async (request, reply) => {
+    const params = z.object({ threadId: z.string() }).parse(request.params);
+    const body = z.object({ message: z.string().min(1).max(10000), userId: z.string().optional() }).parse(request.body);
+    const userId = body.userId || 'anonymous';
+    let thread = await prisma.chatThread.findUnique({ where: { id: params.threadId }, include: { server: true, messages: { orderBy: { createdAt: 'asc' }, take: 50 } } });
+    if (!thread) {
+      const serverId = params.threadId.replace(/^thread_/, '');
+      const server = await prisma.server.findUnique({ where: { id: serverId } });
+      if (!server) return reply.status(404).send({ error: 'Server not found' });
+      thread = await prisma.chatThread.create({ data: { id: params.threadId, serverId, userId, title: 'New Chat', status: 'open' }, include: { server: true } });
+    }
+    const gateway = (fastify as any).agentGateway;
+    if (!gateway) return reply.status(500).send({ error: 'Agent gateway not initialized' });
+    const chunks: string[] = [];
+    let lastError: string | undefined;
+    await handleChatMessage(gateway, thread.serverId, params.threadId, userId, body.message, (chunk) => {
+      if (chunk.type === 'text') chunks.push(chunk.content);
+      if (chunk.type === 'error') lastError = chunk.content;
+    });
+    cache.invalidate(`threads:${thread.serverId}:${userId}`);
+    cache.invalidate(`thread:${thread.serverId}:${userId}`);
+    if (!chunks.length) {
+      if (lastError) return reply.send({ threadId: params.threadId, response: lastError });
+      const agentConnected = gateway.isConnected(thread.serverId);
+      if (!agentConnected) return reply.send({ threadId: params.threadId, response: 'The AI has no response because no agent is connected to this server. Pair your FiveM server first to enable file operations and full AI assistance.' });
+      return reply.send({ threadId: params.threadId, response: 'The AI did not return a response. Please try again.' });
+    }
+    return { threadId: params.threadId, response: chunks.join('') };
+  });
+
+  // ============================================
+  // Players
+  // ============================================
+
+  fastify.get('/api/servers/:serverId/players', async (request, reply) => {
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+    const cached = cache.get(`players:${params.serverId}`);
+    if (cached) return cached;
+    const agentGateway = (fastify as any).agentGateway;
+    if (!agentGateway || !agentGateway.isConnected(params.serverId)) {
+      return reply.status(400).send({ error: 'Agent not connected' });
+    }
+    try {
+      const players = await agentGateway.sendCommand(params.serverId, 'fivem.listPlayers', {}, 10000);
+      cache.set(`players:${params.serverId}`, players, 15000);
+      return players;
+    } catch (e) {
+      return reply.status(500).send({ error: e instanceof Error ? e.message : 'Failed to fetch players' });
+    }
+  });
+
+  // ============================================
+  // Settings
+  // ============================================
+
+  fastify.get('/api/servers/:serverId/settings', async (request, reply) => {
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+    const server = await prisma.server.findUnique({ where: { id: params.serverId }, select: { settings: true, rootLabel: true } });
+    return { settings: server?.settings || {}, serverDir: server?.rootLabel || '' };
+  });
+
+  fastify.put('/api/servers/:serverId/settings', async (request, reply) => {
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+    const body = z.object({ settings: z.record(z.unknown()).optional(), serverDir: z.string().optional() }).parse(request.body);
+    const updates: any = {};
+    if (body.settings !== undefined) updates.settings = body.settings;
+    if (body.serverDir !== undefined) updates.rootLabel = body.serverDir;
+    const server = await prisma.server.update({ where: { id: params.serverId }, data: updates, select: { settings: true, rootLabel: true } });
+    return { settings: server.settings, serverDir: server.rootLabel };
+  });
+
+  // ============================================
   // Changes
   // ============================================
 
