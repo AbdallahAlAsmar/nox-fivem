@@ -477,6 +477,41 @@ fn handle_orchestrator_request(
                 }
             }
         }
+        "fivem.tailConsole" => {
+            let lines = args.get("lines").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+            let log_path = srv_path.join("server.log");
+            let content = match fs::read_to_string(&log_path) {
+                Ok(c) => c,
+                Err(_) => {
+                    let env = serde_json::json!({
+                        "protocolVersion": "2026-08-12.v1",
+                        "messageId": Uuid::new_v4().to_string(),
+                        "type": "agent.response",
+                        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                        "requestId": req_id,
+                        "serverId": server_id,
+                        "agentDeviceId": agent_device_id,
+                        "payload": { "ok": false, "action": "fivem.tailConsole", "error": { "code": "LOG_NOT_FOUND", "message": "server.log not found", "retryable": false } }
+                    });
+                    let _ = tx.send(Message::Text(env.to_string()));
+                    return;
+                }
+            };
+            let all_lines: Vec<&str> = content.lines().collect();
+            let start = if all_lines.len() > lines { all_lines.len() - lines } else { 0 };
+            let tail = all_lines[start..].join("\n");
+            let env = serde_json::json!({
+                "protocolVersion": "2026-08-12.v1",
+                "messageId": Uuid::new_v4().to_string(),
+                "type": "agent.response",
+                "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                "requestId": req_id,
+                "serverId": server_id,
+                "agentDeviceId": agent_device_id,
+                "payload": { "ok": true, "action": "fivem.tailConsole", "result": { "lines": tail, "count": all_lines.len() - start } }
+            });
+            let _ = tx.send(Message::Text(env.to_string()));
+        }
         _ => {
             let env = serde_json::json!({
                 "protocolVersion": "2026-08-12.v1",

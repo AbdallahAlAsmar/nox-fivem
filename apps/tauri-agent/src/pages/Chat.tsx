@@ -16,6 +16,7 @@ import Players from './Players'
 import Changes from './Changes'
 import ResourceFinder from './ResourceFinder'
 import ErrorAnalysis from './ErrorAnalysis'
+import Console from './Console'
 import ServerSettings from './ServerSettings'
 
 const SKILL_ICONS: Record<string, React.ElementType> = {
@@ -239,7 +240,7 @@ export default function Chat({ serverId }: ChatProps) {
       case 'resources':
         return <ResourceFinder serverId={currentServerId} />
       case 'console':
-        return <ErrorAnalysis serverId={currentServerId} />
+        return <Console serverId={currentServerId} />
       case 'settings':
         return <ServerSettings serverId={currentServerId} />
       default:

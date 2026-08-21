@@ -6,6 +6,7 @@ import type { AuthUser } from '../auth';
 import { parseDiffToPatch } from './parseDiff';
 import type { AgentGateway } from '../ws/agentGateway';
 import { cache } from '../cache/cache';
+import { handleChatMessage } from '../chat/chatService';
 
 export async function registerRoutes(fastify: FastifyInstance) {
   // Register auth plugin
@@ -273,21 +274,21 @@ export async function registerRoutes(fastify: FastifyInstance) {
       const serverId = params.threadId.replace(/^thread_/, '');
       const server = await prisma.server.findUnique({ where: { id: serverId } });
       if (!server) return reply.status(404).send({ error: 'Server not found' });
-      thread = await prisma.chatThread.create({ data: { id: params.threadId, serverId, userId, title: 'New Chat', status: 'open' }, include: { server: true } });
+      thread = (await prisma.chatThread.create({ data: { id: params.threadId, serverId, userId, title: 'New Chat', status: 'open' }, include: { server: true, messages: { orderBy: { createdAt: 'asc' }, take: 50 } } })) as any;
     }
     const gateway = (fastify as any).agentGateway;
     if (!gateway) return reply.status(500).send({ error: 'Agent gateway not initialized' });
     const chunks: string[] = [];
     let lastError: string | undefined;
-    await handleChatMessage(gateway, thread.serverId, params.threadId, userId, body.message, (chunk) => {
+    await handleChatMessage(gateway, thread!.serverId, params.threadId, userId, body.message, (chunk: any) => {
       if (chunk.type === 'text') chunks.push(chunk.content);
       if (chunk.type === 'error') lastError = chunk.content;
     });
-    cache.invalidate(`threads:${thread.serverId}:${userId}`);
-    cache.invalidate(`thread:${thread.serverId}:${userId}`);
+    cache.invalidate(`threads:${thread!.serverId}:${userId}`);
+    cache.invalidate(`thread:${thread!.serverId}:${userId}`);
     if (!chunks.length) {
       if (lastError) return reply.send({ threadId: params.threadId, response: lastError });
-      const agentConnected = gateway.isConnected(thread.serverId);
+      const agentConnected = gateway.isConnected(thread!.serverId);
       if (!agentConnected) return reply.send({ threadId: params.threadId, response: 'The AI has no response because no agent is connected to this server. Pair your FiveM server first to enable file operations and full AI assistance.' });
       return reply.send({ threadId: params.threadId, response: 'The AI did not return a response. Please try again.' });
     }
@@ -629,6 +630,36 @@ export async function registerRoutes(fastify: FastifyInstance) {
     return { ok: true, synced: body.resources.length, framework: body.framework };
   });
 
+  // Console tail endpoint
+  fastify.get('/api/servers/:serverId/console', async (request, reply) => {
+    const user = requireAuth(request, reply);
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+
+    const server = await prisma.server.findFirst({
+      where: { id: params.serverId, orgId: user.orgId },
+    });
+
+    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    if (server.status !== 'online') return reply.status(400).send({ error: 'Agent not connected' });
+
+    const agentGateway = (fastify as any).agentGateway as AgentGateway;
+    if (!agentGateway.isConnected(params.serverId)) {
+      return reply.status(400).send({ error: 'Agent is not connected' });
+    }
+
+    try {
+      const result = await agentGateway.sendCommand(
+        params.serverId,
+        'fivem.tailConsole',
+        { lines: 200 },
+        15000
+      );
+      return result;
+    } catch (e) {
+      return reply.status(500).send({ error: e instanceof Error ? e.message : 'Failed to get console' });
+    }
+  });
+
   // Restart a server (sends command to agent)
   fastify.post('/api/servers/:serverId/restart', async (request, reply) => {
     const user = requireAuth(request, reply);
@@ -898,6 +929,26 @@ export async function registerRoutes(fastify: FastifyInstance) {
       createdAt: org.created_at,
     };
   });
+  // Delete a server
+  fastify.delete('/api/servers/:serverId', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+    const body = z.object({ confirmName: z.string() }).parse(request.body);
+
+    const server = await prisma.server.findFirst({
+      where: { id: params.serverId, orgId },
+    });
+
+    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    if (server.name !== body.confirmName) {
+      return reply.status(400).send({ error: 'Server name does not match. Please enter the exact server name to confirm deletion.' });
+    }
+
+    await prisma.server.delete({ where: { id: params.serverId } });
+    return { ok: true };
+  });
+
   // ============================================
   // Pairing helpers
   // ============================================

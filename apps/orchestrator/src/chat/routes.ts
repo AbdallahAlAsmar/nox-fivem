@@ -61,7 +61,7 @@ export async function registerChatRoutes(fastify: FastifyInstance) {
       const server = await prisma.server.findUnique({ where: { id: serverId } });
       if (!server) return reply.status(404).send({ error: 'Server not found' });
 
-      thread = await prisma.chatThread.create({
+      thread = (await prisma.chatThread.create({
         data: {
           id: params.threadId,
           serverId,
@@ -69,8 +69,8 @@ export async function registerChatRoutes(fastify: FastifyInstance) {
           title: 'New Chat',
           status: 'open',
         },
-        include: { server: true },
-      });
+        include: { server: true, messages: { orderBy: { createdAt: 'asc' }, take: 50 } },
+      })) as any;
     }
 
     const gateway = (fastify as any).agentGateway;
@@ -78,20 +78,20 @@ export async function registerChatRoutes(fastify: FastifyInstance) {
 
     const chunks: string[] = [];
     let lastError: string | undefined;
-    await handleChatMessage(gateway, thread.serverId, params.threadId, userId, body.message, (chunk) => {
+    await handleChatMessage(gateway, thread!.serverId, params.threadId, userId, body.message, (chunk: any) => {
       if (chunk.type === 'text') chunks.push(chunk.content);
       if (chunk.type === 'error') lastError = chunk.content;
     });
 
     // Invalidate cache
-    cache.invalidate(`threads:${thread.serverId}:${userId}`);
-    cache.invalidate(`thread:${thread.serverId}:${userId}`);
+    cache.invalidate(`threads:${thread!.serverId}:${userId}`);
+    cache.invalidate(`thread:${thread!.serverId}:${userId}`);
 
     if (!chunks.length) {
       if (lastError) {
         return reply.send({ threadId: params.threadId, response: lastError });
       }
-      const agentConnected = gateway.isConnected(thread.serverId);
+      const agentConnected = gateway.isConnected(thread!.serverId);
       if (!agentConnected) {
         return reply.send({
           threadId: params.threadId,
