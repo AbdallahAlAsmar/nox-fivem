@@ -40,7 +40,7 @@ export default function ServerDetailPage() {
   const router = useRouter();
   const serverId = params?.serverId ?? '';
 
-  const [activeTab, setActiveTab] = useState<'chat' | 'changes' | 'resources' | 'console' | 'settings'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'players' | 'changes' | 'resources' | 'console' | 'settings'>('chat');
   const [server, setServer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
