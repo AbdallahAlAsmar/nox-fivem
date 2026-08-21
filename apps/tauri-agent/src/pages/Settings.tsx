@@ -10,7 +10,6 @@ export default function Settings({ onThemeChange }: SettingsProps) {
   const [settings, setSettings] = useState({
     theme: 'dark' as 'dark' | 'light',
     serverDirectory: '',
-    aiMode: 'AI' as 'AI' | 'Agent',
     showFileTree: true,
     showCodeChanges: true,
     autoStart: false,
@@ -40,7 +39,6 @@ export default function Settings({ onThemeChange }: SettingsProps) {
       localStorage.setItem('nox-settings', JSON.stringify({
         theme: settings.theme,
         serverDirectory: settings.serverDirectory,
-        aiMode: settings.aiMode,
         showFileTree: settings.showFileTree,
         showCodeChanges: settings.showCodeChanges,
         autoStart: settings.autoStart,
@@ -109,36 +107,6 @@ export default function Settings({ onThemeChange }: SettingsProps) {
               className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
             />
           </div>
-        </div>
-      </div>
-
-      {/* AI Mode */}
-      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Cpu className="w-4 h-4 text-[#5E6AD2]" />
-          <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">AI Mode</h3>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSettings(s => ({ ...s, aiMode: 'AI' }))}
-            className={`flex-1 px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
-              settings.aiMode === 'AI'
-                ? 'bg-white text-[#0F0F14]'
-                : 'bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.5)] hover:bg-[rgba(255,255,255,0.08)]'
-            }`}
-          >
-            AI (Propose)
-          </button>
-          <button
-            onClick={() => setSettings(s => ({ ...s, aiMode: 'Agent' }))}
-            className={`flex-1 px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
-              settings.aiMode === 'Agent'
-                ? 'bg-white text-[#0F0F14]'
-                : 'bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.5)] hover:bg-[rgba(255,255,255,0.08)]'
-            }`}
-          >
-            Agent (Auto)
-          </button>
         </div>
       </div>
 
