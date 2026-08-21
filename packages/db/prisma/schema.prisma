@@ -160,6 +160,7 @@ model Server {
   playerCount Int      @default(0)
   maxPlayers  Int      @default(64)
   fps         Int      @default(0)
+  settings    Json     @default("{}") // Per-server settings: serverDir, etc.
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -228,6 +229,8 @@ model ChatThread {
   changes  Change[]
 
   @@map("chat_threads")
+  @@index([serverId, userId])
+  @@index([userId, createdAt])
 }
 
 model ChatMessage {

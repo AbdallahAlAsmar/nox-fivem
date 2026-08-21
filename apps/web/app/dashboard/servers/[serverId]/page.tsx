@@ -33,6 +33,7 @@ import {
 import ChatPanel from '@/components/chat/ChatPanel';
 import { ORCHESTRATOR_URL } from '@/lib/config';
 import { scanResources, restartServer, applyChange } from '@/lib/api';
+import { fetchPlayers } from '@/lib/api-base';
 
 export default function ServerDetailPage() {
   const params = useParams<{ serverId: string }>();
@@ -245,6 +246,7 @@ export default function ServerDetailPage() {
           <div className="h-10 border-b border-[rgba(255,255,255,0.08)] bg-[#16161E]/30 flex items-center px-4 gap-1 flex-shrink-0">
             {[
               { id: 'chat' as const, label: 'Chat', icon: MessageSquare },
+              { id: 'players' as const, label: 'Players', icon: Users },
               { id: 'changes' as const, label: 'Changes', icon: FileDiff },
               { id: 'resources' as const, label: 'Resources', icon: Package },
               { id: 'console' as const, label: 'Console', icon: Terminal },
@@ -278,6 +280,10 @@ export default function ServerDetailPage() {
                 framework={server.framework || 'unknown'}
                 resources={server.resources || []}
               />
+            )}
+
+            {activeTab === 'players' && (
+              <ServerPlayersView serverId={serverId} orchUrl={ORCH_URL} />
             )}
 
             {activeTab === 'changes' && (
@@ -700,6 +706,101 @@ function ServerResourcesView({
   );
 }
 
+function ServerPlayersView({ serverId, orchUrl }: { serverId: string; orchUrl: string }) {
+  const [players, setPlayers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadPlayers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${orchUrl}/api/servers/${serverId}/players`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setPlayers(data);
+    } catch {
+      setError('Failed to fetch players');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPlayers();
+    const interval = setInterval(loadPlayers, 30000);
+    return () => clearInterval(interval);
+  }, [serverId]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Loader2 className="w-6 h-6 animate-spin text-[rgba(255,255,255,0.3)]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="text-center">
+          <AlertCircle className="w-8 h-8 text-[rgba(239,68,68,0.5)] mx-auto mb-2" />
+          <p className="font-mono text-xs text-[rgba(239,68,68,0.7)]">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6">
+      {players.length === 0 ? (
+        <div className="text-center py-16">
+          <Users className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-3" />
+          <p className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] mb-1">
+            No Players Online
+          </p>
+          <p className="font-sans text-xs text-[rgba(255,255,255,0.3)]">
+            Players will appear here when connected to the server.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)]">
+              Online Players ({players.length})
+            </h3>
+            <button
+              onClick={loadPlayers}
+              className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors border border-[rgba(255,255,255,0.08)]"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Refresh
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {players.map((player) => (
+              <div
+                key={player.id}
+                className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-3 flex items-center gap-3 hover:border-[rgba(255,255,255,0.16)] transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)] flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 text-[#5E6AD2]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-mono text-sm text-white truncate">{player.name}</p>
+                  <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">{player.identifier}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-xs text-[rgba(255,255,255,0.5)]">{player.ping}ms</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ServerConsoleView({ server, onRestart }: { server: any; onRestart: () => void }) {
   const [command, setCommand] = useState('');
   const [logs, setLogs] = useState<string[]>([
@@ -758,6 +859,27 @@ function ServerSettingsView({
 }) {
   const [revoking, setRevoking] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [serverDir, setServerDir] = useState(server?.settings?.serverDir || '');
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveDir = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`${orchUrl}/api/servers/${serverId}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: { serverDir } }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setMsg('Settings saved');
+      onRefresh();
+    } catch {
+      setMsg('Failed to save settings');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMsg(null), 3000);
+    }
+  };
 
   const handleRevoke = async () => {
     if (!confirm('Are you sure you want to disconnect and revoke the agent on this server?')) return;
@@ -823,6 +945,31 @@ function ServerSettingsView({
             </label>
             <p className="font-mono text-xs text-white uppercase">{server.status}</p>
           </div>
+        </div>
+
+        <div>
+          <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1">
+            Server Directory
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={serverDir}
+              onChange={(e) => setServerDir(e.target.value)}
+              placeholder="Enter server directory path..."
+              className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#5E6AD2]"
+            />
+            <button
+              onClick={handleSaveDir}
+              disabled={saving}
+              className="px-4 py-2 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+          <p className="font-sans text-[10px] text-[rgba(255,255,255,0.3)] mt-1">
+            Path to your FiveM server directory (e.g., C:/servers/my-server)
+          </p>
         </div>
       </div>
 

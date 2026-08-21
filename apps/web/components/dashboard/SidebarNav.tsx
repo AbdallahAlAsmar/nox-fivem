@@ -24,7 +24,6 @@ import { useTheme } from '@/context/ThemeContext';
 const navItems = [
   { href: '/dashboard', label: 'Servers', icon: Server },
   { href: '/dashboard/resources', label: 'Resources', icon: Package },
-  { href: '/dashboard/players', label: 'Players', icon: Users },
   { href: '/dashboard/changes', label: 'Changes', icon: FileDiff },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
   { href: '/dashboard/docs', label: 'Docs', icon: BookOpen },
