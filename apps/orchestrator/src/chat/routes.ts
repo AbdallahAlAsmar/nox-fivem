@@ -5,39 +5,6 @@ import { handleChatMessage } from '../chat/chatService';
 import { cache } from '../cache/cache';
 
 export async function registerChatRoutes(fastify: FastifyInstance) {
-  // Get chat threads for a server (with history)
-  fastify.get('/api/servers/:serverId/threads', async (request, reply) => {
-    const params = z.object({ serverId: z.string() }).parse(request.params);
-    const userId = (request as any).userId || 'anonymous';
-    
-    const cached = cache.get(`threads:${params.serverId}:${userId}`);
-    if (cached) return cached;
-
-    const threads = await prisma.chatThread.findMany({
-      where: { serverId: params.serverId, userId },
-      include: { 
-        messages: { 
-          take: 1,
-          orderBy: { createdAt: 'desc' }
-        },
-        server: true
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 20,
-    });
-
-    const result = threads.map(t => ({
-      id: t.id,
-      title: t.title || `Chat - ${t.messages[0]?.content?.substring(0, 30) || 'New'}...`,
-      lastMessage: t.messages[0]?.content || '',
-      lastMessageAt: t.updatedAt,
-      messageCount: t.messages.length,
-    }));
-
-    cache.set(`threads:${params.serverId}:${userId}`, result, 30000);
-    return result;
-  });
-
   // Get or create a thread for a server and user
   fastify.get('/api/servers/:serverId/threads/:userId', async (request, reply) => {
     const params = z.object({ 
