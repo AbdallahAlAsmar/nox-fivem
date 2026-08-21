@@ -7,9 +7,10 @@ import { parseDiffToPatch } from './parseDiff';
 import type { AgentGateway } from '../ws/agentGateway';
 import { cache } from '../cache/cache';
 import { handleChatMessage } from '../chat/chatService';
+import { registerResourceRoutes } from './resourceRoutes';
 
 export async function registerRoutes(fastify: FastifyInstance) {
-  // Register auth plugin
+  await fastify.register(registerResourceRoutes);
   await fastify.register(authPlugin);
   // ============================================
   // Servers
@@ -191,29 +192,57 @@ export async function registerRoutes(fastify: FastifyInstance) {
     return thread;
   });
 
+  // List all threads for an org (used by web dashboard)
+  fastify.get('/api/threads', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const url = request.url as string;
+    const serverId = new URLSearchParams(url.split('?')[1] || '').get('serverId');
+
+    const threads = await prisma.chatThread.findMany({
+      where: serverId
+        ? { serverId, server: { orgId } }
+        : { server: { orgId } },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+      include: { server: { select: { id: true, name: true } } },
+    });
+
+    return threads;
+  });
+
   // Get threads for a server
   fastify.get('/api/servers/:serverId/threads', async (request, reply) => {
-    const user = requireAuth(request, reply);
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
     const params = z.object({
       serverId: z.string(),
     }).parse(request.params);
 
-    // Verify server belongs to user's org
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-
-    if (!server) {
-      return reply.status(404).send({ error: 'Server not found' });
-    }
-
     const threads = await prisma.chatThread.findMany({
-      where: { serverId: params.serverId },
+      where: { serverId: params.serverId, server: { orgId } },
       orderBy: { updatedAt: 'desc' },
       take: 50,
     });
 
     return threads;
+  });
+
+  // Delete a thread
+  fastify.delete('/api/threads/:threadId', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const params = z.object({ threadId: z.string() }).parse(request.params);
+
+    const thread = await prisma.chatThread.findFirst({
+      where: { id: params.threadId, server: { orgId } },
+    });
+
+    if (!thread) return reply.status(404).send({ error: 'Thread not found' });
+
+    await prisma.chatMessage.deleteMany({ where: { threadId: params.threadId } });
+    await prisma.chatThread.delete({ where: { id: params.threadId } });
+    return { ok: true };
   });
 
   // Get messages in a thread

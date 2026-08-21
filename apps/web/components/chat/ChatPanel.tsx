@@ -1,310 +1,410 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { 
-  MessageSquare, 
-  Bot, 
-  Send, 
-  Sparkles, 
-  RefreshCw,
-  Loader2,
-  AlertCircle,
-  FileText,
-  Package,
-  Settings,
-  Car,
-  Bug,
-  Palette,
-  User,
-  Zap,
-  Lock,
-  RotateCcw,
-  ChevronDown,
-  ChevronUp
+import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  MessageSquare, Bot, Send, Loader2, AlertCircle,
+  Plus, Trash2, ChevronDown, Sparkles, Clock, RefreshCw,
 } from 'lucide-react';
-import { sendChatMessage } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const SKILL_ICONS: Record<string, React.ElementType> = {
-  'Settings': Settings,
-  'Car': Car,
-  'Bug': Bug,
-  'Palette': Palette,
-  'User': User,
-  'Package': Package,
-  'Zap': Zap,
-  'Lock': Lock,
-  'RotateCcw': RotateCcw,
-  'FileText': FileText,
-};
-
-const SKILLS = [
-  { id: 'config-editor', name: 'Config Editor', icon: 'Settings', description: 'Edit config files' },
-  { id: 'vehicle-handler', name: 'Vehicle Handler', icon: 'Car', description: 'Modify vehicles' },
-  { id: 'error-fixer', name: 'Error Fixer', icon: 'Bug', description: 'Fix errors' },
-  { id: 'ui-customizer', name: 'UI Customizer', icon: 'Palette', description: 'Customize UI' },
-  { id: 'npc-spawner', name: 'NPC Spawner', icon: 'User', description: 'Add NPCs' },
-  { id: 'resource-installer', name: 'Resource Installer', icon: 'Package', description: 'Install resources' },
-  { id: 'dependency-checker', name: 'Dependency Checker', icon: 'Zap', description: 'Check dependencies' },
-  { id: 'performance-analyzer', name: 'Performance Analyzer', icon: 'Zap', description: 'Optimize performance' },
-  { id: 'fivem-dev', name: 'FiveM Dev', icon: 'Package', description: 'Complete FiveM RP engineering' },
-  { id: 'lua-development', name: 'Lua Expert', icon: 'Zap', description: 'Advanced Lua & QBCore' },
-  { id: 'fivem-nui', name: 'NUI Specialist', icon: 'Palette', description: 'HTML/CSS/JS UIs' },
-];
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-  skillUsed?: string;
-}
+import { sendChatMessage, fetchThreads, deleteThread, fetchThreadMessages } from '@/lib/api';
 
 interface ChatPanelProps {
   serverId: string;
-  threadId: string;
   framework: string;
-  resources: Array<{ name: string; path: string }>;
+  onThreadIdChange?: (threadId: string) => void;
 }
 
-export default function ChatPanel({ serverId, threadId, framework }: ChatPanelProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+const SKILLS = [
+  { id: 'config-editor', name: 'Config Editor', desc: 'Edit config files' },
+  { id: 'vehicle-handler', name: 'Vehicle Handler', desc: 'Modify vehicles' },
+  { id: 'error-fixer', name: 'Error Fixer', desc: 'Fix errors' },
+  { id: 'ui-customizer', name: 'UI Customizer', desc: 'Customize UI' },
+  { id: 'resource-installer', name: 'Resource Installer', desc: 'Install resources' },
+  { id: 'fivem-dev', name: 'FiveM Dev', desc: 'Complete FiveM RP engineering' },
+  { id: 'lua-development', name: 'Lua Expert', desc: 'Advanced Lua & QBCore' },
+  { id: 'fivem-nui', name: 'NUI Specialist', desc: 'HTML/CSS/JS UIs' },
+];
+
+type Role = 'user' | 'assistant' | 'tool';
+interface ChatMsg { id: string; role: Role; content: string; timestamp: number; skillUsed?: string; }
+interface Thread { id: string; serverId: string; userId: string; title?: string; status: string; createdAt: string; updatedAt: string; messageCount?: number; }
+
+export default function ChatPanel({ serverId, framework, onThreadIdChange }: ChatPanelProps) {
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [showThreadList, setShowThreadList] = useState(false);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
+  const [threadHistoryLoading, setThreadHistoryLoading] = useState(false);
+  const [isAgentConnected, setIsAgentConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!serverId) return;
+    fetch(`${process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/servers/${serverId}`)
+      .then((r) => r.json())
+      .then((data) => setIsAgentConnected(!!data?.hasAgent))
+      .catch(() => setIsAgentConnected(false));
+  }, [serverId]);
+
+  const activeThread = threads.find((t) => t.id === activeThreadId);
+
+  const loadThreads = useCallback(async () => {
+    const list = await fetchThreads(serverId);
+    setThreads(list);
+    if (list.length > 0 && !activeThreadId) {
+      setActiveThreadId(list[0].id);
+      onThreadIdChange?.(list[0].id);
+    }
+  }, [serverId, activeThreadId, onThreadIdChange]);
+
+  useEffect(() => { loadThreads(); }, [loadThreads]);
+
+  useEffect(() => {
+    if (activeThreadId) {
+      setThreadHistoryLoading(true);
+      fetchThreadMessages(activeThreadId).then((msgs) => {
+        setMessages(
+          msgs.map((m: any) => ({
+            id: m.id,
+            role: (m.role as Role) || 'assistant',
+            content: m.content,
+            timestamp: new Date(m.createdAt).getTime(),
+          })),
+        );
+      }).finally(() => setThreadHistoryLoading(false));
+    }
+  }, [activeThreadId]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, threadHistoryLoading]);
+
+  const createThread = async () => {
+    const id = `thread_${serverId}_${Date.now()}`;
+    const newThread: Thread = { id, serverId, userId: 'anonymous', title: 'New Chat', status: 'open', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), messageCount: 0 };
+    setThreads((prev) => [newThread, ...prev]);
+    setActiveThreadId(id);
+    onThreadIdChange?.(id);
+    setMessages([]);
+    setShowThreadList(false);
+  };
+
+  const deleteChat = async (threadId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await deleteThread(serverId, threadId).catch(() => null);
+    const remaining = threads.filter((t) => t.id !== threadId);
+    setThreads(remaining);
+    if (activeThreadId === threadId) {
+      const next = remaining[0];
+      setActiveThreadId(next?.id ?? null);
+      onThreadIdChange?.(next?.id ?? '');
+      setMessages([]);
+    }
+  };
+
+  const clearHistory = () => {
+    if (!confirm('Clear chat history for this thread?')) return;
+    setMessages([]);
+  };
 
   const toggleSkill = (skillId: string) => {
-    setSelectedSkills(prev => 
-      prev.includes(skillId) 
-        ? prev.filter(id => id !== skillId)
-        : [...prev, skillId]
+    setSelectedSkills((prev) =>
+      prev.includes(skillId) ? prev.filter((id) => id !== skillId) : [...prev, skillId],
     );
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !activeThreadId) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: Date.now(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const userMsg: ChatMsg = { id: `u_${Date.now()}`, role: 'user', content: input, timestamp: Date.now() };
+    setMessages((prev) => [...prev, userMsg]);
+    const captured = input.trim();
     setInput('');
     setIsLoading(true);
 
     try {
-      const response = await sendChatMessage(threadId, input);
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      const response = await sendChatMessage(activeThreadId, captured);
+      const assistantMsg: ChatMsg = {
+        id: `a_${Date.now()}`,
         role: 'assistant',
         content: response.response || 'Response received',
         timestamp: Date.now(),
       };
-      
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMsg]);
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === activeThreadId ? { ...t, messageCount: (t.messageCount ?? 0) + 2, updatedAt: new Date().toISOString() } : t,
+        ),
+      );
     } catch (error) {
-      console.error('Chat error:', error);
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: 'Sorry, there was an error processing your message. Please try again.',
-        timestamp: Date.now(),
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        { id: `e_${Date.now()}`, role: 'assistant', content: 'Sorry, there was an error. Please try again.', timestamp: Date.now() },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const clearHistory = () => {
-    setMessages([]);
-  };
-
   return (
-    <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="border-b border-border px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="font-medium text-sm">AI Assistant</span>
-          <span className="text-xs text-muted-foreground">• {framework.toUpperCase()}</span>
-        </div>
-        
-        <div className="flex items-center gap-2">
+    <div className="flex h-full bg-[#0F0F14]">
+      {/* Thread sidebar */}
+      <AnimatePresence>
+        {showThreadList && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowThreadList(false)}
+              className="absolute inset-0 bg-black/50 z-20 lg:hidden"
+            />
+            <motion.div
+              initial={{ x: -280, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -280, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25 }}
+              className="absolute left-0 top-0 bottom-0 w-72 bg-[#16161E] border-r border-white/8 z-30 flex flex-col lg:relative lg:z-0 lg:translate-x-0 lg:opacity-100"
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+                <span className="font-mono text-xs uppercase tracking-widest text-white/60">Chats</span>
+                <button
+                  onClick={createThread}
+                  className="flex items-center gap-1 px-2 py-1 bg-[#5E6AD2]/20 border border-[#5E6AD2]/40 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#5E6AD2]/30 transition-colors"
+                >
+                  <Plus className="w-3 h-3" /> New
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                {threads.length === 0 ? (
+                  <p className="text-[10px] text-white/25 font-mono px-3 py-6 text-center">No chats yet</p>
+                ) : (
+                  threads.map((thread) => (
+                    <button
+                      key={thread.id}
+                      onClick={() => { setActiveThreadId(thread.id); setShowThreadList(false); onThreadIdChange?.(thread.id); }}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors group ${
+                        activeThreadId === thread.id
+                          ? 'bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.3)]'
+                          : 'hover:bg-white/5 border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className={`w-3.5 h-3.5 flex-shrink-0 ${activeThreadId === thread.id ? 'text-[#5E6AD2]' : 'text-white/30'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-mono text-xs truncate ${activeThreadId === thread.id ? 'text-white' : 'text-white/60'}`}>
+                            {thread.title || 'Untitled'}
+                          </p>
+                          <p className="font-mono text-[9px] text-white/25 flex items-center gap-1 mt-0.5">
+                            <Clock className="w-2.5 h-2.5" />
+                            {new Date(thread.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <span className="font-mono text-[9px] text-white/20 flex-shrink-0">{thread.messageCount ?? 0}</span>
+                        <button
+                          onClick={(e) => deleteChat(thread.id, e)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-[#ef4444]"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/8 bg-[#16161E]/30 flex-shrink-0">
+          <button
+            onClick={() => setShowThreadList(true)}
+            className="lg:hidden flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 text-white/60 font-mono text-xs rounded hover:bg-white/10 transition-colors"
+          >
+            <ChevronDown className="w-3 h-3" /> Chats
+          </button>
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <div className={`w-2 h-2 rounded-full ${isAgentConnected ? 'bg-[#22c55e] animate-pulse' : 'bg-[#f59e0b]'}`} />
+            <span className={`font-mono text-[10px] uppercase tracking-wider ${isAgentConnected ? 'text-[#22c55e]' : 'text-[#f59e0b]'}`}>
+              {isAgentConnected ? 'Agent Live' : 'Agent Disconnected'}
+            </span>
+            <span className="font-mono text-xs text-white/70 truncate">
+              {activeThread?.title || 'AI Assistant'}
+            </span>
+            <span className="font-mono text-[10px] text-white/25 uppercase">• {framework.toUpperCase()}</span>
+          </div>
           <button
             onClick={clearHistory}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground rounded hover:bg-accent transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors border border-[rgba(255,255,255,0.08)]"
           >
             <RefreshCw className="w-3 h-3" />
-            Clear
+            <span className="hidden sm:inline">Clear</span>
+          </button>
+          <button
+            onClick={createThread}
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[#5E6AD2]/20 border border-[#5E6AD2]/40 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#5E6AD2]/30 transition-colors"
+          >
+            <Plus className="w-3 h-3" /> New Chat
           </button>
         </div>
-      </div>
 
-      {/* Skill Selector */}
-      <div className="border-b border-border px-4 py-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground">Skills:</span>
-          <button
-            onClick={() => setShowSkillPicker(!showSkillPicker)}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-accent rounded hover:bg-accent/80 transition-colors"
-          >
-            <Sparkles className="w-3 h-3" />
-            {selectedSkills.length > 0 ? `${selectedSkills.length} selected` : 'Select'}
-          </button>
-          
-          {selectedSkills.map(skillId => {
-            const skill = SKILLS.find(s => s.id === skillId);
-            const IconComponent = skill ? SKILL_ICONS[skill.icon] : null;
-            return skill && IconComponent ? (
-              <button
-                key={skillId}
-                onClick={() => toggleSkill(skillId)}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {threadHistoryLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="text-center py-16 space-y-4">
+              <div className="w-14 h-14 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] rounded-2xl flex items-center justify-center mx-auto">
+                <Bot className="w-7 h-7 text-[#5E6AD2]" />
+              </div>
+              <div>
+                <h3 className="font-mono text-sm text-white/80 mb-1">Start a conversation</h3>
+                <p className="font-sans text-xs text-white/30">Ask about your server, config, or resources</p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2 max-w-sm mx-auto">
+                {['Fix an error', 'Change HUD color', 'Add a job'].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setInput(s)}
+                    className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/40 font-mono text-[10px] uppercase tracking-wider rounded hover:bg-white/10 hover:text-white/60 transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <IconComponent className="w-3 h-3" />
-                {skill.name}
-                <span className="ml-1">×</span>
+                {msg.role === 'assistant' && (
+                  <div className="w-7 h-7 rounded-full bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.25)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Bot className="w-3.5 h-3.5 text-[#5E6AD2]" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[82%] rounded-xl px-3.5 py-2.5 ${
+                    msg.role === 'user'
+                      ? 'bg-[#5E6AD2] text-white'
+                      : 'bg-[#16161E] border border-white/8 text-white/85'
+                  }`}
+                >
+                  {msg.skillUsed && msg.role === 'assistant' && (
+                    <div className="flex items-center gap-1 text-[10px] text-[#5E6AD2]/70 mb-1 font-mono uppercase tracking-wider">
+                      <Sparkles className="w-3 h-3" /> {msg.skillUsed}
+                    </div>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  <p className="text-[9px] text-white/20 mt-1.5 font-mono">
+                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                {msg.role === 'user' && (
+                  <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-[10px] text-white/50 font-mono">U</span>
+                  </div>
+                )}
+              </motion.div>
+            ))
+          )}
+          {isLoading && (
+            <div className="flex gap-3">
+              <div className="w-7 h-7 rounded-full bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.25)] flex items-center justify-center flex-shrink-0">
+                <Bot className="w-3.5 h-3.5 text-[#5E6AD2]" />
+              </div>
+              <div className="bg-[#16161E] border border-white/8 rounded-xl px-4 py-3 flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-white/30" />
+                <span className="text-xs text-white/30 font-mono">Thinking...</span>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Skills bar */}
+        <div className="border-t border-white/8 px-4 py-2 flex items-center gap-2 flex-wrap flex-shrink-0 bg-[#16161E]/20">
+          <span className="font-mono text-[9px] uppercase tracking-wider text-white/20 flex-shrink-0">Skills:</span>
+          <div className="relative">
+            <button
+              onClick={() => setShowSkillPicker(!showSkillPicker)}
+              className="flex items-center gap-1 px-2 py-1 text-[10px] bg-white/5 border border-white/10 text-white/50 font-mono rounded hover:bg-white/10 hover:text-white/70 transition-colors"
+            >
+              <Sparkles className="w-3 h-3" />
+              {selectedSkills.length > 0 ? `${selectedSkills.length} selected` : 'Select'}
+            </button>
+            <AnimatePresence>
+              {showSkillPicker && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                  className="absolute bottom-full left-0 mb-2 w-56 bg-[#16161E] border border-white/10 rounded-lg shadow-xl p-2 z-10"
+                >
+                  <div className="grid grid-cols-1 gap-1">
+                    {SKILLS.map((skill) => (
+                      <button
+                        key={skill.id}
+                        onClick={() => { toggleSkill(skill.id); setShowSkillPicker(false); }}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors ${
+                          selectedSkills.includes(skill.id)
+                            ? 'bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.3)]'
+                            : 'hover:bg-white/5 border border-transparent'
+                        }`}
+                      >
+                        <Sparkles className={`w-3 h-3 flex-shrink-0 ${selectedSkills.includes(skill.id) ? 'text-[#5E6AD2]' : 'text-white/30'}`} />
+                        <div>
+                          <p className={`font-mono text-[10px] ${selectedSkills.includes(skill.id) ? 'text-white' : 'text-white/60'}`}>{skill.name}</p>
+                          <p className="font-sans text-[9px] text-white/30">{skill.desc}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          {selectedSkills.map((id) => {
+            const skill = SKILLS.find((s) => s.id === id);
+            return skill ? (
+              <button
+                key={id}
+                onClick={() => toggleSkill(id)}
+                className="flex items-center gap-1 px-2 py-1 text-[10px] bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.3)] text-[#5E6AD2] font-mono rounded hover:bg-[rgba(94,106,210,0.25)] transition-colors"
+              >
+                {skill.name} <span className="ml-0.5">×</span>
               </button>
             ) : null;
           })}
         </div>
 
-        {/* Skill Picker Dropdown */}
-        <AnimatePresence>
-          {showSkillPicker && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute top-full left-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-lg p-3 z-10"
+        {/* Input */}
+        <div className="border-t border-white/8 p-3 flex-shrink-0 bg-[#16161E]/20">
+          <div className="flex gap-2 max-w-4xl">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+              placeholder="Ask about your server..."
+              disabled={isLoading || !activeThreadId}
+              className="flex-1 px-4 py-2.5 bg-[#0F0F14] border border-white/10 text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#5E6AD2]/60 disabled:opacity-40 transition-colors"
+            />
+            <button
+              onClick={handleSend}
+              disabled={isLoading || !input.trim() || !activeThreadId}
+              className="px-4 py-2.5 bg-[#5E6AD2] text-white rounded-lg hover:bg-[#4f5bc0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
-              <div className="grid grid-cols-2 gap-2">
-                {SKILLS.map(skill => {
-                  const IconComponent = SKILL_ICONS[skill.icon];
-                  return (
-                    <button
-                      key={skill.id}
-                      onClick={() => {
-                        toggleSkill(skill.id);
-                        setShowSkillPicker(false);
-                      }}
-                      className={`p-2 rounded-lg text-left transition-colors ${
-                        selectedSkills.includes(skill.id)
-                          ? 'bg-primary/10 border border-primary/30'
-                          : 'hover:bg-accent border border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        {IconComponent && <IconComponent className="w-4 h-4 text-primary" />}
-                        <span className="text-xs font-medium">{skill.name}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{skill.description}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Bot className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Start a Conversation</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Select skills above, then ask about your server configuration.
-            </p>
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>Try: "Change my HUD color to blue"</p>
-              <p>Try: "Fix this error: attempt to index a nil value"</p>
-              <p>Try: "Add a ped spawn point"</p>
-            </div>
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </button>
           </div>
-        )}
-
-        {messages.map((message) => (
-          <motion.div
-            key={message.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            {message.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-primary" />
-              </div>
-            )}
-            <div
-              className={`max-w-[80%] rounded-xl px-4 py-2.5 ${
-                message.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-accent text-foreground'
-              }`}
-            >
-              {message.skillUsed && message.role === 'assistant' && (
-                <div className="text-xs text-primary/70 mb-1 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  Using: {message.skillUsed}
-                </div>
-              )}
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-            </div>
-          </motion.div>
-        ))}
-
-        {isLoading && (
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Bot className="w-4 h-4 text-primary" />
-            </div>
-            <div className="bg-accent rounded-xl px-4 py-3 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Thinking...</span>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="border-t border-border p-4">
-        <div className="flex gap-2 max-w-4xl mx-auto">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-            placeholder="Ask about your server... (Ctrl+K for commands)"
-            className="flex-1 px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50"
-            disabled={isLoading}
-          />
-          <button
-            onClick={handleSend}
-            disabled={isLoading || !input.trim()}
-            className="px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </button>
         </div>
       </div>
     </div>

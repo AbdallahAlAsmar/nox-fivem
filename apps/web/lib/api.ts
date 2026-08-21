@@ -73,7 +73,59 @@ export async function createServer(
   return { id: data.server.id, pairingCode: data.pairing.code };
 }
 
-/** Send a chat message */
+/** Fetch threads for a server */
+export async function fetchThreads(serverId: string): Promise<any[]> {
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads?serverId=${serverId}`);
+  } catch {
+    return [];
+  }
+}
+
+/** Fetch messages for a thread */
+export async function fetchThreadMessages(threadId: string): Promise<any[]> {
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`);
+  } catch {
+    return [];
+  }
+}
+
+/** Delete a thread */
+export async function deleteThread(serverId: string, threadId: string): Promise<void> {
+  const res = await fetch(`${ORCHESTRATOR_URL}/api/threads/${threadId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Failed to delete thread: ${res.status}`);
+}
+
+/** Fetch public resource catalog */
+export async function fetchResourceCatalog(params?: {
+  category?: string; search?: string; type?: string; page?: string; limit?: string;
+}): Promise<any> {
+  const qs = new URLSearchParams();
+  if (params?.category) qs.set('category', params.category);
+  if (params?.search) qs.set('search', params.search);
+  if (params?.type) qs.set('type', params.type);
+  if (params?.page) qs.set('page', params.page);
+  if (params?.limit) qs.set('limit', params.limit);
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/catalog${qs.toString() ? '?' + qs.toString() : ''}`);
+  } catch {
+    return { items: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  }
+}
+
+/** Delete a server */
+export async function deleteServer(serverId: string, confirmName: string): Promise<void> {
+  const res = await fetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ confirmName }),
+  });
+  if (!res.ok) throw new Error(`Failed to delete server: ${res.status}`);
+}
 export async function sendChatMessage(
   threadId: string,
   message: string,

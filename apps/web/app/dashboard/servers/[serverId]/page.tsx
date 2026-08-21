@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import ChatPanel from '@/components/chat/ChatPanel';
 import { ORCHESTRATOR_URL } from '@/lib/config';
-import { scanResources, restartServer, applyChange } from '@/lib/api';
+import { scanResources, restartServer, applyChange, deleteServer } from '@/lib/api';
 import { fetchPlayers } from '@/lib/api-base';
 
 export default function ServerDetailPage() {
@@ -50,6 +50,20 @@ export default function ServerDetailPage() {
   const [scanning, setScanning] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [headerMessage, setHeaderMessage] = useState<string | null>(null);
+  const [deletingServer, setDeletingServer] = useState(false);
+  const [deleteServerMsg, setDeleteServerMsg] = useState<string | null>(null);
+  const handleDeleteServer = async (name: string) => {
+    setDeletingServer(true);
+    setDeleteServerMsg(null);
+    try {
+      await deleteServer(serverId, name);
+      router.push('/dashboard');
+    } catch {
+      setDeleteServerMsg('Failed to delete server');
+    } finally {
+      setDeletingServer(false);
+    }
+  };
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ORCH_URL = ORCHESTRATOR_URL;
@@ -274,12 +288,11 @@ export default function ServerDetailPage() {
           {/* Tab Views */}
           <div className="flex-1 overflow-hidden flex flex-col">
             {activeTab === 'chat' && (
-              <ChatPanel
-                serverId={serverId}
-                threadId={`thread_${serverId}`}
-                framework={server.framework || 'unknown'}
-                resources={server.resources || []}
-              />
+                <ChatPanel
+                  serverId={serverId}
+                  framework={server.framework || 'unknown'}
+                  onThreadIdChange={(tid) => {/* sync active thread */}}
+                />
             )}
 
             {activeTab === 'players' && (
@@ -310,6 +323,7 @@ export default function ServerDetailPage() {
                 serverId={serverId}
                 orchUrl={ORCH_URL}
                 onRefresh={() => loadServer(false)}
+                onDelete={handleDeleteServer}
               />
             )}
           </div>
@@ -851,16 +865,21 @@ function ServerSettingsView({
   serverId,
   orchUrl,
   onRefresh,
+  onDelete,
 }: {
   server: any;
   serverId: string;
   orchUrl: string;
   onRefresh: () => void;
+  onDelete: (name: string) => Promise<void>;
 }) {
   const [revoking, setRevoking] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [serverDir, setServerDir] = useState(server?.settings?.serverDir || '');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteName, setDeleteName] = useState('');
+  const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
 
   const handleSaveDir = async () => {
     setSaving(true);
@@ -900,6 +919,22 @@ function ServerSettingsView({
     }
   };
 
+  const handleDelete = async () => {
+    if (deleteName !== server?.name) {
+      setDeleteMsg('Server name does not match');
+      return;
+    }
+    setDeleting(true);
+    try {
+      await onDelete(server?.name);
+      // On success, the parent handles the redirect
+    } catch {
+      setDeleteMsg('Failed to delete server');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-6 max-w-2xl space-y-6">
       <div>
@@ -925,26 +960,16 @@ function ServerSettingsView({
 
         <div>
           <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1">
-            Server ID
+            Framework
           </label>
-          <code className="font-mono text-xs text-[#5E6AD2] bg-[#0A0A0F] px-2 py-1 border border-[rgba(255,255,255,0.06)] block">
-            {serverId}
-          </code>
+          <p className="font-mono text-xs text-white uppercase">{server.framework || 'unknown'}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1">
-              Framework
-            </label>
-            <p className="font-mono text-xs text-white uppercase">{server.framework || 'unknown'}</p>
-          </div>
-          <div>
-            <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1">
-              Status
-            </label>
-            <p className="font-mono text-xs text-white uppercase">{server.status}</p>
-          </div>
+        <div>
+          <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1">
+            Status
+          </label>
+          <p className="font-mono text-xs text-white uppercase">{server.status}</p>
         </div>
 
         <div>
@@ -976,16 +1001,26 @@ function ServerSettingsView({
       <div className="border border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.04)] p-5 space-y-3">
         <h3 className="font-mono text-xs uppercase tracking-wider text-[#ef4444]">Danger Zone</h3>
         <p className="font-sans text-xs text-[rgba(255,255,255,0.4)]">
-          Disconnect the desktop agent from this server. You will need to re-pair it using a new pairing code.
+          Permanently delete this server and all its data. This cannot be undone.
         </p>
-        <button
-          onClick={handleRevoke}
-          disabled={revoking}
-          className="px-4 py-2 bg-[rgba(239,68,68,0.15)] border border-[rgba(239,68,68,0.3)] hover:bg-[rgba(239,68,68,0.25)] text-[#ef4444] font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center gap-2"
-        >
-          {revoking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-          <span>Disconnect Agent</span>
-        </button>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={deleteName}
+            onChange={(e) => setDeleteName(e.target.value)}
+            placeholder={`Type "${server?.name}" to confirm`}
+            className="w-full bg-[#0A0A0F] border border-[rgba(239,68,68,0.2)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#ef4444] placeholder:text-white/20"
+          />
+          {deleteMsg && <p className="font-mono text-xs text-[#ef4444]">{deleteMsg}</p>}
+          <button
+            onClick={handleDelete}
+            disabled={deleting || deleteName !== server?.name}
+            className="w-full px-4 py-2 bg-[rgba(239,68,68,0.15)] border border-[rgba(239,68,68,0.3)] hover:bg-[rgba(239,68,68,0.25)] text-[#ef4444] font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            <span>Delete Server</span>
+          </button>
+        </div>
       </div>
     </div>
   );
