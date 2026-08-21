@@ -106,49 +106,4 @@ export async function registerChatRoutes(fastify: FastifyInstance) {
 
     return { threadId: params.threadId, response: chunks.join('') };
   });
-
-  // Get server players
-  fastify.get('/api/servers/:serverId/players', async (request, reply) => {
-    const params = z.object({ serverId: z.string() }).parse(request.params);
-    
-    const cached = cache.get(`players:${params.serverId}`);
-    if (cached) return cached;
-
-    const players = await prisma.player.findMany({
-      where: { serverId: params.serverId },
-      orderBy: { name: 'asc' },
-    });
-
-    cache.set(`players:${params.serverId}`, players, 15000);
-    return players;
-  });
-
-  // Get server settings
-  fastify.get('/api/servers/:serverId/settings', async (request, reply) => {
-    const params = z.object({ serverId: z.string() }).parse(request.params);
-    
-    const server = await prisma.server.findUnique({
-      where: { id: params.serverId },
-      select: { settings: true },
-    });
-
-    return server?.settings || {};
-  });
-
-  // Update server settings
-  fastify.put('/api/servers/:serverId/settings', async (request, reply) => {
-    const params = z.object({ serverId: z.string() }).parse(request.params);
-    const body = z.object({ settings: z.record(z.any()).optional() }).parse(request.body);
-    
-    const server = await prisma.server.update({
-      where: { id: params.serverId },
-      data: { settings: { ...(body.settings || {}) } },
-    });
-
-    // Invalidate cache
-    cache.invalidate(`server:${params.serverId}`);
-    cache.invalidate(`players:${params.serverId}`);
-
-    return server.settings;
-  });
 }
