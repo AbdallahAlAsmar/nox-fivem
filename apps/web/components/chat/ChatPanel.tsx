@@ -47,6 +47,9 @@ const SKILLS = [
   { id: 'resource-installer', name: 'Resource Installer', icon: 'Package', description: 'Install resources' },
   { id: 'dependency-checker', name: 'Dependency Checker', icon: 'Zap', description: 'Check dependencies' },
   { id: 'performance-analyzer', name: 'Performance Analyzer', icon: 'Zap', description: 'Optimize performance' },
+  { id: 'fivem-dev', name: 'FiveM Dev', icon: 'Package', description: 'Complete FiveM RP engineering' },
+  { id: 'lua-development', name: 'Lua Expert', icon: 'Zap', description: 'Advanced Lua & QBCore' },
+  { id: 'fivem-nui', name: 'NUI Specialist', icon: 'Palette', description: 'HTML/CSS/JS UIs' },
 ];
 
 interface Message {
