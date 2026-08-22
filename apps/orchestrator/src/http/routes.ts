@@ -364,6 +364,17 @@ export async function registerRoutes(fastify: FastifyInstance) {
   });
 
   // ============================================
+  // Agent Status
+  // ============================================
+
+  fastify.get('/api/agent/status', async (request, reply) => {
+    const gateway = (fastify as any).agentGateway;
+    if (!gateway) return { connectedServers: [], total: 0 };
+    const servers = gateway.getConnectedServers();
+    return { connectedServers: servers, total: servers.length };
+  });
+
+  // ============================================
   // Settings
   // ============================================
 

@@ -236,3 +236,12 @@ export async function fetchOrg(): Promise<any> {
     return null;
   }
 }
+
+/** Fetch agent connection status */
+export async function fetchAgentStatus(): Promise<{ connectedServers: string[]; total: number }> {
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/agent/status`);
+  } catch {
+    return { connectedServers: [], total: 0 };
+  }
+}

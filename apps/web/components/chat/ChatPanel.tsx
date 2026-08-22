@@ -40,6 +40,7 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
   const [showThreadList, setShowThreadList] = useState(false);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
   const [isAgentConnected, setIsAgentConnected] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useUser();
   const isDev = user.isSignedIn === false;
@@ -52,6 +53,25 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
       .then((r) => r.json())
       .then((data) => setIsAgentConnected(!!data?.hasAgent))
       .catch(() => setIsAgentConnected(false));
+  }, [serverId]);
+
+  useEffect(() => {
+    const checkAgentStatus = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/agent/status`);
+        const data = await res.json();
+        const connected = data.connectedServers?.includes(serverId) ?? false;
+        setIsAgentConnected(connected);
+        setAgentStatus(connected ? 'connected' : 'disconnected');
+      } catch {
+        setIsAgentConnected(false);
+        setAgentStatus('disconnected');
+      }
+    };
+
+    checkAgentStatus();
+    const interval = setInterval(checkAgentStatus, 5000);
+    return () => clearInterval(interval);
   }, [serverId]);
 
   const activeThread = threads.find((t) => t.id === activeThreadId);
@@ -244,9 +264,9 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
             <ChevronDown className="w-3 h-3" /> Chats
           </button>
           <div className="flex-1 flex items-center gap-2 min-w-0">
-            <div className={`w-1.5 h-1.5 rounded-full ${isAgentConnected ? 'bg-[#22c55e] animate-pulse' : 'bg-[#f59e0b]'}`} />
-            <span className={`font-mono text-[10px] uppercase tracking-wider ${isAgentConnected ? 'text-[#22c55e]' : 'text-[#f59e0b]'}`}>
-              {isAgentConnected ? 'Agent Live' : 'Agent Disconnected'}
+            <div className={`w-1.5 h-1.5 rounded-full ${agentStatus === 'connected' ? 'bg-[#22c55e] animate-pulse' : agentStatus === 'disconnected' ? 'bg-[#ef4444]' : 'bg-[#f59e0b] animate-pulse'}`} />
+            <span className={`font-mono text-[10px] uppercase tracking-wider ${agentStatus === 'connected' ? 'text-[#22c55e]' : agentStatus === 'disconnected' ? 'text-[#ef4444]' : 'text-[#f59e0b]'}`}>
+              {agentStatus === 'connected' ? 'Agent Live' : agentStatus === 'disconnected' ? 'Agent Offline' : 'Checking...'}
             </span>
             <span className="font-mono text-xs text-white/50 truncate">
               {activeThread?.title || 'AI Assistant'}
@@ -270,7 +290,23 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.length === 0 ? (
+          {agentStatus === 'disconnected' && messages.length === 0 && (
+            <div className="text-center py-12 space-y-4">
+              <div className="w-12 h-12 bg-[rgba(239,68,68,0.08)] rounded-2xl flex items-center justify-center mx-auto">
+                <span className="text-2xl">🔌</span>
+              </div>
+              <div>
+                <h3 className="font-mono text-sm text-[#ef4444]/80 mb-1">Agent Not Connected</h3>
+                <p className="font-sans text-xs text-white/40">
+                  Open the NOX Agent desktop app to connect to your server.
+                </p>
+                <p className="font-sans text-xs text-white/25 mt-1">
+                  Once connected, the status will update automatically.
+                </p>
+              </div>
+            </div>
+          )}
+          {messages.length === 0 && agentStatus !== 'disconnected' && (
             <div className="text-center py-16 space-y-4">
               <div className="w-12 h-12 bg-[rgba(94,106,210,0.08)] rounded-2xl flex items-center justify-center mx-auto">
                 <Bot className="w-6 h-6 text-[#5E6AD2]/60" />
@@ -291,7 +327,8 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
                 ))}
               </div>
             </div>
-          ) : (
+          )}
+          {messages.length > 0 && (
             messages.map((msg) => (
               <motion.div
                 key={msg.id}
@@ -400,6 +437,13 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
 
         {/* Input */}
         <div className="p-3 flex-shrink-0 bg-[#0d0d14]/30">
+          {agentStatus === 'disconnected' && (
+            <div className="mb-2 px-3 py-2 bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] rounded-lg">
+              <p className="font-mono text-[10px] text-[#ef4444]/80 uppercase tracking-wider">
+                ⚠ Agent not connected — open NOX Agent app to enable AI assistance
+              </p>
+            </div>
+          )}
           <div className="flex gap-2 max-w-4xl">
             <input
               type="text"
@@ -407,12 +451,12 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
               placeholder="Ask about your server..."
-              disabled={isLoading || !activeThreadId}
+              disabled={isLoading || !activeThreadId || agentStatus === 'disconnected'}
               className="flex-1 px-4 py-2.5 bg-[#0a0a0f] text-white font-mono text-sm placeholder:text-white/15 focus:outline-none focus:ring-1 focus:ring-[#5E6AD2]/40 disabled:opacity-40 transition-all"
             />
             <button
               onClick={handleSend}
-              disabled={isLoading || !input.trim() || !activeThreadId}
+              disabled={isLoading || !input.trim() || !activeThreadId || agentStatus === 'disconnected'}
               className="px-4 py-2.5 bg-[#5E6AD2] text-white rounded-lg hover:bg-[#4f5bc0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
