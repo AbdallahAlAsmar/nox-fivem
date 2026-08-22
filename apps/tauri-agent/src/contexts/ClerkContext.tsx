@@ -14,7 +14,6 @@ interface ClerkContextType {
   signOut: () => void
 }
 
-// Simple context using @clerk/clerk-react hooks directly
 import { createContext, useContext, useEffect, useState } from 'react'
 
 const ClerkContext = createContext<ClerkContextType>({
@@ -29,7 +28,7 @@ export function useClerk() {
   return useContext(ClerkContext)
 }
 
-export function ClerkProvider({ children }: { children: React.ReactNode }) {
+export function ClerkContextProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoaded: clerkLoaded } = useUser()
   const { getToken, signOut: clerkSignOut } = useAuth()
   const [token, setToken] = useState<string | null>(null)
@@ -46,7 +45,7 @@ export function ClerkProvider({ children }: { children: React.ReactNode }) {
         name: user.fullName ?? user.username ?? user.id,
       }
       window.__nox_clerk_user = clerkUser
-      window.__nox_clerk_token = null // will be set after getToken
+      window.__nox_clerk_token = null
       ;(window as any).__nox_clerk_user = clerkUser
 
       getToken?.().then((t) => {
@@ -63,7 +62,6 @@ export function ClerkProvider({ children }: { children: React.ReactNode }) {
   }, [user, clerkLoaded, getToken])
 
   const signIn = () => {
-    // Clerk redirects are handled by ClerkProvider's afterSignInUrl
     window.location.href = '/sign-in'
   }
 
@@ -78,7 +76,13 @@ export function ClerkProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ClerkContext.Provider value={{ user: user ? { id: user.id, email: user.primaryEmailAddress?.emailAddress ?? '', name: user.fullName ?? user.username ?? user.id } : null, token, isLoaded, signIn, signOut }}>
+    <ClerkContext.Provider value={{
+      user: user ? { id: user.id, email: user.primaryEmailAddress?.emailAddress ?? '', name: user.fullName ?? user.username ?? user.id } : null,
+      token,
+      isLoaded,
+      signIn,
+      signOut,
+    }}>
       {children}
     </ClerkContext.Provider>
   )
