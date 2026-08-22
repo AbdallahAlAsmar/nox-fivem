@@ -210,26 +210,29 @@ export async function applyChange(changeId: string): Promise<any> {
 
 // ─── Chat ────────────────────────────────────────────────────────────────────
 
-export async function sendChatMessage(serverId: string, message: string): Promise<string> {
-  const threadId = serverId === 'local' ? 'thread_local' : `thread_${serverId}`
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: number
+  skillUsed?: string
+  isError?: boolean
+}
+
+export async function sendChatMessage(threadId: string, message: string): Promise<string> {
   const result = await apiFetch(`/api/threads/${threadId}/chat`, {
     method: 'POST',
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, userId: 'tauri' }),
   })
   return result?.response ?? result?.message ?? 'Response received.'
 }
 
-export function getStoredMessages(serverId: string): ChatMessage[] {
+export async function fetchServerThread(serverId: string): Promise<{ id: string; messages: any[] } | null> {
   try {
-    const raw = localStorage.getItem(`chat_${serverId}`)
-    return raw ? JSON.parse(raw) : []
+    return await apiFetch(`/api/servers/${serverId}/thread`)
   } catch {
-    return []
+    return null
   }
-}
-
-export function storeMessages(serverId: string, messages: ChatMessage[]): void {
-  localStorage.setItem(`chat_${serverId}`, JSON.stringify(messages))
 }
 
 // ─── Players ─────────────────────────────────────────────────────────────────

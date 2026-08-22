@@ -247,17 +247,14 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get messages in a thread
   fastify.get('/api/threads/:threadId/messages', async (request, reply) => {
-    const user = requireAuth(request, reply);
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
     const params = z.object({
       threadId: z.string(),
     }).parse(request.params);
 
-    // Verify thread belongs to user's org via server
     const thread = await prisma.chatThread.findFirst({
-      where: {
-        id: params.threadId,
-        server: { orgId: user.orgId },
-      },
+      where: { id: params.threadId, server: { orgId } },
     });
 
     if (!thread) {
@@ -270,6 +267,27 @@ export async function registerRoutes(fastify: FastifyInstance) {
     });
 
     return messages;
+  });
+
+  // Get or create one persistent thread per server/user
+  fastify.get('/api/servers/:serverId/thread', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+    const userId = user ? user.userId : 'anonymous';
+
+    let thread = await prisma.chatThread.findFirst({
+      where: { serverId: params.serverId, userId },
+      orderBy: { createdAt: 'asc' },
+      include: { messages: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!thread) {
+      thread = await prisma.chatThread.create({
+        data: { serverId: params.serverId, userId, title: 'Chat', status: 'open' },
+        include: { messages: { orderBy: { createdAt: 'asc' } } },
+      });
+    }
+    return thread;
   });
 
   // ============================================

@@ -6,7 +6,8 @@ import {
   Plus, Trash2, ChevronDown, Sparkles, Clock, RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { sendChatMessage, fetchThreads, deleteThread, fetchThreadMessages } from '@/lib/api';
+import { sendChatMessage, fetchServerThread, fetchThreadMessages } from '@/lib/api';
+import { useUser } from '@clerk/nextjs';
 
 interface ChatPanelProps {
   serverId: string;
@@ -41,6 +42,10 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
   const [threadHistoryLoading, setThreadHistoryLoading] = useState(false);
   const [isAgentConnected, setIsAgentConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const user = useUser();
+  const isDev = user.isSignedIn === false;
+  const sharedUserId = isDev ? 'anonymous' : user.user?.id || 'unknown';
+  const lastKnownMessageId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!serverId) return;
@@ -52,63 +57,83 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
 
   const activeThread = threads.find((t) => t.id === activeThreadId);
 
-  const loadThreads = useCallback(async () => {
-    const list = await fetchThreads(serverId);
-    setThreads(list);
-    if (list.length > 0 && !activeThreadId) {
-      setActiveThreadId(list[0].id);
-      onThreadIdChange?.(list[0].id);
-    }
-  }, [serverId, activeThreadId, onThreadIdChange]);
-
-  useEffect(() => { loadThreads(); }, [loadThreads]);
+  const initThread = useCallback(async () => {
+    if (!serverId) return;
+    const thread = await fetchServerThread(serverId);
+    if (!thread) return;
+    const id = thread.id;
+    setActiveThreadId(id);
+    onThreadIdChange?.(id);
+    setThreads([{
+      id,
+      serverId,
+      userId: thread.userId,
+      title: thread.title,
+      status: thread.status,
+      createdAt: thread.createdAt,
+      updatedAt: thread.updatedAt,
+      messageCount: thread.messages?.length ?? 0,
+    }]);
+    setMessages(
+      (thread.messages ?? []).map((m: any) => ({
+        id: m.id,
+        role: (m.role as Role) || 'assistant',
+        content: m.content,
+        timestamp: new Date(m.createdAt).getTime(),
+      })),
+    );
+    lastKnownMessageId.current = thread.messages?.[thread.messages.length - 1]?.id ?? null;
+  }, [serverId, onThreadIdChange]);
 
   useEffect(() => {
-    if (activeThreadId) {
-      setThreadHistoryLoading(true);
-      fetchThreadMessages(activeThreadId).then((msgs) => {
-        setMessages(
-          msgs.map((m: any) => ({
-            id: m.id,
-            role: (m.role as Role) || 'assistant',
-            content: m.content,
-            timestamp: new Date(m.createdAt).getTime(),
-          })),
-        );
-      }).finally(() => setThreadHistoryLoading(false));
-    }
+    if (!serverId) return;
+    fetch(`${process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/servers/${serverId}`)
+      .then((r) => r.json())
+      .then((data) => setIsAgentConnected(!!data?.hasAgent))
+      .catch(() => setIsAgentConnected(false));
+  }, [serverId]);
+
+  useEffect(() => {
+    initThread();
+  }, [initThread]);
+
+  useEffect(() => {
+    if (!activeThreadId) return;
+    const id = setInterval(async () => {
+      const msgs = await fetchThreadMessages(activeThreadId);
+      if (!msgs.length) return;
+      const last = msgs[msgs.length - 1];
+      if (lastKnownMessageId.current === last.id) return;
+      lastKnownMessageId.current = last.id;
+      setMessages(
+        msgs.map((m: any) => ({
+          id: m.id,
+          role: (m.role as Role) || 'assistant',
+          content: m.content,
+          timestamp: new Date(m.createdAt).getTime(),
+        })),
+      );
+    }, 2000);
+    return () => clearInterval(id);
   }, [activeThreadId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, threadHistoryLoading]);
+  }, [messages]);
 
   const createThread = async () => {
-    const id = `thread_${serverId}_${Date.now()}`;
-    const newThread: Thread = { id, serverId, userId: 'anonymous', title: 'New Chat', status: 'open', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), messageCount: 0 };
-    setThreads((prev) => [newThread, ...prev]);
-    setActiveThreadId(id);
-    onThreadIdChange?.(id);
-    setMessages([]);
+    await initThread();
     setShowThreadList(false);
   };
 
-  const deleteChat = async (threadId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await deleteThread(serverId, threadId).catch(() => null);
-    const remaining = threads.filter((t) => t.id !== threadId);
-    setThreads(remaining);
-    if (activeThreadId === threadId) {
-      const next = remaining[0];
-      setActiveThreadId(next?.id ?? null);
-      onThreadIdChange?.(next?.id ?? '');
-      setMessages([]);
-    }
+  const deleteChat = async (_threadId: string, _e: React.MouseEvent) => {
+    // one thread per user/server — no manual delete
   };
 
-  const clearHistory = () => {
+  const clearHistory = async () => {
     if (!confirm('Clear chat history for this thread?')) return;
     setMessages([]);
+    await initThread();
   };
 
   const toggleSkill = (skillId: string) => {
@@ -128,24 +153,33 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
 
     try {
       const response = await sendChatMessage(activeThreadId, captured);
-      const assistantMsg: ChatMsg = {
-        id: `a_${Date.now()}`,
-        role: 'assistant',
-        content: response.response || 'Response received',
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id === activeThreadId ? { ...t, messageCount: (t.messageCount ?? 0) + 2, updatedAt: new Date().toISOString() } : t,
-        ),
-      );
+      await initThread();
+      const thread = await fetchServerThread(serverId);
+      if (thread) {
+        setMessages(
+          (thread.messages ?? []).map((m: any) => ({
+            id: m.id,
+            role: (m.role as Role) || 'assistant',
+            content: m.content,
+            timestamp: new Date(m.createdAt).getTime(),
+          })),
+        );
+        lastKnownMessageId.current = thread.messages?.[thread.messages.length - 1]?.id ?? null;
+      }
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { id: `e_${Date.now()}`, role: 'assistant', content: 'Sorry, there was an error. Please try again.', timestamp: Date.now() },
-      ]);
-    } finally {
+      await initThread();
+      const thread = await fetchServerThread(serverId);
+      if (thread) {
+        setMessages(
+          (thread.messages ?? []).map((m: any) => ({
+            id: m.id,
+            role: (m.role as Role) || 'assistant',
+            content: m.content,
+            timestamp: new Date(m.createdAt).getTime(),
+          })),
+        );
+        lastKnownMessageId.current = thread.messages?.[thread.messages.length - 1]?.id ?? null;
+      } finally {
       setIsLoading(false);
     }
   };

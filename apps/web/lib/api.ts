@@ -91,6 +91,15 @@ export async function fetchThreadMessages(threadId: string): Promise<any[]> {
   }
 }
 
+/** Fetch one shared thread per server */
+export async function fetchServerThread(serverId: string): Promise<any> {
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/thread`);
+  } catch {
+    return null;
+  }
+}
+
 /** Delete a thread */
 export async function deleteThread(serverId: string, threadId: string): Promise<void> {
   const res = await fetch(`${ORCHESTRATOR_URL}/api/threads/${threadId}`, {

@@ -9,7 +9,7 @@ import {
   Users, GitBranch, Terminal, FileCog
 } from 'lucide-react'
 import {
-  sendChatMessage, getStoredMessages, storeMessages, fetchServers, connectExistingServer, syncResources, type ChatMessage, type Server
+  sendChatMessage, fetchServerThread, fetchServers, connectExistingServer, syncResources, type ChatMessage, type Server
 } from '../api'
 import { useClerk } from '../contexts/ClerkContext'
 import Players from './Players'
@@ -76,6 +76,8 @@ export default function Chat({ serverId }: ChatProps) {
   const [showHistory, setShowHistory] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
+  const lastMessageIdRef = useRef<string | null>(null)
 
   // Load server list
   useEffect(() => {
@@ -108,15 +110,51 @@ export default function Chat({ serverId }: ChatProps) {
   }, [currentServerId])
 
   // Load stored messages
-  useEffect(() => {
+  const loadThread = async () => {
     if (!currentServerId) return
-    const stored = getStoredMessages(currentServerId)
-    setMessages(stored)
+    const thread = await fetchServerThread(currentServerId)
+    if (!thread) return
+    setActiveThreadId(thread.id)
+    setMessages(
+      (thread.messages ?? []).map((m: any) => ({
+        id: m.id,
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.content,
+        timestamp: new Date(m.createdAt).getTime(),
+      }))
+    )
+    lastMessageIdRef.current = thread.messages?.[thread.messages.length - 1]?.id ?? null
+  }
+
+  useEffect(() => {
+    loadThread()
   }, [currentServerId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!activeThreadId) return
+    const interval = setInterval(async () => {
+      const thread = await fetchServerThread(currentServerId)
+      if (!thread) return
+      const msgs = thread.messages ?? []
+      if (!msgs.length) return
+      const last = msgs[msgs.length - 1]
+      if (lastMessageIdRef.current === last.id) return
+      lastMessageIdRef.current = last.id
+      setMessages(
+        msgs.map((m: any) => ({
+          id: m.id,
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.content,
+          timestamp: new Date(m.createdAt).getTime(),
+        }))
+      )
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [activeThreadId, currentServerId])
 
   const toggleSkill = (skillId: string) => {
     setSelectedSkills(prev =>
@@ -185,25 +223,14 @@ export default function Chat({ serverId }: ChatProps) {
       timestamp: Date.now(),
     }
 
-    const updated = [...messages, userMsg]
-    setMessages(updated)
-    storeMessages(currentServerId, updated)
+    setMessages((prev) => [...prev, userMsg])
     setInput('')
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await sendChatMessage(currentServerId, userMsg.content)
-      const assistantMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response || 'Response received.',
-        timestamp: Date.now(),
-        skillUsed: selectedSkills[0],
-      }
-      const final = [...updated, assistantMsg]
-      setMessages(final)
-      storeMessages(currentServerId, final)
+      await sendChatMessage(activeThreadId!, userMsg.content)
+      await loadThread()
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Failed to send message'
       setError(errMsg)
@@ -214,9 +241,7 @@ export default function Chat({ serverId }: ChatProps) {
         timestamp: Date.now(),
         isError: true,
       }
-      const final = [...updated, errMsgObj]
-      setMessages(final)
-      storeMessages(currentServerId, final)
+      setMessages((prev) => [...prev, errMsgObj])
     } finally {
       setIsLoading(false)
     }
@@ -225,7 +250,6 @@ export default function Chat({ serverId }: ChatProps) {
   const clearHistory = () => {
     if (confirm('Clear chat history?')) {
       setMessages([])
-      localStorage.removeItem(`chat_${currentServerId}`)
     }
   }
 
