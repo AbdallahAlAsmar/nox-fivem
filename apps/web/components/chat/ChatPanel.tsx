@@ -179,7 +179,8 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
           })),
         );
         lastKnownMessageId.current = thread.messages?.[thread.messages.length - 1]?.id ?? null;
-      } finally {
+      }
+    } finally {
       setIsLoading(false);
     }
   };

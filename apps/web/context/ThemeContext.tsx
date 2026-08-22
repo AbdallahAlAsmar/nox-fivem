@@ -1,62 +1,45 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { useEffect, useState, createContext } from 'react';
 
 type Theme = 'dark' | 'light';
 
-interface ThemeContextType {
+const ThemeContext = createContext<{
   theme: Theme;
   toggleTheme: () => void;
-}
+  mounted: boolean;
+}>({ theme: 'dark', toggleTheme: () => {}, mounted: false });
 
-const ThemeContext = createContext<ThemeContextType>({
-  theme: 'dark',
-  toggleTheme: () => {},
-});
-
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const saved = localStorage.getItem('nox-theme') as Theme | null;
     if (saved) {
       setTheme(saved);
+      document.documentElement.classList.add(saved);
     } else {
-      const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-      if (prefersLight) {
-        setTheme('light');
-      }
+      document.documentElement.classList.add('dark');
     }
-    setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted) {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.remove('light');
-      document.documentElement.classList.add(theme);
-      document.documentElement.style.colorScheme = theme;
-    }
-  }, [theme, mounted]);
-
   const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('nox-theme', newTheme);
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('nox-theme', next);
+    document.documentElement.classList.remove('dark', 'light');
+    document.documentElement.classList.add(next);
   };
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, mounted }}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
 export function useTheme() {
-  return useContext(ThemeContext);
+  return React.useContext(ThemeContext);
 }

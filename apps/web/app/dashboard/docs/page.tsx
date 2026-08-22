@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Terminal, Shield, AlertCircle, HelpCircle, FileText } from 'lucide-react';
+import { BookOpen, Terminal, Shield, AlertCircle, HelpCircle, FileText, Plus, RefreshCw, Settings as SettingsIcon, Package, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SECTIONS = [
@@ -45,6 +45,10 @@ const SECTIONS = [
         title: 'Scan returns no resources',
         body: 'The scan looks for fxserver.conf, resource manifest files, and folder structures. Ensure your server-data folder contains properly structured resources with valid manifests.',
       },
+      {
+        title: 'Failed to fetch players',
+        body: 'Ensure the agent is connected and the server is online. Players are only available when the agent has active communication with the FiveM server.',
+      },
     ],
   },
   {
@@ -83,6 +87,10 @@ const SECTIONS = [
       {
         title: 'GET /api/org',
         body: 'Returns organization billing info: planTier, monthlyActionLimit, monthlyActionCount, monthlyCostCap.',
+      },
+      {
+        title: 'GET /api/servers/:id/players',
+        body: 'Returns list of online players for a server. Requires active agent connection.',
       },
     ],
   },

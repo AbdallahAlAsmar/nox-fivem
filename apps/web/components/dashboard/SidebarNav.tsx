@@ -12,7 +12,6 @@ import {
   X,
   Package,
   Users,
-  FileDiff,
   CreditCard,
   BookOpen,
 } from 'lucide-react';
@@ -24,7 +23,6 @@ import { useTheme } from '@/context/ThemeContext';
 const navItems = [
   { href: '/dashboard', label: 'Servers', icon: Server },
   { href: '/dashboard/resources', label: 'Resources', icon: Package },
-  { href: '/dashboard/changes', label: 'Changes', icon: FileDiff },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
   { href: '/dashboard/docs', label: 'Docs', icon: BookOpen },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },

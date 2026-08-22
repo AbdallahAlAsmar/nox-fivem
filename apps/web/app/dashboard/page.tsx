@@ -40,6 +40,7 @@ interface ServerData {
   playerCount: number;
   maxPlayers: number;
   fps: number;
+  serverDir?: string;
 }
 
 interface Change {
@@ -208,7 +209,7 @@ function ServerCard({
           </h3>
         </div>
         <span className="nox-badge font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)] bg-[rgba(255,255,255,0.04)] px-2 py-0.5 flex-shrink-0 ml-2">
-          {server.framework?.toUpperCase() || 'UNKNOWN'}
+          {server.framework?.toUpperCase() || (server.hasAgent ? 'DETECTED' : 'STANDALONE')}
         </span>
       </div>
 

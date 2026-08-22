@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Package, Search, Filter, ChevronRight, Download,
   Star, Download as DownloadIcon, ExternalLink,
+  Server as ServerIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useSWR from 'swr';
@@ -38,6 +39,7 @@ export default function ResourceHubPage() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [headerMsg, setHeaderMsg] = useState<string | null>(null);
+  const [installing, setInstalling] = useState<string | null>(null);
 
   const { data: servers } = useSWR('servers', fetchServers, { fallbackData: [] });
 
@@ -67,7 +69,37 @@ export default function ResourceHubPage() {
     }
   };
 
+  const handleInstall = async (slug: string) => {
+    if (!selectedServer || installing) return;
+    setInstalling(slug);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/resources/install`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverId: selectedServer, slug }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setHeaderMsg(`Installed: ${catalog.find((r) => r.slug === slug)?.name}`);
+      setTimeout(() => setHeaderMsg(null), 3000);
+    } catch {
+      setHeaderMsg('Install failed');
+      setTimeout(() => setHeaderMsg(null), 3000);
+    } finally {
+      setInstalling(null);
+    }
+  };
+
   const selectedServerData = servers?.find((s: any) => s.id === selectedServer);
+
+  const categoryColors: Record<string, string> = {
+    framework: 'bg-[#5E6AD2]/20 text-[#5E6AD2] border-[#5E6AD2]/30',
+    jobs: 'bg-[#22c55e]/20 text-[#22c55e] border-[#22c55e]/30',
+    admin: 'bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/30',
+    inventory: 'bg-[#ec4899]/20 text-[#ec4899] border-[#ec4899]/30',
+    dependency: 'bg-[#8b5cf6]/20 text-[#8b5cf6] border-[#8b5cf6]/30',
+    map: 'bg-[#06b6d4]/20 text-[#06b6d4] border-[#06b6d4]/30',
+    config: 'bg-[rgba(255,255,255,0.1)] text-white/60 border-white/20',
+  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0F0F14] p-6">
@@ -113,9 +145,14 @@ export default function ResourceHubPage() {
         </div>
 
         {headerMsg && (
-          <div className="p-3 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] font-mono text-xs text-[#5E6AD2]">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="p-3 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] font-mono text-xs text-[#5E6AD2]"
+          >
             {headerMsg}
-          </div>
+          </motion.div>
         )}
 
         {/* Category tabs */}
@@ -160,9 +197,16 @@ export default function ResourceHubPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {catalog.map((res) => (
-              <ResourceCard key={res.slug} resource={res} serverId={selectedServer} />
+              <ResourceCard
+                key={res.slug}
+                resource={res}
+                serverId={selectedServer}
+                onInstall={handleInstall}
+                installing={installing === res.slug}
+                categoryColors={categoryColors}
+              />
             ))}
           </div>
         )}
@@ -171,36 +215,19 @@ export default function ResourceHubPage() {
   );
 }
 
-function ResourceCard({ resource, serverId }: { resource: Resource; serverId: string }) {
-  const [installing, setInstalling] = useState(false);
-
-  const handleInstall = async () => {
-    if (!serverId || installing) return;
-    setInstalling(true);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/resources/install`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serverId, slug: resource.slug }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    } catch {
-      /* ignore */
-    } finally {
-      setInstalling(false);
-    }
-  };
-
-  const categoryColors: Record<string, string> = {
-    framework: 'bg-[#5E6AD2]/20 text-[#5E6AD2] border-[#5E6AD2]/30',
-    jobs: 'bg-[#22c55e]/20 text-[#22c55e] border-[#22c55e]/30',
-    admin: 'bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/30',
-    inventory: 'bg-[#ec4899]/20 text-[#ec4899] border-[#ec4899]/30',
-    dependency: 'bg-[#8b5cf6]/20 text-[#8b5cf6] border-[#8b5cf6]/30',
-    map: 'bg-[#06b6d4]/20 text-[#06b6d4] border-[#06b6d4]/30',
-    config: 'bg-[rgba(255,255,255,0.1)] text-white/60 border-white/20',
-  };
-
+function ResourceCard({
+  resource,
+  serverId,
+  onInstall,
+  installing,
+  categoryColors,
+}: {
+  resource: Resource;
+  serverId: string;
+  onInstall: (slug: string) => void;
+  installing: boolean;
+  categoryColors: Record<string, string>;
+}) {
   return (
     <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4 hover:border-[rgba(255,255,255,0.16)] transition-colors">
       <div className="flex items-start gap-3">
@@ -237,7 +264,7 @@ function ResourceCard({ resource, serverId }: { resource: Resource; serverId: st
           </a>
           {serverId ? (
             <button
-              onClick={handleInstall}
+              onClick={() => onInstall(resource.slug)}
               disabled={installing}
               className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors border ${
                 installing

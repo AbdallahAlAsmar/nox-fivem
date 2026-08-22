@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import {
   Settings as SettingsIcon,
-  Bell,
   Shield,
   CheckCircle2,
   Monitor,
@@ -17,10 +16,6 @@ import { toast } from 'sonner';
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [notifications, setNotifications] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [compactMode, setCompactMode] = useState(false);
   const [saved, setSaved] = useState(false);
   const isDark = theme === 'dark';
 
@@ -32,16 +27,6 @@ export default function SettingsPage() {
     setSaved(true);
     toast.success('Settings saved');
     setTimeout(() => setSaved(false), 3000);
-  };
-
-  const testNotification = () => {
-    toast('This is a test notification', {
-      description: 'Notifications are working correctly!',
-      action: {
-        label: 'OK',
-        onClick: () => {},
-      },
-    });
   };
 
   if (!mounted) return null;
@@ -89,104 +74,6 @@ export default function SettingsPage() {
                 />
               </button>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-white">Compact mode</p>
-                <p className="font-sans text-xs text-white/40 mt-0.5">
-                  Reduce spacing for denser layout
-                </p>
-              </div>
-              <button
-                onClick={() => setCompactMode(!compactMode)}
-                className={`w-11 h-6 rounded-full transition-colors duration-200 flex items-center px-1 ${
-                  compactMode ? 'bg-[#5E6AD2]' : 'bg-white/15'
-                }`}
-              >
-                <motion.div
-                  initial={false}
-                  animate={{ x: compactMode ? 20 : 0 }}
-                  className="w-4 h-4 bg-white rounded-full shadow"
-                />
-              </button>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Notifications */}
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-[#16161E] border border-white/10 p-5"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Bell className="w-4 h-4 text-[#5E6AD2]" />
-            <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Notifications</h2>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-white">Chat notifications</p>
-                <p className="font-sans text-xs text-white/40 mt-0.5">
-                  Show toast when AI responds
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setNotifications(!notifications);
-                  toast(notifications ? 'Chat notifications disabled' : 'Chat notifications enabled');
-                }}
-                className={`w-10 h-5 transition-colors duration-100 flex items-center justify-end px-1 ${
-                  notifications ? 'bg-[#5E6AD2]' : 'bg-white/15'
-                }`}
-              >
-                <div className={`w-3 h-3 bg-white rounded-full ${notifications ? '' : 'translate-x-0'}`} />
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-white">Sound effects</p>
-                <p className="font-sans text-xs text-white/40 mt-0.5">
-                  Play sound on notifications
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setSoundEnabled(!soundEnabled);
-                  toast(soundEnabled ? 'Sound disabled' : 'Sound enabled');
-                }}
-                className={`w-10 h-5 transition-colors duration-100 flex items-center justify-end px-1 ${
-                  soundEnabled ? 'bg-[#5E6AD2]' : 'bg-white/15'
-                }`}
-              >
-                <div className="w-3 h-3 bg-white rounded-full" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-white">Auto-refresh servers</p>
-                <p className="font-sans text-xs text-white/40 mt-0.5">
-                  Poll orchestrator every 60s
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setAutoRefresh(!autoRefresh);
-                  toast(autoRefresh ? 'Auto-refresh disabled' : 'Auto-refresh enabled');
-                }}
-                className={`w-10 h-5 transition-colors duration-100 flex items-center justify-end px-1 ${
-                  autoRefresh ? 'bg-[#5E6AD2]' : 'bg-white/15'
-                }`}
-              >
-                <div className="w-3 h-3 bg-white rounded-full" />
-              </button>
-            </div>
-            <button
-              onClick={testNotification}
-              className="mt-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider border border-[rgba(94,106,210,0.3)] text-[#5E6AD2] hover:bg-[rgba(94,106,210,0.1)] transition-colors duration-100"
-            >
-              Test Notification
-            </button>
           </div>
         </motion.section>
 
@@ -194,7 +81,7 @@ export default function SettingsPage() {
         <motion.section
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
+          transition={{ delay: 0.1 }}
           className="bg-[#16161E] border border-white/10 p-5"
         >
           <div className="flex items-center gap-2 mb-4">
@@ -219,7 +106,7 @@ export default function SettingsPage() {
         <motion.section
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.15 }}
           className="bg-[#16161E] border border-white/10 p-5"
         >
           <div className="flex items-center gap-2 mb-4">

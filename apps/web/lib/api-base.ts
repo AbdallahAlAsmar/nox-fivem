@@ -60,6 +60,9 @@ export async function fetchPlayers(serverId: string): Promise<any[]> {
   return cachedFetch(`players:${serverId}`, `${ORCHESTRATOR_URL}/api/servers/${serverId}/players`);
 }
 
+/**
+ * Fetch server settings (framework, directory, etc. auto-detected)
+ */
 export async function fetchServerSettings(serverId: string): Promise<any> {
   return cachedFetch(`settings:${serverId}`, `${ORCHESTRATOR_URL}/api/servers/${serverId}/settings`);
 }
