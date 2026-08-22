@@ -19,6 +19,7 @@ import { SignedIn, SignedOut, SignInButton, useClerk, useUser } from '@clerk/nex
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from '@/context/ThemeContext';
+import AgentStatusBadge from '@/components/status/AgentStatusBadge';
 
 const navItems = [
   { href: '/dashboard', label: 'Servers', icon: Server },
@@ -181,6 +182,11 @@ export default function SidebarNav() {
                 NOX
               </motion.span>
             </div>
+          </div>
+
+          {/* Agent Status */}
+          <div className="px-3 py-2 border-b border-white/5">
+            <AgentStatusBadge />
           </div>
 
           {/* Nav */}

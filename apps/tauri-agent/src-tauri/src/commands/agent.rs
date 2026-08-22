@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::fs;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::config::{AgentState, AgentConnectionStatus, update_agent_state, get_config, get_agent_state};
+use crate::config::{AgentState, AgentConnectionStatus, update_agent_state, get_config, get_agent_state, update_config};
 use crate::commands::scanner::{Scanner, ScanResult};
 use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
@@ -51,12 +51,14 @@ pub struct ErrorDetail {
 }
 
 #[derive(Debug, Clone)]
-struct AgentConnection {
+pub struct AgentConnection {
+    #[allow(dead_code)]
     sender: mpsc::UnboundedSender<Message>,
     server_id: String,
     agent_device_id: String,
+    #[allow(dead_code)]
     server_directory: String,
-    pending_requests: Arc<Mutex<HashMap<String, mpsc::UnboundedSender<ResponsePayload>>>>,
+    pub pending_requests: Arc<Mutex<HashMap<String, mpsc::UnboundedSender<ResponsePayload>>>>,
 }
 
 impl AgentConnection {
@@ -77,7 +79,14 @@ impl AgentConnection {
 }
 
 lazy_static::lazy_static! {
-    static ref AGENT_CONNECTION: Arc<Mutex<Option<AgentConnection>>> = Arc::new(Mutex::new(None));
+    pub static ref AGENT_CONNECTION: Arc<Mutex<Option<AgentConnection>>> = Arc::new(Mutex::new(None));
+}
+
+/// Check if the agent is currently connected to the orchestrator
+#[allow(dead_code)]
+pub fn is_connected() -> bool {
+    let guard = AGENT_CONNECTION.lock().unwrap();
+    guard.is_some()
 }
 
 #[tauri::command]
@@ -273,10 +282,17 @@ pub async fn connect_agent_cmd(
 
     update_agent_state(|state| {
         state.connected = true;
-        state.server_id = Some(server_id);
+        state.server_id = Some(server_id.clone());
         state.status = AgentConnectionStatus::Connected;
         state.last_heartbeat = Some(chrono::Utc::now().timestamp());
     });
+
+    // Save connection info to config for auto-connect on next launch
+    let mut config = get_config();
+    config.server_id = Some(server_id.clone());
+    config.agent_device_id = agent_device_id.clone();
+    config.server_directory = server_directory.clone();
+    update_config(config);
 
     Ok(get_agent_state())
 }

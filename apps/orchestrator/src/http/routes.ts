@@ -374,6 +374,30 @@ export async function registerRoutes(fastify: FastifyInstance) {
     return { connectedServers: servers, total: servers.length };
   });
 
+  // WebSocket endpoint for client status subscriptions
+  fastify.register(async function (fastify) {
+    fastify.get('/ws/status', { websocket: true }, (connection, req) => {
+      const gateway = (fastify as any).agentGateway;
+      if (!gateway) {
+        connection.close();
+        return;
+      }
+
+      // Send initial status
+      const servers = gateway.getConnectedServers();
+      connection.send(JSON.stringify({
+        type: 'agent.status',
+        connectedServers: servers,
+        total: servers.length,
+      }));
+
+      // Listen for disconnects
+      connection.on('close', () => {
+        // Client disconnected
+      });
+    });
+  });
+
   // ============================================
   // Settings
   // ============================================

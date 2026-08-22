@@ -8,6 +8,8 @@ use std::sync::LazyLock;
 pub struct Config {
     pub theme: Theme,
     pub server_directory: String,
+    pub server_id: Option<String>,
+    pub agent_device_id: String,
     pub ai_mode: AiMode,
     pub show_file_tree: bool,
     pub show_code_changes: bool,
@@ -71,6 +73,8 @@ static CONFIG: LazyLock<Mutex<Config>> = LazyLock::new(|| {
     Mutex::new(Config {
         theme: Theme::Dark,
         server_directory: String::new(),
+        server_id: None,
+        agent_device_id: String::new(),
         ai_mode: AiMode::AI,
         show_file_tree: true,
         show_code_changes: true,
@@ -129,4 +133,9 @@ pub fn get_agent_state() -> AgentState {
 pub fn update_agent_state(updater: impl FnOnce(&mut AgentState)) {
     let mut state = AGENT_STATE.lock().unwrap();
     updater(&mut state);
+}
+
+pub fn is_configured() -> bool {
+    let config = get_config();
+    !config.agent_device_id.is_empty() && config.server_id.is_some()
 }

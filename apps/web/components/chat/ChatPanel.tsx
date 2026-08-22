@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { sendChatMessage, fetchServerThread, fetchThreadMessages } from '@/lib/api';
 import { useUser } from '@clerk/nextjs';
+import { useAgentStatus } from '@/contexts/AgentStatusContext';
 
 interface ChatPanelProps {
   serverId: string;
@@ -39,40 +40,14 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [showThreadList, setShowThreadList] = useState(false);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
-  const [isAgentConnected, setIsAgentConnected] = useState(false);
-  const [agentStatus, setAgentStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isConnected } = useAgentStatus();
+  const isAgentConnected = isConnected;
+  const agentStatus: 'connected' | 'disconnected' | 'checking' = isConnected ? 'connected' : 'disconnected';
   const user = useUser();
   const isDev = user.isSignedIn === false;
   const sharedUserId = isDev ? 'anonymous' : user.user?.id || 'unknown';
   const lastKnownMessageId = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!serverId) return;
-    fetch(`${process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/servers/${serverId}`)
-      .then((r) => r.json())
-      .then((data) => setIsAgentConnected(!!data?.hasAgent))
-      .catch(() => setIsAgentConnected(false));
-  }, [serverId]);
-
-  useEffect(() => {
-    const checkAgentStatus = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/agent/status`);
-        const data = await res.json();
-        const connected = data.connectedServers?.includes(serverId) ?? false;
-        setIsAgentConnected(connected);
-        setAgentStatus(connected ? 'connected' : 'disconnected');
-      } catch {
-        setIsAgentConnected(false);
-        setAgentStatus('disconnected');
-      }
-    };
-
-    checkAgentStatus();
-    const interval = setInterval(checkAgentStatus, 5000);
-    return () => clearInterval(interval);
-  }, [serverId]);
 
   const activeThread = threads.find((t) => t.id === activeThreadId);
 

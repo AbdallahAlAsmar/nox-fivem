@@ -49,6 +49,7 @@ export class AgentGateway {
               capabilities: (message.payload as AgentHello).capabilities,
             };
             this.connections.set(connection.serverId, connection);
+            this.broadcastStatus();
             break;
 
           case 'agent.heartbeat':
@@ -78,7 +79,8 @@ export class AgentGateway {
       if (connection) {
         console.log(`Agent disconnected: ${connection.serverId}`);
         this.connections.delete(connection.serverId);
-        
+        this.broadcastStatus();
+
         // Update server status to offline
         await prisma.server.update({
           where: { id: connection.serverId },
@@ -248,5 +250,13 @@ export class AgentGateway {
       pendingRequests: this.pendingRequests.size,
       servers: this.getConnectedServers(),
     };
+  }
+
+  // Broadcast status to all connected WebSocket clients
+  broadcastStatus() {
+    // This would broadcast to any registered status subscribers
+    // For now, we rely on the /ws/status endpoint
+    const servers = this.getConnectedServers();
+    console.log(`[StatusBroadcast] ${servers.length} agents connected: ${servers.join(', ') || 'none'}`);
   }
 }
