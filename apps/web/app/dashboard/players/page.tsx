@@ -6,6 +6,9 @@ import { Users, Search, Shield, ShieldOff, AlertCircle, Ban, UserX } from 'lucid
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchServers } from '@/lib/api';
 import { fetchPlayers, banPlayer, unbanPlayer } from '@/lib/api';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { ConfirmDialog, useConfirmDialog } from '@/components/ui/confirm-dialog';
+import { toast } from 'sonner';
 
 export default function PlayersPage() {
   const [selectedServer, setSelectedServer] = useState<string>('');
@@ -13,7 +16,8 @@ export default function PlayersPage() {
   const [filterBanned, setFilterBanned] = useState<'all' | 'online' | 'banned'>('all');
   const [banning, setBanning] = useState<string | null>(null);
   const [banReason, setBanReason] = useState('');
-  const [toast, setToast] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const { dialog, confirm, close: closeConfirm } = useConfirmDialog();
 
   const { data: servers, isLoading: loadingServers } = useSWR('servers', fetchServers, {
     fallbackData: [],
@@ -40,162 +44,215 @@ export default function PlayersPage() {
     setBanning(playerId);
     try {
       await banPlayer(selectedServer, playerId, banReason || `Banned by admin`);
-      setToast(`Banned ${name}`);
+      toast.success(`Banned ${name}`);
       mutate();
     } catch {
-      setToast('Failed to ban player');
+      toast.error('Failed to ban player');
     }
     setBanning(null);
     setBanReason('');
-    setTimeout(() => setToast(null), 3000);
   };
 
   const handleUnban = async (playerId: string, name: string) => {
     if (!selectedServer) return;
     try {
       await unbanPlayer(selectedServer, playerId);
-      setToast(`Unbanned ${name}`);
+      toast.success(`Unbanned ${name}`);
       mutate();
     } catch {
-      setToast('Failed to unban player');
+      toast.error('Failed to unban player');
     }
-    setTimeout(() => setToast(null), 3000);
   };
 
   const onlineCount = (players ?? []).filter((p: any) => !p.isBanned).length;
   const bannedCount = (players ?? []).filter((p: any) => p.isBanned).length;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0F0F14] p-6">
-      {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(94,106,210,0.4)] text-white"
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="max-w-4xl mx-auto space-y-5">
-        {/* Header */}
-        <div>
-          <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-white">Players</h1>
-          <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-1">
-            Manage online players and bans across your servers
-          </p>
+    <ErrorBoundary>
+      <div className="flex-1 overflow-y-auto bg-[#0a0a0f] p-6">
+        {/* Toast notifications */}
+        <div className="fixed top-4 right-4 z-50 space-y-2">
+          <AnimatePresence>
+            {toastMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                className="font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(94,106,210,0.4)] text-white"
+              >
+                {toastMsg}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Server selector */}
-        <div className="flex gap-3 items-center">
-          <div className="relative flex-1">
-            <select
-              value={selectedServer}
-              onChange={(e) => { setSelectedServer(e.target.value); setSearch(''); setFilterBanned('all'); }}
-              className="w-full appearance-none bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2.5 pr-8 focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
-            >
-              <option value="">Select a server…</option>
-              {servers?.map((s: any) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-            <Users className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(255,255,255,0.3)] pointer-events-none" />
+        {/* Confirm dialog */}
+        {dialog && (
+          <ConfirmDialog
+            isOpen={!!dialog}
+            title={dialog.title}
+            message={dialog.message}
+            confirmText={dialog.confirmText}
+            cancelText={dialog.cancelText}
+            variant={dialog.variant}
+            onConfirm={dialog.onConfirm}
+            onCancel={closeConfirm}
+          />
+        )}
+
+        <div className="max-w-4xl mx-auto space-y-5">
+          {/* Header */}
+          <div>
+            <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-white">Players</h1>
+            <p className="font-sans text-xs text-white/40 mt-1">
+              Manage online players and bans across your servers
+            </p>
           </div>
-          {selectedServer && (
-            <div className="flex gap-2 font-mono text-[10px] uppercase tracking-wider">
-              <span className="px-2.5 py-1.5 bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.2)] text-[#22c55e]">
-                {onlineCount} online
-              </span>
-              {bannedCount > 0 && (
-                <span className="px-2.5 py-1.5 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] text-[#ef4444]">
-                  {bannedCount} banned
+
+          {/* Server selector */}
+          <div className="flex gap-3 items-center">
+            <div className="relative flex-1">
+              <select
+                value={selectedServer}
+                onChange={(e) => { setSelectedServer(e.target.value); setSearch(''); setFilterBanned('all'); }}
+                className="w-full appearance-none bg-[#16161E] border border-white/10 text-white font-mono text-xs uppercase tracking-wider px-4 py-2.5 pr-8 focus:outline-none focus:border-[#5E6AD2] transition-colors"
+              >
+                <option value="">Select a server...</option>
+                {servers?.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <Users className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+            </div>
+            {selectedServer && (
+              <div className="flex gap-2 font-mono text-[10px] uppercase tracking-wider">
+                <span className="px-2.5 py-1.5 bg-[rgba(34,197,94,0.1)] text-[#22c55e]">
+                  {onlineCount} online
                 </span>
+                {bannedCount > 0 && (
+                  <span className="px-2.5 py-1.5 bg-[rgba(239,68,68,0.1)] text-[#ef4444]">
+                    {bannedCount} banned
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Search + filters */}
+          {selectedServer && players !== undefined && (
+            <>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by name or ID..."
+                    className="w-full pl-9 pr-4 py-2 bg-transparent border border-white/10 text-sm text-white font-sans placeholder:text-white/25 focus:outline-none focus:border-[#5E6AD2] transition-colors"
+                  />
+                </div>
+                <div className="flex gap-1">
+                  {(['all', 'online', 'banned'] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setFilterBanned(f)}
+                      className={`font-mono text-[10px] uppercase tracking-wider px-3 py-2 transition-colors ${
+                        filterBanned === f
+                          ? 'bg-[rgba(94,106,210,0.15)] text-[#5E6AD2]'
+                          : 'text-white/40 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Player list */}
+              {loadingPlayers ? (
+                <div className="space-y-1">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="bg-[#16161E] px-5 py-3.5 flex items-center gap-4">
+                      <div className="w-8 h-8 bg-white/5 rounded-full animate-pulse flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="w-32 h-3 bg-white/5 rounded animate-pulse" />
+                        <div className="w-24 h-2.5 bg-white/3 rounded animate-pulse" />
+                      </div>
+                      <div className="w-16 h-7 bg-white/5 rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-16 bg-[#16161E]">
+                  <Users className="w-10 h-10 text-white/20 mx-auto mb-4" />
+                  <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">
+                    {search ? 'No matches' : 'No players yet'}
+                  </h3>
+                  <p className="font-sans text-xs text-white/40">
+                    {search ? 'Try a different search term' : 'Players will appear when someone joins the server'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filtered.map((player: any) => (
+                    <PlayerRow
+                      key={player.id}
+                      player={player}
+                      onBan={() => handleBan(player.id, player.name)}
+                      onUnban={() => handleUnban(player.id, player.name)}
+                      banning={banning === player.id}
+                      banReason={banReason}
+                      onBanReasonChange={(v) => setBanReason(v)}
+                    />
+                  ))}
+                </div>
               )}
+            </>
+          )}
+
+          {!selectedServer && !loadingServers && (
+            <div className="text-center py-20 bg-[#16161E]">
+              <Users className="w-12 h-12 text-white/15 mx-auto mb-4" />
+              <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">Select a server</h3>
+              <p className="font-sans text-xs text-white/40 max-w-sm mx-auto leading-[1.6]">
+                Choose a server to view and manage its players.
+              </p>
+            </div>
+          )}
+
+          {loadingServers && (
+            <div className="space-y-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="bg-[#16161E] px-5 py-3.5 flex items-center gap-4">
+                  <div className="w-8 h-8 bg-white/5 rounded-full animate-pulse flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="w-32 h-3 bg-white/5 rounded animate-pulse" />
+                    <div className="w-24 h-2.5 bg-white/3 rounded animate-pulse" />
+                  </div>
+                  <div className="w-16 h-7 bg-white/5 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {selectedServer && !loadingPlayers && !players && (
+            <div className="text-center py-16 bg-[#16161E]">
+              <AlertCircle className="w-10 h-10 text-white/20 mx-auto mb-4" />
+              <h3 className="font-mono text-sm text-white/60 mb-2">Failed to load players</h3>
+              <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
+              <button
+                onClick={() => mutate()}
+                className="flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+              >
+                <span className="w-3.5 h-3.5">↻</span>
+                Retry
+              </button>
             </div>
           )}
         </div>
-
-        {/* Search + filters */}
-        {selectedServer && players !== undefined && (
-          <>
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[rgba(255,255,255,0.3)] pointer-events-none" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name or ID…"
-                  className="w-full pl-9 pr-4 py-2 bg-transparent border border-[rgba(255,255,255,0.08)] text-sm text-white font-sans placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
-                />
-              </div>
-              <div className="flex gap-1">
-                {(['all', 'online', 'banned'] as const).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilterBanned(f)}
-                    className={`font-mono text-[10px] uppercase tracking-wider px-3 py-2 border transition-colors duration-100 ${
-                      filterBanned === f
-                        ? 'bg-[rgba(94,106,210,0.15)] border-[rgba(94,106,210,0.4)] text-[#5E6AD2]'
-                        : 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.4)] hover:text-white hover:border-[rgba(255,255,255,0.2)]'
-                    }`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Player list */}
-            {filtered.length === 0 ? (
-              <div className="text-center py-16 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
-                <Users className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-4" />
-                <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">
-                  {search ? 'No matches' : 'No players yet'}
-                </h3>
-                <p className="font-sans text-xs text-[rgba(255,255,255,0.4)]">
-                  {search ? 'Try a different search term' : 'Players will appear when someone joins the server'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {filtered.map((player: any) => (
-                  <PlayerRow
-                    key={player.id}
-                    player={player}
-                    onBan={() => handleBan(player.id, player.name)}
-                    onUnban={() => handleUnban(player.id, player.name)}
-                    banning={banning === player.id}
-                    banReason={banReason}
-                    onBanReasonChange={(v) => setBanReason(v)}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {!selectedServer && !loadingServers && (
-          <div className="text-center py-20 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
-            <Users className="w-12 h-12 text-[rgba(255,255,255,0.15)] mx-auto mb-4" />
-            <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">Select a server</h3>
-            <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] max-w-sm mx-auto leading-[1.6]">
-              Choose a server to view and manage its players.
-            </p>
-          </div>
-        )}
-
-        {loadingServers && (
-          <div className="text-center py-8 font-mono text-xs text-[rgba(255,255,255,0.3)] uppercase tracking-wider">
-            Loading servers…
-          </div>
-        )}
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }
 
@@ -220,23 +277,23 @@ function PlayerRow({
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-[#16161E] border transition-colors duration-100 ${
+      className={`bg-[#16161E] transition-colors duration-100 ${
         player.isBanned
-          ? 'border-[rgba(239,68,68,0.2)]'
-          : 'border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)]'
+          ? 'border-l-2 border-l-[#ef4444]'
+          : 'border-l-2 border-l-[rgba(94,106,210,0.5)] hover:border-l-[#5E6AD2]'
       }`}
     >
       <div className="flex items-center gap-4 px-5 py-3.5">
         {/* Avatar */}
         <div className={`w-8 h-8 flex items-center justify-center flex-shrink-0 ${
           player.isBanned
-            ? 'bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)]'
-            : 'bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)]'
+            ? 'bg-[rgba(239,68,68,0.1)]'
+            : 'bg-[rgba(255,255,255,0.04)]'
         }`}>
           {player.isBanned ? (
             <UserX className="w-4 h-4 text-[#ef4444]" />
           ) : (
-            <Users className="w-4 h-4 text-[rgba(255,255,255,0.5)]" />
+            <Users className="w-4 h-4 text-white/50" />
           )}
         </div>
 
@@ -247,63 +304,67 @@ function PlayerRow({
               {player.name}
             </span>
             {player.isBanned && (
-              <span className="font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[#ef4444]">
+              <span className="px-1.5 py-0.5 bg-[rgba(239,68,68,0.1)] text-[#ef4444] font-mono text-[9px] uppercase">
                 Banned
               </span>
             )}
           </div>
-          <div className="font-mono text-[10px] text-[rgba(255,255,255,0.3)] truncate mt-0.5">
-            {player.playerId}
-            {player.license && <span className="ml-2">· {player.license}</span>}
-          </div>
-          {player.banReason && (
-            <p className="font-sans text-[11px] text-[rgba(239,68,68,0.6)] mt-0.5">
-              {player.banReason}
-            </p>
-          )}
+          <p className="font-mono text-[10px] text-white/30 truncate mt-0.5">
+            {player.playerId || player.identifier}
+          </p>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
           {player.isBanned ? (
             <button
               onClick={onUnban}
-              className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#22c55e] border border-[rgba(34,197,94,0.3)] hover:bg-[rgba(34,197,94,0.1)] transition-colors duration-100"
+              disabled={banning}
+              className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
             >
               <ShieldOff className="w-3 h-3" />
-              Unban
+              <span>Unban</span>
             </button>
           ) : (
-            <>
-              <button
-                onClick={() => setShowReason(!showReason)}
-                className="px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] border border-[rgba(255,255,255,0.08)] hover:text-white hover:border-[rgba(255,255,255,0.2)] transition-colors duration-100"
-              >
-                Ban
-              </button>
-              {showReason && (
-                <div className="flex items-center gap-1">
-                  <input
-                    type="text"
-                    value={banReason}
-                    onChange={(e) => onBanReasonChange(e.target.value)}
-                    placeholder="Reason…"
-                    className="w-28 px-2 py-1.5 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] text-white font-mono text-[11px] placeholder:text-[rgba(255,255,255,0.2)] focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
-                  />
-                  <button
-                    onClick={onBan}
-                    disabled={banning}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider bg-[#ef4444] text-white hover:bg-[#dc2626] disabled:opacity-50 transition-colors duration-100"
-                  >
-                    {banning ? <span className="animate-spin">↻</span> : <Ban className="w-3 h-3" />}
-                    Confirm
-                  </button>
-                </div>
-              )}
-            </>
+            <button
+              onClick={() => setShowReason(!showReason)}
+              disabled={banning}
+              className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-[#ef4444] hover:bg-[rgba(239,68,68,0.1)] transition-colors disabled:opacity-50"
+            >
+              <Ban className="w-3 h-3" />
+              <span>Ban</span>
+            </button>
           )}
         </div>
       </div>
+
+      {/* Ban reason input */}
+      {showReason && (
+        <div className="px-5 pb-3 pt-1">
+          <input
+            type="text"
+            value={banReason}
+            onChange={(e) => onBanReasonChange(e.target.value)}
+            placeholder="Reason for ban..."
+            className="w-full bg-[#0a0a0f] border border-white/10 px-3 py-2 text-white font-mono text-xs placeholder:text-white/20 focus:outline-none focus:border-[#ef4444]"
+          />
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => { onBan(); setShowReason(false); }}
+              disabled={banning}
+              className="px-3 py-1.5 bg-[#ef4444] text-white font-mono text-[10px] uppercase tracking-wider hover:bg-[#dc2626] transition-colors disabled:opacity-50"
+            >
+              {banning ? 'Banning...' : 'Confirm Ban'}
+            </button>
+            <button
+              onClick={() => setShowReason(false)}
+              className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
