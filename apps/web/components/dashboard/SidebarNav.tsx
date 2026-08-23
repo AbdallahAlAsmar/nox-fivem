@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Server,
@@ -14,6 +14,10 @@ import {
   Users,
   CreditCard,
   BookOpen,
+  FileDiff,
+  ScrollText,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { SignedIn, SignedOut, SignInButton, useClerk, useUser } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
@@ -24,6 +28,8 @@ import AgentStatusBadge from '@/components/status/AgentStatusBadge';
 const navItems = [
   { href: '/dashboard', label: 'Servers', icon: Server },
   { href: '/dashboard/resources', label: 'Resources', icon: Package },
+  { href: '/dashboard/changes', label: 'Changes', icon: FileDiff },
+  { href: '/dashboard/audit', label: 'Audit Log', icon: ScrollText },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
   { href: '/dashboard/docs', label: 'Docs', icon: BookOpen },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
@@ -86,16 +92,29 @@ export default function SidebarNav() {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed top-0 left-0 z-50 w-64 bg-[#16161E] border-r border-white/10 flex flex-col"
+              className={`lg:hidden fixed top-0 left-0 z-50 w-64 border-r flex flex-col transition-colors duration-150 ${
+                isDark
+                  ? 'bg-[#16161E] border-white/10'
+                  : 'bg-white border-gray-200'
+              }`}
             >
-              <div className="flex items-center justify-between px-5 h-14 border-b border-white/10">
+              <div className={`flex items-center justify-between px-5 h-14 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
                 <div className="flex items-center gap-2 font-mono">
                   <img src="/nox-logo.svg" alt="NOX" className="w-8 h-8 text-white" />
                   <span className="text-white font-mono text-sm font-bold tracking-[0.2em]">NOX</span>
                 </div>
-                <button onClick={() => setMobileOpen(false)} className="text-white/50 hover:text-white transition-colors duration-100">
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={toggleTheme}
+                    className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${isDark ? 'text-white/40 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                    aria-label="Toggle theme"
+                  >
+                    {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                  </button>
+                  <button onClick={() => setMobileOpen(false)} className={`ml-1 transition-colors ${isDark ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
               <nav className="flex-1 px-3 py-4 space-y-1">
                 {navItems.map((item) => {
@@ -108,21 +127,25 @@ export default function SidebarNav() {
                       onClick={() => setMobileOpen(false)}
                       className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                         active
-                          ? 'text-white bg-[rgba(94,106,210,0.15)] border-l-2 border-[#5E6AD2]'
-                          : 'text-white/40 hover:text-white hover:bg-white/5'
+                          ? isDark
+                            ? 'text-white bg-[rgba(94,106,210,0.15)] border-l-2 border-[#5E6AD2]'
+                            : 'text-[#5E6AD2] bg-[rgba(94,106,210,0.08)] border-l-2 border-[#5E6AD2]'
+                          : isDark
+                            ? 'text-white/40 hover:text-white hover:bg-white/5'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#5E6AD2]' : isDark ? 'text-white/40' : 'text-gray-400'}`} />
                       <span className="flex-1">{item.label}</span>
-                      {active && <ChevronRight className="w-3 h-3 opacity-50" />}
+                      {active && <ChevronRight className={`w-3 h-3 opacity-50 ${isDark ? 'text-white/50' : 'text-gray-400'}`} />}
                     </Link>
                   );
                 })}
               </nav>
-              <div className="px-3 py-4 border-t border-white/10">
+              <div className={`px-3 py-4 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
                 <SignedIn>
                   <Link href="/dashboard/account" onClick={() => setMobileOpen(false)}>
-                    <div className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors duration-100 rounded">
+                    <div className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-100 rounded ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}>
                       {userAvatar ? (
                         <img src={userAvatar} alt="avatar" className="w-7 h-7 rounded flex-shrink-0 opacity-90" />
                       ) : (
@@ -131,14 +154,14 @@ export default function SidebarNav() {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-mono text-xs text-white/80 truncate uppercase tracking-wider">{userName}</p>
-                        <p className="font-mono text-[10px] text-white/30 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                        <p className={`font-mono text-xs truncate uppercase tracking-wider ${isDark ? 'text-white/80' : 'text-gray-800'}`}>{userName}</p>
+                        <p className={`font-mono text-[10px] truncate ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{user?.primaryEmailAddress?.emailAddress}</p>
                       </div>
                     </div>
                   </Link>
                   <button
                     onClick={() => signOut({ redirectUrl: '/' })}
-                    className="w-full flex items-center gap-2 px-3 py-2 mt-1 font-mono text-xs uppercase tracking-wider text-white/30 hover:text-white/60 transition-colors duration-100"
+                    className={`w-full flex items-center gap-2 px-3 py-2 mt-1 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${isDark ? 'text-white/30 hover:text-white/60' : 'text-gray-400 hover:text-gray-600'}`}
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     Sign Out
@@ -146,7 +169,7 @@ export default function SidebarNav() {
                 </SignedIn>
                 <SignedOut>
                   <SignInButton mode="modal">
-                    <button className="w-full flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase tracking-wider text-white/40 hover:text-white transition-colors duration-100">
+                    <button className={`w-full flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${isDark ? 'text-white/40 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}>
                       <LogOut className="w-4 h-4" />
                       Sign In
                     </button>
@@ -160,7 +183,9 @@ export default function SidebarNav() {
 
       {/* Desktop sidebar */}
       <aside
-        className="hidden lg:block h-full bg-[#16161E] border-r border-white/10 flex flex-col overflow-hidden"
+        className={`hidden lg:block h-full border-r border-white/10 flex flex-col overflow-hidden transition-colors duration-150 ${
+          isDark ? 'bg-[#16161E]' : 'bg-white'
+        }`}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
@@ -171,16 +196,25 @@ export default function SidebarNav() {
         >
           {/* Logo */}
           <div className="h-14 flex items-center border-b border-white/10 flex-shrink-0">
-            <div className="flex items-center gap-3 w-full px-5">
-              <img src="/nox-logo.svg" alt="NOX" className="w-8 h-8 text-white flex-shrink-0" />
-              <motion.span
-                initial={false}
-                animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
-                transition={{ duration: 0.15 }}
-                className="font-mono text-white font-bold text-sm tracking-[0.2em] whitespace-nowrap overflow-hidden"
+            <div className="flex items-center justify-between w-full px-5">
+              <div className="flex items-center gap-3">
+                <img src="/nox-logo.svg" alt="NOX" className="w-8 h-8 text-white flex-shrink-0" />
+                <motion.span
+                  initial={false}
+                  animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="font-mono text-white font-bold text-sm tracking-[0.2em] whitespace-nowrap overflow-hidden"
+                >
+                  NOX
+                </motion.span>
+              </div>
+              <button
+                onClick={toggleTheme}
+                className="w-7 h-7 rounded flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Toggle theme"
               >
-                NOX
-              </motion.span>
+                {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
             </div>
           </div>
 
@@ -198,14 +232,17 @@ export default function SidebarNav() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  title={item.label}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 rounded-sm ${
+                  className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                     active
-                      ? 'text-white bg-[rgba(94,106,210,0.15)] border-l-2 border-[#5E6AD2]'
-                      : 'text-white/40 hover:text-white hover:bg-white/5'
+                      ? isDark
+                        ? 'text-white bg-[rgba(94,106,210,0.15)] border-l-2 border-[#5E6AD2]'
+                        : 'text-[#5E6AD2] bg-[rgba(94,106,210,0.08)] border-l-2 border-[#5E6AD2]'
+                      : isDark
+                        ? 'text-white/40 hover:text-white hover:bg-white/5'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${active ? (isDark ? 'text-[#5E6AD2]' : 'text-[#5E6AD2]') : isDark ? 'text-white/40' : 'text-gray-400'}`} />
                   <motion.span
                     initial={false}
                     animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
@@ -214,41 +251,19 @@ export default function SidebarNav() {
                   >
                     {item.label}
                   </motion.span>
-                  {active && hovered && <ChevronRight className="w-3 h-3 opacity-50 ml-auto" />}
+                  {active && hovered && <ChevronRight className={`w-3 h-3 opacity-50 ml-auto ${isDark ? 'text-white/50' : 'text-gray-400'}`} />}
                 </Link>
               );
             })}
           </nav>
 
-          {/* Footer — User profile + Theme toggle */}
-          <div className="px-3 py-3 border-t border-white/10 flex-shrink-0 space-y-2">
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center gap-2 px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/30 hover:text-white/60 transition-colors duration-100 rounded"
-              title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-            >
-              <span className="w-3 h-3 flex-shrink-0">{isDark ? '☀' : '☾'}</span>
-              <motion.span
-                initial={false}
-                animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
-                transition={{ duration: 0.15 }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                {isDark ? 'Light Mode' : 'Dark Mode'}
-              </motion.span>
-            </button>
-
-            {/* User profile */}
+          {/* User section */}
+          <div className={`px-3 py-4 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
             <SignedIn>
-              <Link href="/dashboard/account" title="View profile">
-                <div className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded px-2 py-2 transition-colors duration-100">
+              <Link href="/dashboard/account">
+                <div className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-100 rounded ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}>
                   {userAvatar ? (
-                    <img
-                      src={userAvatar}
-                      alt="avatar"
-                      className="w-7 h-7 rounded flex-shrink-0 opacity-90"
-                    />
+                    <img src={userAvatar} alt="avatar" className="w-7 h-7 rounded flex-shrink-0 opacity-90" />
                   ) : (
                     <div className="w-7 h-7 rounded bg-[#5E6AD2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                       {userInitial}
@@ -256,47 +271,28 @@ export default function SidebarNav() {
                   )}
                   <motion.div
                     initial={false}
-                    animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
+                    animate={{ opacity: hovered ? 1 : 0 }}
                     transition={{ duration: 0.15 }}
-                    className="flex-1 min-w-0 overflow-hidden"
+                    className="overflow-hidden whitespace-nowrap"
                   >
-                    <p className="font-mono text-xs text-white/80 truncate uppercase tracking-wider">{userName}</p>
-                    {hovered && user?.primaryEmailAddress && (
-                      <p className="font-mono text-[10px] text-white/30 truncate">
-                        {user.primaryEmailAddress.emailAddress}
-                      </p>
-                    )}
+                    <p className={`font-mono text-xs truncate uppercase tracking-wider ${isDark ? 'text-white/80' : 'text-gray-800'}`}>{userName}</p>
+                    <p className={`font-mono text-[10px] truncate ${isDark ? 'text-white/30' : 'text-gray-400'}`}>{user?.primaryEmailAddress?.emailAddress}</p>
                   </motion.div>
                 </div>
               </Link>
               <button
                 onClick={() => signOut({ redirectUrl: '/' })}
-                className="w-full flex items-center gap-2 mt-1 px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/25 hover:text-white/50 transition-colors duration-100 rounded"
-                title="Sign out"
+                className={`w-full flex items-center gap-2 px-3 py-2 mt-1 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${isDark ? 'text-white/30 hover:text-white/60' : 'text-gray-400 hover:text-gray-600'}`}
               >
-                <LogOut className="w-3 h-3" />
-                <motion.span
-                  initial={false}
-                  animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="overflow-hidden whitespace-nowrap"
-                >
-                  Sign Out
-                </motion.span>
+                <LogOut className="w-3.5 h-3.5" />
+                {hovered && <span className={isDark ? 'text-white/30' : 'text-gray-400'}>Sign Out</span>}
               </button>
             </SignedIn>
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="w-full flex items-center gap-2 px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/30 hover:text-white transition-colors duration-100">
-                  <LogOut className="w-3 h-3" />
-                  <motion.span
-                    initial={false}
-                    animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="overflow-hidden whitespace-nowrap"
-                  >
-                    Sign In
-                  </motion.span>
+                <button className={`w-full flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${isDark ? 'text-white/40 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}>
+                  <LogOut className="w-4 h-4" />
+                  {hovered && <span className={isDark ? 'text-white/40' : 'text-gray-400'}>Sign In</span>}
                 </button>
               </SignInButton>
             </SignedOut>

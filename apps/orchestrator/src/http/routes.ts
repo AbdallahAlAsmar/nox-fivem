@@ -61,18 +61,26 @@ export async function registerRoutes(fastify: FastifyInstance) {
       directory: z.string().optional(),
     }).parse(request.body);
 
-    // Create server
+    // Create server in auto-paired state
     const server = await prisma.server.create({
       data: {
         orgId: orgId,
         name: body.name,
-        status: 'unpaired',
+        status: 'paired',
         framework: 'unknown',
         rootLabel: body.directory || null,
       },
     });
 
-    const pairing = await issuePairing(server.id);
+    // Auto-create paired agent device
+    const device = await prisma.agentDevice.create({
+      data: {
+        serverId: server.id,
+        status: 'paired',
+        platform: 'unknown',
+        lastHeartbeatAt: new Date(),
+      },
+    });
 
     return {
       server: {
@@ -80,7 +88,11 @@ export async function registerRoutes(fastify: FastifyInstance) {
         name: server.name,
         status: server.status,
       },
-      pairing,
+      connect: {
+        serverId: server.id,
+        agentDeviceId: device.id,
+        wsUrl: process.env.ORCHESTRATOR_WS_URL || 'ws://localhost:3001/ws/agent',
+      },
     };
   });
 
@@ -356,8 +368,24 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }
     try {
       const players = await agentGateway.sendCommand(params.serverId, 'fivem.listPlayers', {}, 10000);
-      cache.set(`players:${params.serverId}`, players, 15000);
-      return players;
+      // Enrich with ban status from DB
+      const dbPlayers = await prisma.player.findMany({
+        where: { serverId: params.serverId },
+        select: { id: true, playerId: true, name: true, isBanned: true, banReason: true, bannedAt: true },
+      });
+      const playerMap = new Map(dbPlayers.map((p: any) => [p.playerId || p.id, p]));
+      const enriched = (players || []).map((p: any) => {
+        const db = playerMap.get(p.playerId) || playerMap.get(p.id) || null;
+        return {
+          ...p,
+          isBanned: db?.isBanned ?? false,
+          banReason: db?.banReason ?? null,
+          bannedAt: db?.bannedAt ?? null,
+          dbPlayerId: db?.id,
+        };
+      });
+      cache.set(`players:${params.serverId}`, enriched, 15000);
+      return enriched;
     } catch (e) {
       return reply.status(500).send({ error: e instanceof Error ? e.message : 'Failed to fetch players' });
     }
@@ -399,6 +427,196 @@ export async function registerRoutes(fastify: FastifyInstance) {
   });
 
   // ============================================
+  // Audit Logs
+  // ============================================
+
+  fastify.post('/api/audit', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const body = z.object({
+      action: z.string(),
+      serverId: z.string().optional(),
+      metadata: z.record(z.unknown()).optional(),
+    }).parse(request.body);
+
+    await prisma.auditLog.create({
+      data: {
+        orgId,
+        userId: user?.userId,
+        serverId: body.serverId,
+        action: body.action,
+        metadata: (body.metadata || {}) as any,
+      },
+    });
+
+    return { ok: true };
+  });
+
+  fastify.get('/api/audit', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const { searchParams } = new URL(request.url, 'http://localhost');
+    const filter = searchParams.get('filter') || '';
+    const limit = parseInt(searchParams.get('limit') || '50');
+
+    const logs = await (prisma.auditLog as any).findMany({
+      where: filter
+        ? { orgId, action: { contains: filter } }
+        : { orgId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        server: { select: { id: true, name: true } },
+      },
+    });
+
+    return { logs };
+  });
+
+  // ============================================
+  // Cost Controls / Usage
+  // ============================================
+
+  fastify.get('/api/usage', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const empty = {
+      totalMessages: 0,
+      messagesLast7Days: 0,
+      activeConversations: 0,
+      totalTokensIn: 0,
+      totalTokensOut: 0,
+      totalCostUsd: 0,
+      modelBreakdown: [] as Array<{ model: string; tokensIn: number; tokensOut: number; costUsd: number; entries: number }>,
+      dailyTrend: [] as Array<{ day: string; tokensIn: number; tokensOut: number; costUsd: number }>,
+      plan: 'starter',
+      limits: { maxTokensPerDay: 50000, maxConcurrentThreads: 5, monthlyCostCap: 20 },
+    };
+
+    const num = (v: unknown) => {
+      if (v == null) return 0;
+      if (typeof v === 'bigint') return Number(v);
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    try {
+      const org = await prisma.organization.findUnique({ where: { id: orgId } });
+
+      const usageStats: any = await prisma.$queryRaw`
+        SELECT
+          COALESCE(SUM("tokensIn"), 0) as total_tokens_in,
+          COALESCE(SUM("tokensOut"), 0) as total_tokens_out,
+          COALESCE(SUM("costUsd"), 0) as total_cost_usd
+        FROM "usage_logs"
+        WHERE "orgId" = ${orgId}
+          AND "createdAt" >= ${thirtyDaysAgo}
+      `;
+
+      const modelBreakdown: any = await prisma.$queryRaw`
+        SELECT
+          "model",
+          COALESCE(SUM("tokensIn"), 0) as tokens_in,
+          COALESCE(SUM("tokensOut"), 0) as tokens_out,
+          COALESCE(SUM("costUsd"), 0) as cost_usd,
+          COUNT(*)::int as entries
+        FROM "usage_logs"
+        WHERE "orgId" = ${orgId}
+          AND "createdAt" >= ${thirtyDaysAgo}
+        GROUP BY "model"
+        ORDER BY cost_usd DESC
+      `;
+
+      const dailyTrend: any = await prisma.$queryRaw`
+        SELECT
+          to_char(DATE("createdAt"), 'YYYY-MM-DD') as day,
+          COALESCE(SUM("tokensIn"), 0) as tokens_in,
+          COALESCE(SUM("tokensOut"), 0) as tokens_out,
+          COALESCE(SUM("costUsd"), 0) as cost_usd
+        FROM "usage_logs"
+        WHERE "orgId" = ${orgId}
+          AND "createdAt" >= ${thirtyDaysAgo}
+        GROUP BY DATE("createdAt")
+        ORDER BY day ASC
+      `;
+
+      const msgStats: any = await prisma.$queryRaw`
+        SELECT
+          COUNT(*)::int as total_messages,
+          COUNT(CASE WHEN cm."createdAt" >= ${sevenDaysAgo} THEN 1 END)::int as messages_last_7d,
+          COUNT(DISTINCT cm."threadId")::int as active_conversations
+        FROM "chat_messages" cm
+        WHERE cm."threadId" IN (
+          SELECT t.id FROM "chat_threads" t
+          INNER JOIN "servers" s ON s.id = t."serverId"
+          WHERE s."orgId" = ${orgId}
+        )
+      `;
+
+      const byDay: Record<string, { day: string; tokensIn: number; tokensOut: number; costUsd: number }> = {};
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        byDay[key] = { day: key, tokensIn: 0, tokensOut: 0, costUsd: 0 };
+      }
+      for (const row of dailyTrend || []) {
+        const key = String(row.day).slice(0, 10);
+        if (byDay[key]) {
+          byDay[key] = {
+            day: key,
+            tokensIn: num(row.tokens_in),
+            tokensOut: num(row.tokens_out),
+            costUsd: num(row.cost_usd),
+          };
+        }
+      }
+
+      return {
+        totalMessages: num(msgStats[0]?.total_messages),
+        messagesLast7Days: num(msgStats[0]?.messages_last_7d),
+        activeConversations: num(msgStats[0]?.active_conversations),
+        totalTokensIn: num(usageStats[0]?.total_tokens_in),
+        totalTokensOut: num(usageStats[0]?.total_tokens_out),
+        totalCostUsd: num(usageStats[0]?.total_cost_usd),
+        modelBreakdown: (modelBreakdown || []).map((m: any) => ({
+          model: m.model,
+          tokensIn: num(m.tokens_in),
+          tokensOut: num(m.tokens_out),
+          costUsd: num(m.cost_usd),
+          entries: num(m.entries),
+        })),
+        dailyTrend: Object.values(byDay),
+        plan: org?.plan_tier || 'starter',
+        limits: {
+          maxTokensPerDay: 50000,
+          maxConcurrentThreads: 5,
+          monthlyCostCap: org?.monthly_cost_cap_usd != null ? Number(org.monthly_cost_cap_usd) : 20,
+        },
+        pricingInfo: {
+          note: 'Costs calculated using provider-listed per-token rates',
+          models: [
+            { id: 'openai/gpt-5.4', name: 'GPT-5.4', input: '$7.50/M', output: '$37.50/M' },
+            { id: 'anthropic/claude-sonnet-4-5', name: 'Claude Sonnet 4.5', input: '$3.00/M', output: '$15.00/M' },
+            { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', input: '$0.075/M', output: '$0.30/M' },
+            { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', input: '$0.27/M', output: '$1.10/M' },
+          ],
+        },
+      };
+    } catch (err) {
+      console.error('[usage] query failed:', err);
+      return empty;
+    }
+  });
+
+  // ============================================
   // Settings
   // ============================================
 
@@ -416,6 +634,101 @@ export async function registerRoutes(fastify: FastifyInstance) {
     if (body.serverDir !== undefined) updates.rootLabel = body.serverDir;
     const server = await prisma.server.update({ where: { id: params.serverId }, data: updates, select: { settings: true, rootLabel: true } });
     return { settings: server.settings, serverDir: server.rootLabel };
+  });
+
+  // ============================================
+  // Resource Config Editor
+  // ============================================
+
+  // Read a resource's manifest/config file
+  fastify.get('/api/servers/:serverId/resources/:resourceName/config', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const params = z.object({
+      serverId: z.string(),
+      resourceName: z.string(),
+    }).parse(request.params);
+
+    const server = await prisma.server.findFirst({
+      where: { id: params.serverId, orgId },
+      include: { resources: { where: { resourceName: params.resourceName } } },
+    });
+
+    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    const resource = server.resources[0];
+    if (!resource) return reply.status(404).send({ error: 'Resource not found' });
+
+    const agentGateway = (fastify as any).agentGateway;
+    if (!agentGateway || !agentGateway.isConnected(params.serverId)) {
+      return reply.status(400).send({ error: 'Agent not connected' });
+    }
+
+    try {
+      const manifestPath = resource.manifestPath || `resources/${resource.resourceName}/fxmanifest.lua`;
+      const result = await agentGateway.sendCommand(
+        params.serverId,
+        'fs.read',
+        { path: manifestPath, maxBytes: 50000 },
+        15000
+      );
+      return {
+        resourceName: resource.resourceName,
+        relativePath: resource.relativePath,
+        manifestPath,
+        content: result.content,
+        sha256: result.sha256,
+        size: result.size,
+        modifiedAt: result.modifiedAt,
+      };
+    } catch (e: any) {
+      return reply.status(500).send({ error: e.message || 'Failed to read config' });
+    }
+  });
+
+  // Save a resource's manifest/config file
+  fastify.post('/api/servers/:serverId/resources/:resourceName/config', async (request, reply) => {
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
+    const params = z.object({
+      serverId: z.string(),
+      resourceName: z.string(),
+    }).parse(request.params);
+    const body = z.object({
+      content: z.string().min(1),
+      expectedSha256: z.string().optional(),
+    }).parse(request.body);
+
+    const server = await prisma.server.findFirst({
+      where: { id: params.serverId, orgId },
+      include: { resources: { where: { resourceName: params.resourceName } } },
+    });
+
+    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    const resource = server.resources[0];
+    if (!resource) return reply.status(404).send({ error: 'Resource not found' });
+
+    const agentGateway = (fastify as any).agentGateway;
+    if (!agentGateway || !agentGateway.isConnected(params.serverId)) {
+      return reply.status(400).send({ error: 'Agent not connected' });
+    }
+
+    try {
+      const manifestPath = resource.manifestPath || `resources/${resource.resourceName}/fxmanifest.lua`;
+      const result = await agentGateway.sendCommand(
+        params.serverId,
+        'fs.write',
+        { path: manifestPath, content: body.content },
+        15000
+      );
+
+      if (!result || !result.success) {
+        return reply.status(500).send({ error: 'Failed to write config file' });
+      }
+
+      return { success: true, sha256: result.sha256 };
+    } catch (e: any) {
+      return reply.status(500).send({ error: e.message || 'Failed to save config' });
+    }
   });
 
   // ============================================
@@ -454,6 +767,47 @@ export async function registerRoutes(fastify: FastifyInstance) {
     return change;
   });
 
+  // Cancel (roll back) a pending change
+  fastify.post('/api/changes/:changeId/cancel', async (request, reply) => {
+    const user = requireAuth(request, reply);
+    const params = z.object({
+      changeId: z.string(),
+    }).parse(request.params);
+
+    const change = await prisma.change.findFirst({
+      where: { id: params.changeId, server: { orgId: user.orgId } },
+      include: { server: true },
+    });
+
+    if (!change) {
+      return reply.status(404).send({ error: 'Change not found' });
+    }
+
+    if (change.status !== 'pending') {
+      return reply.status(400).send({ error: 'Only pending changes can be cancelled' });
+    }
+
+    await prisma.change.update({
+      where: { id: params.changeId },
+      data: {
+        status: 'rolled_back',
+        rolledBackAt: new Date(),
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        orgId: user.orgId,
+        serverId: change.serverId,
+        userId: user.userId,
+        action: 'change.rolled_back',
+        metadata: { changeId: change.id, filesTouched: change.filesTouched },
+      },
+    });
+
+    return { status: 'cancelled', changeId: change.id };
+  });
+
   // Apply a change (triggers agent action)
   fastify.post('/api/changes/:changeId/apply', async (request, reply) => {
     const user = requireAuth(request, reply);
@@ -484,6 +838,17 @@ export async function registerRoutes(fastify: FastifyInstance) {
       },
     });
 
+    // Log audit event
+    await prisma.auditLog.create({
+      data: {
+        orgId: user.orgId,
+        serverId: change.serverId,
+        userId: user.userId,
+        action: 'change.approved',
+        metadata: { changeId: change.id, filesTouched: change.filesTouched },
+      },
+    });
+
     // Send apply command to agent via gateway
     const agentGateway = (fastify as any).agentGateway as AgentGateway;
     if (!agentGateway.isConnected(change.serverId)) {
@@ -504,7 +869,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       ? (changeWithFiles.filesTouched as string[])
       : [];
     const files = parseDiffToPatch(changeWithFiles.diff, touchedFiles);
-    
+
     if (files.length === 0) {
       return reply.status(400).send({ error: 'No files to apply in change' });
     }
@@ -528,6 +893,17 @@ export async function registerRoutes(fastify: FastifyInstance) {
         },
       });
 
+      // Log audit event
+      await prisma.auditLog.create({
+        data: {
+          orgId: user.orgId,
+          serverId: change.serverId,
+          userId: user.userId,
+          action: 'change.applied',
+          metadata: { changeId: change.id, filesApplied: touchedFiles },
+        },
+      });
+
       return {
         status: 'applied',
         changeId: change.id,
@@ -541,6 +917,18 @@ export async function registerRoutes(fastify: FastifyInstance) {
           applyResult: { error: error.message },
         },
       });
+
+      // Log audit event
+      await prisma.auditLog.create({
+        data: {
+          orgId: user.orgId,
+          serverId: change.serverId,
+          userId: user.userId,
+          action: 'change.failed',
+          metadata: { changeId: change.id, error: error.message },
+        },
+      });
+
       return reply.status(500).send({ error: `Failed to apply change: ${error.message}` });
     }
   });
@@ -987,19 +1375,180 @@ export async function registerRoutes(fastify: FastifyInstance) {
   });
 
   // ============================================
+  // Onboarding
+  // ============================================
+
+  fastify.get('/api/onboarding/status', async (request, reply) => {
+    const user = requireAuth(request, reply);
+    const org = await prisma.organization.findUnique({
+      where: { id: user.orgId },
+      select: { onboardedAt: true, name: true },
+    });
+    if (!org) return reply.status(404).send({ error: 'Organization not found' });
+    return { onboarded: !!org.onboardedAt };
+  });
+
+  fastify.post('/api/onboarding/complete', async (request, reply) => {
+    const user = requireAuth(request, reply);
+    const body = z.object({
+      name: z.string().min(1).max(100),
+      framework: z.enum(['qbcore', 'esx', 'vRP', 'other']),
+      hasServer: z.boolean(),
+      goal: z.string().optional(),
+    }).parse(request.body);
+
+    await prisma.organization.update({
+      where: { id: user.orgId },
+      data: {
+        name: body.name,
+        onboardedAt: new Date(),
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        orgId: user.orgId,
+        userId: user.userId,
+        action: 'onboarding.completed',
+        metadata: { framework: body.framework, hasServer: body.hasServer },
+      },
+    });
+
+    return { ok: true };
+  });
+
+  // ============================================
+  // Batch Operations
+  // ============================================
+
+  // Batch approve changes
+  fastify.post('/api/changes/batch/apply', async (request, reply) => {
+    const user = requireAuth(request, reply);
+    const body = z.object({
+      changeIds: z.array(z.string()),
+      serverId: z.string().optional(),
+    }).parse(request.body);
+
+    const where: any = { id: { in: body.changeIds }, server: { orgId: user.orgId } };
+    if (body.serverId) where.serverId = body.serverId;
+
+    const changes = await prisma.change.findMany({
+      where,
+      include: { server: true },
+    });
+
+    const pendingChanges = changes.filter(c => c.status === 'pending');
+    const results = {
+      approved: [] as string[],
+      skipped: [] as Array<{ id: string; reason: string }>,
+    };
+
+    for (const change of pendingChanges) {
+      try {
+        await prisma.change.update({
+          where: { id: change.id },
+          data: {
+            status: 'approved',
+            approvedByUserId: user.userId,
+            approvedAt: new Date(),
+          },
+        });
+        results.approved.push(change.id);
+
+        await prisma.auditLog.create({
+          data: {
+            orgId: user.orgId,
+            serverId: change.serverId,
+            userId: user.userId,
+            action: 'change.approved',
+            metadata: { changeId: change.id, filesTouched: change.filesTouched, batchApproved: true },
+          },
+        });
+      } catch (e) {
+        results.skipped.push({ id: change.id, reason: (e as Error).message });
+      }
+    }
+
+    return results;
+  });
+
+  // Batch cancel changes
+  fastify.post('/api/changes/batch/cancel', async (request, reply) => {
+    const user = requireAuth(request, reply);
+    const body = z.object({
+      changeIds: z.array(z.string()),
+      serverId: z.string().optional(),
+    }).parse(request.body);
+
+    const where: any = { id: { in: body.changeIds }, server: { orgId: user.orgId } };
+    if (body.serverId) where.serverId = body.serverId;
+
+    const changes = await prisma.change.findMany({
+      where,
+      include: { server: true },
+    });
+
+    const pendingChanges = changes.filter(c => c.status === 'pending');
+    const results = {
+      cancelled: [] as string[],
+      skipped: [] as Array<{ id: string; reason: string }>,
+    };
+
+    for (const change of pendingChanges) {
+      try {
+        await prisma.change.update({
+          where: { id: change.id },
+          data: {
+            status: 'rolled_back',
+            rolledBackAt: new Date(),
+          },
+        });
+        results.cancelled.push(change.id);
+
+        await prisma.auditLog.create({
+          data: {
+            orgId: user.orgId,
+            serverId: change.serverId,
+            userId: user.userId,
+            action: 'change.rolled_back',
+            metadata: { changeId: change.id, filesTouched: change.filesTouched, batchCancelled: true },
+          },
+        });
+      } catch (e) {
+        results.skipped.push({ id: change.id, reason: (e as Error).message });
+      }
+    }
+
+    return results;
+  });
+
+  // ============================================
   // Billing / Org
   // ============================================
 
   fastify.get('/api/org', async (request, reply) => {
-    const user = requireAuth(request, reply);
+    const user = request.authUser;
+    const orgId = user?.orgId || 'dev-org';
     const org = await prisma.organization.findUnique({
-      where: { id: user.orgId },
+      where: { id: orgId },
     });
-    if (!org) return reply.status(404).send({ error: 'Organization not found' });
 
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const actionCount = await prisma.change.count({
-      where: { server: { orgId: user.orgId }, createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } },
+      where: { server: { orgId }, createdAt: { gte: monthStart } },
     });
+
+    if (!org) {
+      return {
+        id: orgId,
+        name: 'Development',
+        planTier: 'starter',
+        monthlyActionLimit: 500,
+        monthlyActionCount: actionCount,
+        monthlyCostCap: 20,
+        createdAt: new Date(),
+      };
+    }
 
     return {
       id: org.id,
@@ -1007,7 +1556,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       planTier: org.plan_tier,
       monthlyActionLimit: org.monthly_action_limit,
       monthlyActionCount: actionCount,
-      monthlyCostCap: org.monthly_cost_cap_usd?.toNumber() ?? 20,
+      monthlyCostCap: org.monthly_cost_cap_usd != null ? Number(org.monthly_cost_cap_usd) : 20,
       createdAt: org.created_at,
     };
   });

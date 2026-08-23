@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { prisma } from '@fivem-ai/db';
 import type { ChatMessage, ResourceIndex } from '@prisma/client';
+import { getModelPricing, calculateCost } from './pricing';
 
 const openai = new OpenAI({
   apiKey: process.env.OMNIROUTE_API_KEY || 'omni-key',
@@ -11,6 +12,7 @@ export interface ChatContext {
   serverId: string;
   threadId: string;
   userId: string;
+  orgId?: string;
   framework: string;
   resources: ResourceIndex[];
   previousMessages: ChatMessage[];
@@ -435,11 +437,27 @@ export async function* streamChat(
       ...(tools ? { tools } : {}),
     });
 
+    let promptTokens = 0;
+    let completionTokens = 0;
+    let totalTokens = 0;
+    let modelUsed = 'unknown';
     const toolCallsMap = new Map<number, any>();
 
     for await (const chunk of stream) {
       const choice = chunk.choices[0];
       if (!choice) continue;
+
+      // Track usage if available (typically in the last chunk)
+      if (chunk.usage) {
+        promptTokens = chunk.usage.prompt_tokens || 0;
+        completionTokens = chunk.usage.completion_tokens || 0;
+        totalTokens = chunk.usage.total_tokens || 0;
+      }
+
+      // Capture model from response (last chunk typically has it)
+      if (chunk.model) {
+        modelUsed = chunk.model;
+      }
 
       const delta = choice.delta;
       if (delta?.content) {
@@ -458,6 +476,25 @@ export async function* streamChat(
           }
         }
       }
+    }
+
+    // Log usage with proper token counts and model-based pricing
+    if (totalTokens > 0) {
+      const pricing = getModelPricing(modelUsed);
+      const costUsd = calculateCost(promptTokens, completionTokens, modelUsed);
+      
+      console.log(`[streamChat] Usage: ${modelUsed} | Input: ${promptTokens} | Output: ${completionTokens} | Total: ${totalTokens} | Cost: $${costUsd.toFixed(4)}`);
+      
+      await prisma.usage.create({
+        data: {
+          orgId: context.orgId || 'dev-org',
+          threadId: context.threadId,
+          tokensIn: promptTokens,
+          tokensOut: completionTokens,
+          costUsd,
+          model: modelUsed,
+        },
+      });
     }
 
     for (const tc of toolCallsMap.values()) {

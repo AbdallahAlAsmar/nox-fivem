@@ -30,11 +30,12 @@ import {
   Check,
   RotateCcw,
   Server,
+  Ban,
 } from 'lucide-react';
 import ChatPanel from '@/components/chat/ChatPanel';
 import { ORCHESTRATOR_URL } from '@/lib/config';
 import { scanResources, restartServer, deleteServer } from '@/lib/api';
-import { fetchPlayers } from '@/lib/api-base';
+import { fetchPlayers, banPlayer, unbanPlayer } from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import useSWR from 'swr';
 
@@ -282,8 +283,12 @@ export default function ServerDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 font-mono text-[10px] text-[rgba(255,255,255,0.3)] mt-0.5">
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     <Users className="w-3 h-3" />
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#22c55e]"></span>
+                    </span>
                     {server?.playerCount ?? 0}/{server?.maxPlayers ?? 0}
                   </span>
                   <span className="flex items-center gap-1">
@@ -445,6 +450,10 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [banning, setBanning] = useState<Record<string, boolean>>({});
+  const [unbanning, setUnbanning] = useState<Record<string, boolean>>({});
+  const [banModal, setBanModal] = useState<{ player: any; reason: string } | null>(null);
+  const [banMsg, setBanMsg] = useState<string | null>(null);
 
   const loadPlayers = useCallback(async () => {
     try {
@@ -461,9 +470,47 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
 
   useEffect(() => {
     loadPlayers();
-    const interval = setInterval(loadPlayers, 30000);
+    const interval = setInterval(loadPlayers, 5000);
     return () => clearInterval(interval);
   }, [serverId]);
+
+  const handleBan = async (player: any) => {
+    setBanModal({ player, reason: '' });
+  };
+
+  const confirmBan = async () => {
+    if (!banModal) return;
+    const { player, reason } = banModal;
+    const playerId = player.dbPlayerId || player.id || player.playerId;
+    if (!playerId) return;
+    setBanning((prev) => ({ ...prev, [playerId]: true }));
+    setBanMsg(null);
+    try {
+      await banPlayer(serverId, playerId, reason || undefined);
+      setBanModal(null);
+      await loadPlayers();
+      setBanMsg('Player banned');
+    } catch {
+      setBanMsg('Failed to ban player');
+    } finally {
+      setBanning((prev) => ({ ...prev, [playerId]: false }));
+      setTimeout(() => setBanMsg(null), 3000);
+    }
+  };
+
+  const handleUnban = async (player: any) => {
+    const playerId = player.dbPlayerId || player.id || player.playerId;
+    if (!playerId) return;
+    setUnbanning((prev) => ({ ...prev, [playerId]: true }));
+    try {
+      await unbanPlayer(serverId, playerId);
+      await loadPlayers();
+    } catch {
+      // ignore
+    } finally {
+      setUnbanning((prev) => ({ ...prev, [playerId]: false }));
+    }
+  };
 
   if (loading) {
     return (
@@ -520,23 +567,151 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {players.map((player: any) => (
-            <div
-              key={player.id}
-              className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-3 flex items-center gap-3 hover:border-[rgba(255,255,255,0.16)] transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)] flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4 text-[#5E6AD2]" />
+          {players.map((player: any) => {
+            const playerId = player.dbPlayerId || player.id || player.playerId;
+            const isBanned = player.isBanned;
+            const banBtn = isBanned
+              ? (
+                  <button
+                    onClick={() => handleUnban(player)}
+                    disabled={unbanning[playerId]}
+                    className="flex items-center gap-1 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#22c55e] border border-[rgba(34,197,94,0.3)] hover:bg-[rgba(34,197,94,0.1)] transition-colors disabled:opacity-50"
+                  >
+                    {unbanning[playerId] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    {unbanning[playerId] ? 'Unbanning...' : 'Unban'}
+                  </button>
+                )
+              : (
+                  <button
+                    onClick={() => handleBan(player)}
+                    disabled={banning[playerId]}
+                    className="flex items-center gap-1 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#ef4444] border border-[rgba(239,68,68,0.3)] hover:bg-[rgba(239,68,68,0.1)] transition-colors disabled:opacity-50"
+                  >
+                    {banning[playerId] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
+                    {banning[playerId] ? 'Banning...' : 'Ban'}
+                  </button>
+                );
+            return (
+              <div
+                key={playerId || player.id}
+                className={`bg-[#16161E] border p-3 flex items-center gap-3 transition-colors ${
+                  isBanned
+                    ? 'border-[rgba(239,68,68,0.3)] hover:border-[rgba(239,68,68,0.5)]'
+                    : 'border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.16)]'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  isBanned
+                    ? 'bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)]'
+                    : 'bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)]'
+                }`}>
+                  {isBanned
+                    ? <Ban className="w-4 h-4 text-[#ef4444]" />
+                    : <Users className="w-4 h-4 text-[#5E6AD2]" />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-mono text-sm text-white truncate">{player.name}</p>
+                  <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">{player.identifier}</p>
+                  {isBanned && player.banReason && (
+                    <p className="font-mono text-[10px] text-[#ef4444] mt-0.5 truncate">{player.banReason}</p>
+                  )}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-mono text-xs text-[rgba(255,255,255,0.5)]">{player.ping}ms</p>
+                  {isBanned && (
+                    <p className="font-mono text-[10px] text-[#ef4444] mt-0.5">
+                      {player.bannedAt ? new Date(player.bannedAt).toLocaleDateString() : 'Banned'}
+                    </p>
+                  )}
+                </div>
+                <div className="flex-shrink-0">{banBtn}</div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-mono text-sm text-white truncate">{player.name}</p>
-                <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">{player.identifier}</p>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Ban reason modal */}
+      {banModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setBanModal(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="relative bg-[#16161E] border border-[rgba(239,68,68,0.3)] rounded-lg p-5 w-full max-w-sm shadow-2xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] flex items-center justify-center">
+                <Ban className="w-4 h-4 text-[#ef4444]" />
               </div>
-              <div className="text-right">
-                <p className="font-mono text-xs text-[rgba(255,255,255,0.5)]">{player.ping}ms</p>
+              <div>
+                <h3 className="font-mono text-sm text-white">Ban Player</h3>
+                <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">{banModal.player.name}</p>
               </div>
+              <button
+                onClick={() => setBanModal(null)}
+                className="ml-auto text-[rgba(255,255,255,0.3)] hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          ))}
+            <div className="mb-4">
+              <label className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5 block">
+                Ban Reason (optional)
+              </label>
+              <input
+                type="text"
+                value={banModal.reason}
+                onChange={(e) => setBanModal({ ...banModal, reason: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') confirmBan();
+                  if (e.key === 'Escape') setBanModal(null);
+                }}
+                placeholder="e.g. Exploiting, cheating, harassment..."
+                className="w-full bg-[#0a0a0f] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-mono text-xs text-white placeholder:text-[rgba(255,255,255,0.2)] focus:outline-none focus:border-[rgba(239,68,68,0.5)]"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setBanModal(null)}
+                className="px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] border border-[rgba(255,255,255,0.1)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmBan}
+                disabled={banning[banModal.player.dbPlayerId || banModal.player.id || banModal.player.playerId]}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#ef4444] hover:bg-[#dc2626] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+              >
+                {banning[banModal.player.dbPlayerId || banModal.player.id || banModal.player.playerId] ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Ban className="w-3 h-3" />
+                )}
+                {banning[banModal.player.dbPlayerId || banModal.player.id || banModal.player.playerId] ? 'Banning...' : 'Confirm Ban'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {banMsg && (
+        <div className="fixed bottom-6 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 border shadow-lg">
+          {banMsg.includes('banned') ? (
+            <span className="text-[#22c55e] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.1)]">
+              <CheckCircle2 className="w-3.5 h-3.5 inline mr-1.5" />
+              {banMsg}
+            </span>
+          ) : (
+            <span className="text-[#ef4444] border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)]">
+              <AlertCircle className="w-3.5 h-3.5 inline mr-1.5" />
+              {banMsg}
+            </span>
+          )}
         </div>
       )}
     </div>

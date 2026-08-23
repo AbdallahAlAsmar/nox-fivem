@@ -149,6 +149,27 @@ export class FilesystemActions {
   /**
    * Apply file patches (after git checkpoint)
    */
+  async writeFile(relativePath: string, content: string): Promise<{
+    path: string;
+    success: boolean;
+    sha256: string;
+  }> {
+    const filePath = this.validatePath(relativePath);
+
+    try {
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.writeFile(filePath, content, 'utf-8');
+      const sha256 = crypto.createHash('sha256').update(content).digest('hex');
+
+      return { path: relativePath, success: true, sha256 };
+    } catch (error: any) {
+      return { path: relativePath, success: false, sha256: '' };
+    }
+  }
+
+  /**
+   * Apply file patches (after git checkpoint)
+   */
   async applyPatch(
     changeId: string,
     files: Array<{

@@ -32,6 +32,7 @@ export async function handleChatMessage(
     serverId,
     threadId,
     userId,
+    orgId: server.orgId || 'dev-org',
     framework: server.framework,
     resources: server.resources,
     previousMessages,
@@ -62,7 +63,7 @@ export async function handleChatMessage(
             toolError = true;
             break;
           }
-          const result = await handleToolCall(gateway, serverId, chunk.toolName!, chunk.toolArgs!);
+          const result = await handleToolCall(gateway, serverId, threadId, userId, { orgId: server.orgId || 'dev-org' }, chunk.toolName!, chunk.toolArgs!);
           toolCalls.push({ id: chunk.toolId || crypto.randomUUID(), name: chunk.toolName, arguments: chunk.toolArgs, result });
           onStream({ type: 'tool_result', content: JSON.stringify(result) });
         }
@@ -112,7 +113,7 @@ export async function handleChatMessage(
   }
 }
 
-async function handleToolCall(gateway: AgentGateway, serverId: string, toolName: string, args: any): Promise<any> {
+async function handleToolCall(gateway: AgentGateway, serverId: string, threadId: string, userId: string, user: any, toolName: string, args: any): Promise<any> {
   if (!gateway.isConnected(serverId)) {
     return { error: `Agent is not connected for server ${serverId}. Pair your server first to enable file operations.`, toolName, status: 'disconnected' };
   }
@@ -130,7 +131,24 @@ async function handleToolCall(gateway: AgentGateway, serverId: string, toolName:
     case 'propose_remote_write': {
       const currentFile = await gateway.sendCommand(serverId, 'fs.read', { path: args.path }, 30000);
       const change = await prisma.change.create({
-        data: { serverId, filesTouched: [args.path], diff: generateDiff(currentFile?.content ?? '', args.newContent), status: 'pending' },
+        data: {
+          serverId,
+          threadId,
+          createdByUserId: userId,
+          filesTouched: [args.path],
+          diff: generateDiff(currentFile?.content ?? '', args.newContent),
+          status: 'pending',
+        },
+      });
+      // Log audit event
+      await prisma.auditLog.create({
+        data: {
+          orgId: user.orgId,
+          serverId,
+          userId,
+          action: 'change.proposed',
+          metadata: { changeId: change.id, path: args.path, reason: args.reason },
+        },
       });
       return { changeId: change.id, path: args.path, reason: args.reason, status: 'staged' };
     }

@@ -74,7 +74,7 @@ export async function authPlugin(fastify: FastifyInstance) {
   fastify.decorateRequest('authUser', null);
 
   fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
-    const publicPaths = ['/health', '/api/pairing/claim', '/api/servers', '/api/threads/', '/api/changes'];
+    const publicPaths = ['/health', '/api/pairing/claim', '/api/servers', '/api/threads/', '/api/changes', '/api/onboarding', '/api/usage', '/api/org'];
     if (publicPaths.some(p => request.url.startsWith(p))) {
       return;
     }

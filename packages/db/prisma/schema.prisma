@@ -16,6 +16,7 @@ model Organization {
   monthly_action_limit      Int?      @default(500)
   monthly_cost_cap_usd      Decimal?  @default(20.00) @db.Decimal
   conversation_cost_cap_usd Decimal?  @default(2.00) @db.Decimal
+  onboardedAt               DateTime? @db.Timestamptz(6)
   created_at                DateTime? @default(now()) @db.Timestamptz(6)
   updated_at                DateTime? @default(now()) @db.Timestamptz(6)
 
@@ -293,4 +294,34 @@ model Player {
   server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@map("players")
+}
+
+model Usage {
+  id          String   @id @default(cuid())
+  orgId       String?
+  threadId    String?
+  tokensIn    Int      @default(0)
+  tokensOut   Int      @default(0)
+  costUsd     Float    @default(0)
+  model       String
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([threadId])
+  @@map("usage_logs")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  orgId       String?
+  serverId    String?
+  userId      String?
+  action      String   // "change.proposed", "change.approved", "change.applied", "change.rolled_back", "server.scanned", "agent.connected"
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([serverId, createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
 }

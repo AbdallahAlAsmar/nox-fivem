@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { FileDiff, Clock, CheckCircle2, XCircle, RotateCcw, ChevronDown, ChevronUp, AlertCircle, Filter } from 'lucide-react';
+import { FileDiff, Clock, CheckCircle2, XCircle, RotateCcw, ChevronDown, ChevronUp, AlertCircle, Filter, Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchServers } from '@/lib/api';
-import { fetchAllChangesGlobal, applyChange } from '@/lib/api';
+import { fetchAllChangesGlobal, applyChange, cancelChange, batchApproveChanges, batchCancelChanges } from '@/lib/api';
+import { DiffViewer } from '@/components/ui/DiffViewer';
 
 export default function ChangesPage() {
   const [selectedServer, setSelectedServer] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchSuccess, setBatchSuccess] = useState<string | null>(null);
 
   const { data: servers, isLoading: loadingServers } = useSWR('servers', fetchServers, {
     fallbackData: [],
@@ -37,6 +40,61 @@ export default function ChangesPage() {
       mutate();
     } catch (e) {
       console.error('Failed to apply:', e);
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    try {
+      await cancelChange(id);
+      mutate();
+    } catch (e) {
+      console.error('Failed to cancel:', e);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const pendingIds = filtered.filter((c: any) => c.status === 'pending').map((c: any) => c.id);
+    setSelectedIds(new Set(pendingIds));
+  };
+
+  const deselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const batchApprove = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const ids = Array.from(selectedIds);
+      const result = await batchApproveChanges(ids, selectedServer);
+      setBatchSuccess(`Approved ${result.approved.length} changes`);
+      setSelectedIds(new Set());
+      mutate();
+      setTimeout(() => setBatchSuccess(null), 3000);
+    } catch (e) {
+      console.error('Failed to batch approve:', e);
+    }
+  };
+
+  const batchCancel = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const ids = Array.from(selectedIds);
+      const result = await batchCancelChanges(ids, selectedServer);
+      setBatchSuccess(`Cancelled ${result.cancelled.length} changes`);
+      setSelectedIds(new Set());
+      mutate();
+      setTimeout(() => setBatchSuccess(null), 3000);
+    } catch (e) {
+      console.error('Failed to batch cancel:', e);
     }
   };
 
@@ -108,11 +166,49 @@ export default function ChangesPage() {
 
           <div className="flex-1" />
 
+          {selectedIds.size > 0 && (
+            <>
+              <span className="font-mono text-xs text-white/50">{selectedIds.size} selected</span>
+              <button
+                onClick={batchApprove}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#22c55e]/15 text-[#22c55e] font-mono text-xs uppercase tracking-wider hover:bg-[#22c55e]/25 rounded-lg transition-colors"
+              >
+                <Check className="w-3.5 h-3.5" /> Approve All
+              </button>
+              <button
+                onClick={batchCancel}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ef4444]/15 text-[#ef4444] font-mono text-xs uppercase tracking-wider hover:bg-[#ef4444]/25 rounded-lg transition-colors"
+              >
+                <X className="w-3.5 h-3.5" /> Cancel All
+              </button>
+              <button
+                onClick={deselectAll}
+                className="px-3 py-1.5 text-white/40 hover:text-white/60 font-mono text-xs transition-colors"
+              >
+                Clear
+              </button>
+            </>
+          )}
+
           <div className="flex gap-3 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)]">
             <span className="text-[#22c55e]">{appliedCount} applied</span>
             <span className="text-[#f59e0b]">{pendingCount} pending</span>
           </div>
         </div>
+
+        {/* Success toast */}
+        <AnimatePresence>
+          {batchSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-4 px-4 py-3 bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.3)] rounded-lg"
+            >
+              <span className="font-mono text-xs text-[#22c55e]">{batchSuccess}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Timeline */}
         {loadingServers || loadingChanges ? (
@@ -135,17 +231,25 @@ export default function ChangesPage() {
             <div className="absolute left-5 top-0 bottom-0 w-px bg-[rgba(255,255,255,0.08)]" />
 
             <div className="space-y-1">
-              {filtered.map((change: any) => (
-                <ChangeRow
-                  key={change.id}
-                  change={change}
-                  isExpanded={expandedId === change.id}
-                  onToggle={() => setExpandedId(expandedId === change.id ? null : change.id)}
-                  onApply={() => handleApply(change.id)}
-                  statusColor={statusColor}
-                  statusIcon={statusIcon}
-                />
-              ))}
+              {filtered.map((change: any) => {
+                const isSelected = selectedIds.has(change.id);
+                const isPending = change.status === 'pending';
+                return (
+                  <ChangeRow
+                    key={change.id}
+                    change={change}
+                    isExpanded={expandedId === change.id}
+                    isPending={isPending}
+                    isSelected={isSelected}
+                    onToggle={() => setExpandedId(expandedId === change.id ? null : change.id)}
+                    onApply={() => handleApply(change.id)}
+                    onCancel={() => handleCancel(change.id)}
+                    onToggleSelect={() => toggleSelect(change.id)}
+                    statusColor={statusColor}
+                    statusIcon={statusIcon}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
@@ -157,15 +261,23 @@ export default function ChangesPage() {
 function ChangeRow({
   change,
   isExpanded,
+  isPending,
+  isSelected,
   onToggle,
   onApply,
+  onCancel,
+  onToggleSelect,
   statusColor,
   statusIcon,
 }: {
   change: any;
   isExpanded: boolean;
+  isPending: boolean;
+  isSelected: boolean;
   onToggle: () => void;
   onApply: () => void;
+  onCancel: () => void;
+  onToggleSelect: () => void;
   statusColor: (s: string) => string;
   statusIcon: (s: string) => React.ReactNode;
 }) {
@@ -173,7 +285,7 @@ function ChangeRow({
     <motion.div
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
-      className="relative pl-10"
+      className={`relative pl-10 ${isSelected ? 'bg-[rgba(94,106,210,0.05)]' : ''}`}
     >
       {/* Timeline dot */}
       <div className={`absolute left-3.5 top-4 w-3 h-3 rounded-full border-2 ${
@@ -187,6 +299,24 @@ function ChangeRow({
         isExpanded ? 'border-[rgba(255,255,255,0.18)]' : 'border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.15)]'
       }`}>
         <button onClick={onToggle} className="w-full flex items-center gap-4 px-5 py-3 text-left">
+          {/* Checkbox */}
+          <div className="flex-shrink-0">
+            {isPending ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                  isSelected
+                    ? 'bg-[#5E6AD2] border-[#5E6AD2]'
+                    : 'border-white/20 hover:border-white/40'
+                }`}
+              >
+                {isSelected && <Check className="w-3 h-3 text-white" />}
+              </button>
+            ) : (
+              <div className="w-5 h-5" />
+            )}
+          </div>
+
           {statusIcon(change.status)}
 
           <div className="flex-1 min-w-0">
@@ -211,13 +341,22 @@ function ChangeRow({
           </div>
 
           {change.status === 'pending' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onApply(); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider bg-white text-[#0F0F14] hover:opacity-85 transition-opacity duration-100 flex-shrink-0"
-            >
-              <CheckCircle2 className="w-3 h-3" />
-              Apply
-            </button>
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onCancel(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider border border-[rgba(239,68,68,0.3)] text-[#ef4444] hover:bg-[rgba(239,68,68,0.1)] transition-colors duration-100 flex-shrink-0"
+              >
+                <XCircle className="w-3 h-3" />
+                Cancel
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onApply(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider bg-white text-[#0F0F14] hover:opacity-85 transition-opacity duration-100 flex-shrink-0"
+              >
+                <CheckCircle2 className="w-3 h-3" />
+                Apply
+              </button>
+            </>
           )}
 
           <span className={`font-mono text-xs transition-transform duration-100 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
@@ -227,9 +366,7 @@ function ChangeRow({
 
         {isExpanded && change.diff && (
           <div className="border-t border-[rgba(255,255,255,0.06)] px-5 py-3">
-            <pre className="font-mono text-xs text-[rgba(255,255,255,0.6)] bg-[#0A0A0F] p-3 overflow-x-auto whitespace-pre leading-[1.7]">
-              {change.diff}
-            </pre>
+            <DiffViewer diff={change.diff} />
           </div>
         )}
       </div>

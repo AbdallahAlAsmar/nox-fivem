@@ -1,17 +1,16 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createServer } from '@/lib/api';
-import { PairingSetupView } from '@/components/dashboard/PairingSetupView';
+import { Plus, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 
 export default function NewServerPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ id: string; pairingCode: string } | null>(null);
+  const [result, setResult] = useState<{ id: string; connect?: { serverId: string; agentDeviceId: string; wsUrl: string } } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -47,10 +46,33 @@ export default function NewServerPage() {
         </a>
 
         {result ? (
-          <PairingSetupView
-            pairing={result}
-            onDone={() => router.push('/dashboard')}
-          />
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 bg-[rgba(34,197,94,0.05)] border border-[rgba(34,197,94,0.2)]">
+              <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
+              <span className="font-mono text-xs text-[#22c55e]">Server created — auto-paired and ready</span>
+            </div>
+            {result.connect && (
+              <div className="bg-[#16161E] border border-white/10 p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-mono text-[10px] uppercase text-white/40">Server ID</span>
+                  <span className="font-mono text-xs text-white/60">{result.connect.serverId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-mono text-[10px] uppercase text-white/40">Device ID</span>
+                  <span className="font-mono text-xs text-white/60">{result.connect.agentDeviceId}</span>
+                </div>
+              </div>
+            )}
+            <p className="font-sans text-xs text-white/40">
+              The desktop agent will auto-connect on next launch.
+            </p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full py-2.5 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors"
+            >
+              Go to Dashboard
+            </button>
+          </div>
         ) : (
           <>
             <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-white mb-1">

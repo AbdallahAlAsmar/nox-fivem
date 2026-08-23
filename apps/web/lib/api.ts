@@ -62,7 +62,12 @@ export async function fetchAllChangesGlobal(serverId?: string): Promise<any[]> {
 /** Create a new server */
 export async function createServer(
   name: string,
-): Promise<{ id: string; pairingCode: string }> {
+): Promise<{
+  id: string;
+  pairingCode: string;
+  pairing: { code: string; expiresAt: Date };
+  connect?: { serverId: string; agentDeviceId: string; wsUrl: string };
+}> {
   const res = await fetch(`${ORCHESTRATOR_URL}/api/servers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -70,7 +75,12 @@ export async function createServer(
   });
   if (!res.ok) throw new Error(`Failed to create server: ${res.status}`);
   const data = await res.json();
-  return { id: data.server.id, pairingCode: data.pairing.code };
+  return {
+    id: data.server.id,
+    pairingCode: data.pairing?.code || '',
+    pairing: data.pairing || { code: '', expiresAt: new Date() },
+    connect: data.connect,
+  };
 }
 
 /** Fetch threads for a server */
@@ -80,6 +90,20 @@ export async function fetchThreads(serverId: string): Promise<any[]> {
   } catch {
     return [];
   }
+}
+
+/** Create a new thread for a server */
+export async function createThread(serverId: string, title?: string): Promise<any> {
+  const res = await fetch(
+    `${ORCHESTRATOR_URL}/api/servers/${serverId}/threads`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title || 'Chat' }),
+    },
+  );
+  if (!res.ok) throw new Error(`Failed to create thread: ${res.status}`);
+  return res.json();
 }
 
 /** Fetch messages for a thread */
@@ -162,6 +186,16 @@ export async function applyChange(changeId: string): Promise<any> {
   return res.json();
 }
 
+/** Cancel a pending change */
+export async function cancelChange(changeId: string): Promise<any> {
+  const res = await fetch(
+    `${ORCHESTRATOR_URL}/api/changes/${changeId}/cancel`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+  );
+  if (!res.ok) throw new Error(`Failed to cancel change: ${res.status}`);
+  return res.json();
+}
+
 /** Scan resources for a server */
 export async function scanResources(serverId: string): Promise<any> {
   const res = await fetch(
@@ -237,6 +271,37 @@ export async function fetchOrg(): Promise<any> {
   }
 }
 
+/** Fetch usage and cost data */
+export async function fetchUsage(): Promise<any> {
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/usage`);
+  } catch {
+    return null;
+  }
+}
+
+/** Batch approve changes */
+export async function batchApproveChanges(changeIds: string[], serverId?: string): Promise<{ approved: string[]; skipped: Array<{ id: string; reason: string }> }> {
+  const res = await fetch(`${ORCHESTRATOR_URL}/api/changes/batch/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ changeIds, serverId }),
+  });
+  if (!res.ok) throw new Error(`Failed to batch approve: ${res.status}`);
+  return res.json();
+}
+
+/** Batch cancel changes */
+export async function batchCancelChanges(changeIds: string[], serverId?: string): Promise<{ cancelled: string[]; skipped: Array<{ id: string; reason: string }> }> {
+  const res = await fetch(`${ORCHESTRATOR_URL}/api/changes/batch/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ changeIds, serverId }),
+  });
+  if (!res.ok) throw new Error(`Failed to batch cancel: ${res.status}`);
+  return res.json();
+}
+
 /** Fetch agent connection status */
 export async function fetchAgentStatus(): Promise<{ connectedServers: string[]; total: number }> {
   try {
@@ -244,4 +309,50 @@ export async function fetchAgentStatus(): Promise<{ connectedServers: string[]; 
   } catch {
     return { connectedServers: [], total: 0 };
   }
+}
+
+/** Check onboarding status */
+export async function fetchOnboardingStatus(): Promise<{ onboarded: boolean }> {
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/onboarding/status`);
+  } catch {
+    return { onboarded: true }; // default to onboarding complete
+  }
+}
+
+/** Fetch resource config (fxmanifest.lua) for editing */
+export async function fetchResourceConfig(serverId: string, resourceName: string): Promise<{
+  resourceName: string;
+  relativePath: string;
+  manifestPath: string;
+  content: string;
+  sha256: string;
+  size: number;
+  modifiedAt: string;
+  error?: string;
+} | null> {
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/resources/${encodeURIComponent(resourceName)}/config`);
+  } catch {
+    return null as any;
+  }
+}
+
+/** Save a resource config change */
+export async function saveResourceConfig(
+  serverId: string,
+  resourceName: string,
+  content: string,
+  expectedSha256?: string,
+): Promise<{ success: boolean; sha256: string }> {
+  const res = await fetch(
+    `${ORCHESTRATOR_URL}/api/servers/${serverId}/resources/${encodeURIComponent(resourceName)}/config`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, expectedSha256 }),
+    },
+  );
+  if (!res.ok) throw new Error(`Failed to save config: ${res.status}`);
+  return res.json();
 }

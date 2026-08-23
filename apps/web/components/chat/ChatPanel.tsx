@@ -4,11 +4,13 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   MessageSquare, Bot, Send, Loader2,
   Plus, Trash2, ChevronDown, Sparkles, Clock, RefreshCw,
+  FileDiff,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { sendChatMessage, fetchServerThread, fetchThreadMessages } from '@/lib/api';
+import { sendChatMessage, fetchServerThread, fetchThreadMessages, fetchThreads, createThread, deleteThread } from '@/lib/api';
 import { useUser } from '@clerk/nextjs';
 import { useAgentStatus } from '@/contexts/AgentStatusContext';
+import { DiffViewer, InlineDiffPreview } from '@/components/ui/DiffViewer';
 
 interface ChatPanelProps {
   serverId: string;
@@ -40,6 +42,9 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [showThreadList, setShowThreadList] = useState(false);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<any[]>([]);
+  const [selectedChange, setSelectedChange] = useState<any | null>(null);
+  const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isConnected } = useAgentStatus();
   const isAgentConnected = isConnected;
@@ -48,51 +53,55 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
   const isDev = user.isSignedIn === false;
   const sharedUserId = isDev ? 'anonymous' : user.user?.id || 'unknown';
   const lastKnownMessageId = useRef<string | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeThread = threads.find((t) => t.id === activeThreadId);
 
-  const initThread = useCallback(async () => {
+  // Load all threads for the sidebar
+  const loadThreads = useCallback(async () => {
     if (!serverId) return;
-    const thread = await fetchServerThread(serverId);
-    if (!thread) return;
-    const id = thread.id;
-    setActiveThreadId(id);
-    onThreadIdChange?.(id);
-    setThreads([{
-      id,
-      serverId,
-      userId: thread.userId,
-      title: thread.title,
-      status: thread.status,
-      createdAt: thread.createdAt,
-      updatedAt: thread.updatedAt,
-      messageCount: thread.messages?.length ?? 0,
-    }]);
+    const list = await fetchThreads(serverId);
+    setThreads(list.map((t: any) => ({
+      id: t.id,
+      serverId: t.serverId,
+      userId: t.userId,
+      title: t.title,
+      status: t.status,
+      createdAt: t.createdAt,
+      updatedAt: t.updatedAt,
+      messageCount: t.messageCount ?? 0,
+    })));
+  }, [serverId]);
+
+  // Load messages for a specific thread
+  const loadThreadMessages = useCallback(async (threadId: string) => {
+    const msgs = await fetchThreadMessages(threadId);
     setMessages(
-      (thread.messages ?? []).map((m: any) => ({
+      (msgs || []).map((m: any) => ({
         id: m.id,
         role: (m.role as Role) || 'assistant',
         content: m.content,
         timestamp: new Date(m.createdAt).getTime(),
       })),
     );
-    lastKnownMessageId.current = thread.messages?.[thread.messages.length - 1]?.id ?? null;
-  }, [serverId, onThreadIdChange]);
+    lastKnownMessageId.current = msgs?.[msgs.length - 1]?.id ?? null;
+  }, []);
 
-  useEffect(() => {
-    initThread();
-  }, [initThread]);
-
-  useEffect(() => {
-    if (!activeThreadId) return;
-    const id = setInterval(async () => {
-      const msgs = await fetchThreadMessages(activeThreadId);
-      if (!msgs.length) return;
+  // Switch active thread
+  const switchThread = useCallback(async (threadId: string) => {
+    setActiveThreadId(threadId);
+    onThreadIdChange?.(threadId);
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    await loadThreadMessages(threadId);
+    // Poll for new messages every 2s
+    pollingRef.current = setInterval(async () => {
+      const msgs = await fetchThreadMessages(threadId);
+      if (!msgs?.length) return;
       const last = msgs[msgs.length - 1];
       if (lastKnownMessageId.current === last.id) return;
       lastKnownMessageId.current = last.id;
       setMessages(
-        msgs.map((m: any) => ({
+        (msgs || []).map((m: any) => ({
           id: m.id,
           role: (m.role as Role) || 'assistant',
           content: m.content,
@@ -100,22 +109,64 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
         })),
       );
     }, 2000);
-    return () => clearInterval(id);
-  }, [activeThreadId]);
+  }, [loadThreadMessages, onThreadIdChange]);
 
+  // Initial load: find existing thread or create one
+  useEffect(() => {
+    loadThreads();
+  }, [loadThreads]);
+
+  useEffect(() => {
+    if (!serverId) return;
+    // Find the first thread for this server
+    fetchServerThread(serverId).then(async (thread) => {
+      if (thread && thread.id) {
+        await switchThread(thread.id);
+      }
+    }).catch(() => {});
+  }, [serverId, switchThread]);
+
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const createThread = async () => {
-    await initThread();
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  const handleNewChat = async () => {
+    const thread = await createThread(serverId, `Chat ${threads.length + 1}`);
+    await loadThreads();
+    await switchThread(thread.id);
     setShowThreadList(false);
   };
 
-  const clearHistory = async () => {
-    if (!confirm('Clear chat history for this thread?')) return;
-    setMessages([]);
-    await initThread();
+  const handleDeleteThread = async (threadId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this conversation? This cannot be undone.')) return;
+    setDeletingThreadId(threadId);
+    try {
+      await deleteThread(serverId, threadId);
+      if (activeThreadId === threadId) {
+        // Switch to first remaining thread or create new
+        const remaining = threads.filter((t) => t.id !== threadId);
+        if (remaining.length > 0) {
+          await switchThread(remaining[0].id);
+        } else {
+          const thread = await createThread(serverId, 'Chat');
+          await switchThread(thread.id);
+        }
+      }
+      await loadThreads();
+    } catch {
+      // ignore
+    } finally {
+      setDeletingThreadId(null);
+    }
   };
 
   const toggleSkill = (skillId: string) => {
@@ -135,33 +186,11 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
 
     try {
       await sendChatMessage(activeThreadId, captured);
-      await initThread();
-      const thread = await fetchServerThread(serverId);
-      if (thread) {
-        setMessages(
-          (thread.messages ?? []).map((m: any) => ({
-            id: m.id,
-            role: (m.role as Role) || 'assistant',
-            content: m.content,
-            timestamp: new Date(m.createdAt).getTime(),
-          })),
-        );
-        lastKnownMessageId.current = thread.messages?.[thread.messages.length - 1]?.id ?? null;
-      }
+      // Reload messages for this thread
+      await loadThreadMessages(activeThreadId);
     } catch (error) {
-      await initThread();
-      const thread = await fetchServerThread(serverId);
-      if (thread) {
-        setMessages(
-          (thread.messages ?? []).map((m: any) => ({
-            id: m.id,
-            role: (m.role as Role) || 'assistant',
-            content: m.content,
-            timestamp: new Date(m.createdAt).getTime(),
-          })),
-        );
-        lastKnownMessageId.current = thread.messages?.[thread.messages.length - 1]?.id ?? null;
-      }
+      // Reload to get actual persisted state
+      await loadThreadMessages(activeThreadId);
     } finally {
       setIsLoading(false);
     }
@@ -186,10 +215,10 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="font-mono text-xs uppercase tracking-widest text-white/40">Chats</span>
                 <button
-                  onClick={createThread}
+                  onClick={handleNewChat}
                   className="flex items-center gap-1 px-2 py-1 bg-[#5E6AD2]/15 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#5E6AD2]/25 transition-colors"
                 >
-                  <Plus className="w-3 h-3" /> New
+                  <Plus className="w-3 h-3" /> New Chat
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -199,8 +228,8 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
                   threads.map((thread) => (
                     <button
                       key={thread.id}
-                      onClick={() => { setActiveThreadId(thread.id); setShowThreadList(false); onThreadIdChange?.(thread.id); }}
-                      className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors group ${
+                      onClick={() => { switchThread(thread.id); setShowThreadList(false); onThreadIdChange?.(thread.id); }}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors group relative ${
                         activeThreadId === thread.id
                           ? 'bg-[rgba(94,106,210,0.12)]'
                           : 'hover:bg-white/5'
@@ -219,6 +248,18 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
                         </div>
                         <span className="font-mono text-[9px] text-white/15 flex-shrink-0">{thread.messageCount ?? 0}</span>
                       </div>
+                      {/* Delete button — only show on hover */}
+                      <button
+                        onClick={(e) => handleDeleteThread(thread.id, e)}
+                        disabled={deletingThreadId === thread.id}
+                        className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[rgba(239,68,68,0.15)] rounded"
+                        title="Delete conversation"
+                      >
+                        {deletingThreadId === thread.id
+                          ? <Loader2 className="w-3 h-3 text-[rgba(239,68,68,0.5)] animate-spin" />
+                          : <Trash2 className="w-3 h-3 text-[rgba(239,68,68,0.5)] hover:text-[#ef4444]" />
+                        }
+                      </button>
                     </button>
                   ))
                 )}
@@ -249,14 +290,14 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
             <span className="font-mono text-[10px] text-white/20 uppercase">• {framework.toUpperCase()}</span>
           </div>
           <button
-            onClick={clearHistory}
+            onClick={() => { if (!confirm('Clear messages for this conversation?')) return; setMessages([]); }}
             className="flex items-center gap-1 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
           >
             <RefreshCw className="w-3 h-3" />
             <span className="hidden sm:inline">Clear</span>
           </button>
           <button
-            onClick={createThread}
+            onClick={handleNewChat}
             className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[#5E6AD2]/15 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#5E6AD2]/25 transition-colors"
           >
             <Plus className="w-3 h-3" /> New Chat

@@ -496,6 +496,47 @@ fn handle_orchestrator_request(
         "fivem.tailConsole" => {
             let lines = args.get("lines").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
             let log_path = srv_path.join("server.log");
+
+            // Check for txAdmin config
+            let use_txadmin = args.get("useTxAdmin").and_then(|v| v.as_bool()).unwrap_or(false);
+            let txadmin_url = args.get("txadminUrl").and_then(|v| v.as_str()).unwrap_or("");
+            let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
+
+            if use_txadmin && !txadmin_url.is_empty() && !txadmin_api_key.is_empty() {
+                // Call txAdmin API for console
+                let result = call_txadmin_console(txadmin_url, txadmin_api_key, lines).await;
+                match result {
+                    Ok(tail) => {
+                        let env = serde_json::json!({
+                            "protocolVersion": "2026-08-12.v1",
+                            "messageId": Uuid::new_v4().to_string(),
+                            "type": "agent.response",
+                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                            "requestId": req_id,
+                            "serverId": server_id,
+                            "agentDeviceId": agent_device_id,
+                            "payload": { "ok": true, "action": "fivem.tailConsole", "result": { "lines": tail, "count": tail.lines().count(), "via": "txadmin" } }
+                        });
+                        let _ = tx.send(Message::Text(env.to_string()));
+                        return;
+                    }
+                    Err(e) => {
+                        let env = serde_json::json!({
+                            "protocolVersion": "2026-08-12.v1",
+                            "messageId": Uuid::new_v4().to_string(),
+                            "type": "agent.response",
+                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                            "requestId": req_id,
+                            "serverId": server_id,
+                            "agentDeviceId": agent_device_id,
+                            "payload": { "ok": false, "action": "fivem.tailConsole", "error": { "code": "TXADMIN_ERROR", "message": e, "retryable": true } }
+                        });
+                        let _ = tx.send(Message::Text(env.to_string()));
+                        return;
+                    }
+                }
+            }
+
             let content = match fs::read_to_string(&log_path) {
                 Ok(c) => c,
                 Err(_) => {
@@ -528,7 +569,46 @@ fn handle_orchestrator_request(
             });
             let _ = tx.send(Message::Text(env.to_string()));
         }
-        _ => {
+        "fivem.restartServer" => {
+            // Check for txAdmin config
+            let use_txadmin = args.get("useTxAdmin").and_then(|v| v.as_bool()).unwrap_or(false);
+            let txadmin_url = args.get("txadminUrl").and_then(|v| v.as_str()).unwrap_or("");
+            let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
+
+            if use_txadmin && !txadmin_url.is_empty() && !txadmin_api_key.is_empty() {
+                let result = call_txadmin_restart(txadmin_url, txadmin_api_key).await;
+                match result {
+                    Ok(_) => {
+                        let env = serde_json::json!({
+                            "protocolVersion": "2026-08-12.v1",
+                            "messageId": Uuid::new_v4().to_string(),
+                            "type": "agent.response",
+                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                            "requestId": req_id,
+                            "serverId": server_id,
+                            "agentDeviceId": agent_device_id,
+                            "payload": { "ok": true, "action": "fivem.restartServer", "result": { "status": "restart_sent_via_txadmin" } }
+                        });
+                        let _ = tx.send(Message::Text(env.to_string()));
+                        return;
+                    }
+                    Err(e) => {
+                        let env = serde_json::json!({
+                            "protocolVersion": "2026-08-12.v1",
+                            "messageId": Uuid::new_v4().to_string(),
+                            "type": "agent.response",
+                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                            "requestId": req_id,
+                            "serverId": server_id,
+                            "agentDeviceId": agent_device_id,
+                            "payload": { "ok": false, "action": "fivem.restartServer", "error": { "code": "TXADMIN_ERROR", "message": e, "retryable": true } }
+                        });
+                        let _ = tx.send(Message::Text(env.to_string()));
+                        return;
+                    }
+                }
+            }
+
             let env = serde_json::json!({
                 "protocolVersion": "2026-08-12.v1",
                 "messageId": Uuid::new_v4().to_string(),
@@ -537,11 +617,7 @@ fn handle_orchestrator_request(
                 "requestId": req_id,
                 "serverId": server_id,
                 "agentDeviceId": agent_device_id,
-                "payload": {
-                    "ok": true,
-                    "action": action,
-                    "result": { "status": "ok" }
-                }
+                "payload": { "ok": true, "action": "fivem.restartServer", "result": { "status": "restart_sent" } }
             });
             let _ = tx.send(Message::Text(env.to_string()));
         }
@@ -654,12 +730,12 @@ pub fn start_heartbeat() {
     std::thread::spawn(|| {
         loop {
             std::thread::sleep(Duration::from_secs(30));
-            
+
             let conn = {
                 let guard = AGENT_CONNECTION.lock().unwrap();
                 guard.clone()
             };
-            
+
             if let Some(connection) = conn {
                 let heartbeat_env = serde_json::json!({
                     "protocolVersion": "2026-08-12.v1",
@@ -674,9 +750,53 @@ pub fn start_heartbeat() {
                         "activeFxServer": true
                     }
                 });
-                
+
                 let _ = connection.sender.send(Message::Text(heartbeat_env.to_string()));
             }
         }
     });
+}
+
+async fn call_txadmin_restart(txadmin_url: &str, api_key: &str) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/v3/server", txadmin_url.trim_end_matches('/'));
+
+    let response = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({ "action": "restart" }))
+        .send()
+        .await
+        .map_err(|e| format!("txAdmin restart failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("txAdmin returned error: {}", response.status()));
+    }
+
+    Ok(())
+}
+
+async fn call_txadmin_console(txadmin_url: &str, api_key: &str, lines: usize) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/v3/server/logs", txadmin_url.trim_end_matches('/'));
+
+    let response = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("txAdmin request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("txAdmin returned error: {}", response.status()));
+    }
+
+    let text = response.text().await
+        .map_err(|e| format!("Failed to read txAdmin response: {}", e))?;
+
+    let all_lines: Vec<&str> = text.lines().collect();
+    let start = if all_lines.len() > lines { all_lines.len() - lines } else { 0 };
+    Ok(all_lines[start..].join("\n"))
 }

@@ -11,8 +11,8 @@
   --border-rgb: 255, 255, 255, 0.08;
 }
 
-/* Light theme */
-.light {
+/* Light theme (overrides when .dark is not present) */
+html:not(.dark) {
   --foreground-rgb: 17, 24, 39;
   --background-start-rgb: 249, 250, 251;
   --background-end-rgb: 249, 250, 251;

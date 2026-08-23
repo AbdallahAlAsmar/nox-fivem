@@ -158,6 +158,7 @@ program
           capabilities: [
             'fs.read',
             'fs.list',
+            'fs.write',
             'fs.applyPatch',
             'git.checkpoint',
             'git.rollback',
@@ -267,6 +268,12 @@ async function handleRequest(
       case 'scan.resources':
         result = await scanner.scanAll();
         break;
+
+      case 'fs.write': {
+        const args = request.args as { path: string; content: string };
+        result = await fsActions.writeFile(args.path, args.content);
+        break;
+      }
 
       case 'fivem.restartServer': {
         result = await fivemActions.restartServer();
