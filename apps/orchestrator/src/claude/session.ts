@@ -428,9 +428,9 @@ export async function* streamChat(
   ] : undefined;
 
   try {
-    console.log('[streamChat] calling OmniRoute with model auto/best-coding, tools:', tools ? 'enabled' : 'disabled');
+    console.log('[streamChat] calling OmniRoute with model Noxes AI, tools:', tools ? 'enabled' : 'disabled');
     const stream = await openai.chat.completions.create({
-      model: 'auto/best-coding',
+      model: 'Noxes AI',
       messages,
       stream: true,
       ...(tools ? { tools } : {}),

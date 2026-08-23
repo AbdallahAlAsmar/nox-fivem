@@ -78,7 +78,7 @@ export async function handleChatMessage(
           role: 'assistant',
           content: assistantContent,
           toolCalls,
-          model: 'auto/best-coding',
+          model: 'Noxes AI',
         },
       });
 
@@ -91,7 +91,7 @@ export async function handleChatMessage(
               role: 'tool',
               content: typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result),
               toolCalls: [tc],
-              model: 'auto/best-coding',
+              model: 'Noxes AI',
             },
           });
         }
