@@ -342,7 +342,6 @@ export default function BillingPage() {
                               <th className="text-left font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-400 py-2 pr-4">Model</th>
                               <th className="text-right font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-400 py-2 px-4">Tokens In</th>
                               <th className="text-right font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-400 py-2 px-4">Tokens Out</th>
-                              <th className="text-right font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-400 py-2 px-4">Cost</th>
                               <th className="text-right font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-400 py-2 pl-4">Calls</th>
                             </tr>
                           </thead>
@@ -357,9 +356,6 @@ export default function BillingPage() {
                                 </td>
                                 <td className="py-3 px-4 text-right">
                                   <span className="font-mono text-xs text-[rgba(255,255,255,0.5)] dark:text-[rgba(255,255,255,0.5)] light:text-gray-500">{formatNumber(m.tokensOut)}</span>
-                                </td>
-                                <td className="py-3 px-4 text-right">
-                                  <span className="font-mono text-xs text-[#5E6AD2]">{formatCost(m.costUsd)}</span>
                                 </td>
                                 <td className="py-3 pl-4 text-right">
                                   <span className="font-mono text-xs text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-400">{m.entries}</span>
@@ -379,7 +375,9 @@ export default function BillingPage() {
                                 <span className="font-mono text-xs text-white dark:text-white light:text-gray-900">{formatNumber(usage?.totalTokensOut || 0)}</span>
                               </td>
                               <td className="py-3 px-4 text-right">
-                                <span className="font-mono text-xs text-[#5E6AD2] font-medium">{formatCost(usage?.totalCostUsd || 0)}</span>
+                                <span className="font-mono text-xs text-[rgba(255,255,255,0.5)] dark:text-[rgba(255,255,255,0.5)] light:text-gray-500">
+                                  {usage?.totalTokensOut || 0}
+                                </span>
                               </td>
                               <td className="py-3 pl-4 text-right">
                                 <span className="font-mono text-xs text-[rgba(255,255,255,0.5)] dark:text-[rgba(255,255,255,0.5)] light:text-gray-500">
@@ -400,57 +398,30 @@ export default function BillingPage() {
                   </div>
 
                   {/* Cost Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="bg-[#16161E] dark:bg-[#16161E] light:bg-white light:border light:border-gray-200 border border-[rgba(255,255,255,0.08)] p-5">
-                      <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500 mb-4">
-                        Cost Details
-                      </h2>
-                      <div className="space-y-3">
-                        {[
-                          { label: 'Total Spend (30d)', value: formatCost(usage?.totalCostUsd || 0) },
-                          { label: 'Avg Per Conversation', value: formatCost(
-                            (usage?.activeConversations || 1) > 0
-                              ? (usage?.totalCostUsd || 0) / (usage?.activeConversations || 1)
-                              : 0
-                          )},
-                          { label: 'Tokens In', value: formatNumber(usage?.totalTokensIn || 0) },
-                          { label: 'Tokens Out', value: formatNumber(usage?.totalTokensOut || 0) },
-                        ].map((item) => (
-                          <div key={item.label} className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.04)] dark:border-[rgba(255,255,255,0.04)] light:border-gray-100 last:border-0">
-                            <span className="font-sans text-xs text-[rgba(255,255,255,0.5)] dark:text-[rgba(255,255,255,0.5)] light:text-gray-500">{item.label}</span>
-                            <span className="font-mono text-xs text-white dark:text-white light:text-gray-900">{item.value}</span>
-                          </div>
-                        ))}
-                      </div>
+                  <div className="bg-[#16161E] dark:bg-[#16161E] light:bg-white light:border light:border-gray-200 border border-[rgba(255,255,255,0.08)] p-5">
+                    <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500 mb-4">
+                      Usage Summary
+                    </h2>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'Total Messages (30d)', value: usage?.totalMessages || 0 },
+                        { label: 'Avg Per Conversation', value: formatNumber(
+                          (usage?.activeConversations || 1) > 0
+                            ? (usage?.totalMessages || 0) / (usage?.activeConversations || 1)
+                            : 0
+                        )},
+                        { label: 'Tokens In', value: formatNumber(usage?.totalTokensIn || 0) },
+                        { label: 'Tokens Out', value: formatNumber(usage?.totalTokensOut || 0) },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.04)] dark:border-[rgba(255,255,255,0.04)] light:border-gray-100 last:border-0">
+                          <span className="font-sans text-xs text-[rgba(255,255,255,0.5)] dark:text-[rgba(255,255,255,0.5)] light:text-gray-500">{item.label}</span>
+                          <span className="font-mono text-xs text-white dark:text-white light:text-gray-900">{item.value}</span>
+                        </div>
+                      ))}
                     </div>
-
-                    <div className="bg-[#16161E] dark:bg-[#16161E] light:bg-white light:border light:border-gray-200 border border-[rgba(255,255,255,0.08)] p-5">
-                      <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500 mb-4">
-                        Pricing Reference
-                      </h2>
-                      <div className="space-y-3">
-                        {(usage?.pricingInfo?.models || [
-                          { id: 'openai/gpt-5.4', name: 'GPT-5.4', input: '$7.50/M', output: '$37.50/M' },
-                          { id: 'anthropic/claude-sonnet-4-5', name: 'Claude Sonnet 4.5', input: '$3.00/M', output: '$15.00/M' },
-                          { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', input: '$0.075/M', output: '$0.30/M' },
-                          { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', input: '$0.27/M', output: '$1.10/M' },
-                        ]).map((p: any) => (
-                          <div key={p.id} className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.04)] dark:border-[rgba(255,255,255,0.04)] light:border-gray-100 last:border-0">
-                            <div>
-                              <p className="font-mono text-xs text-white dark:text-white light:text-gray-900">{p.name}</p>
-                              <p className="font-mono text-[10px] text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-500">{p.id}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500">In: {p.input}</p>
-                              <p className="font-mono text-[10px] text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.4)] light:text-gray-500">Out: {p.output}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="font-sans text-[10px] text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-500 mt-3">
-                        Costs calculated using provider-listed per-token rates
-                      </p>
-                    </div>
+                    <p className="font-sans text-[10px] text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)] light:text-gray-500 mt-3">
+                      All AI usage included in your subscription
+                    </p>
                   </div>
                 </motion.div>
               )}

@@ -1,93 +1,131 @@
 /**
- * Model pricing configuration
- * Prices are per 1M tokens (input / output)
- * Auto-routed models from OmniRoute use these base rates
+ * Subscription Pricing Configuration
+ * 
+ * All AI usage is INCLUDED in the monthly subscription.
+ * OmniRoute is free for you, so there's no per-token cost.
+ * 
+ * To change plan prices, edit the PLANS config below.
  */
-export const MODEL_PRICING: Record<string, { input: number; output: number; name: string }> = {
-  // GPT-5.4 series (default routing)
-  'openai/gpt-5.4': { input: 7.5, output: 37.5, name: 'GPT-5.4' },
-  'gpt-5.4': { input: 7.5, output: 37.5, name: 'GPT-5.4' },
-  
-  // GPT-4o series
-  'openai/gpt-4o': { input: 2.5, output: 10.0, name: 'GPT-4o' },
-  'gpt-4o': { input: 2.5, output: 10.0, name: 'GPT-4o' },
-  'openai/gpt-4o-mini': { input: 0.15, output: 0.6, name: 'GPT-4o Mini' },
-  'gpt-4o-mini': { input: 0.15, output: 0.6, name: 'GPT-4o Mini' },
-  
-  // Claude series
-  'anthropic/claude-opus-4-6': { input: 15.0, output: 75.0, name: 'Claude Opus 4.6' },
-  'claude-opus-4-6': { input: 15.0, output: 75.0, name: 'Claude Opus 4.6' },
-  'anthropic/claude-sonnet-4-5': { input: 3.0, output: 15.0, name: 'Claude Sonnet 4.5' },
-  'claude-sonnet-4-5': { input: 3.0, output: 15.0, name: 'Claude Sonnet 4.5' },
-  'anthropic/claude-haiku-4-5': { input: 0.8, output: 4.0, name: 'Claude Haiku 4.5' },
-  'claude-haiku-4-5': { input: 0.8, output: 4.0, name: 'Claude Haiku 4.5' },
-  
-  // Gemini series
-  'google/gemini-2.5-pro': { input: 1.25, output: 7.5, name: 'Gemini 2.5 Pro' },
-  'gemini-2.5-pro': { input: 1.25, output: 7.5, name: 'Gemini 2.5 Pro' },
-  'google/gemini-2.5-flash': { input: 0.075, output: 0.3, name: 'Gemini 2.5 Flash' },
-  'gemini-2.5-flash': { input: 0.075, output: 0.3, name: 'Gemini 2.5 Flash' },
-  
-  // DeepSeek series
-  'deepseek/deepseek-chat': { input: 0.27, output: 1.1, name: 'DeepSeek Chat' },
-  'deepseek-chat': { input: 0.27, output: 1.1, name: 'DeepSeek Chat' },
-  'deepseek/deepseek-reasoner': { input: 0.55, output: 2.19, name: 'DeepSeek R1' },
-  'deepseek-reasoner': { input: 0.55, output: 2.19, name: 'DeepSeek R1' },
-  
-  // Auto-routed fallback
-  'auto/best-coding': { input: 2.5, output: 10.0, name: 'Auto (Best Coding)' },
-  
-  // Default fallback for unknown models
-  '_default': { input: 1.0, output: 5.0, name: 'Unknown' },
-};
+
+export interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  period: string;
+  description: string;
+  servers: number;
+  actions: number;
+  color: string;
+  border: string;
+  bg: string;
+  highlighted?: boolean;
+  features: Feature[];
+}
+
+export interface Feature {
+  name: string;
+  included: boolean;
+}
+
+// ─── Subscription Plans ───────────────────────────────────────────────────────
+export const SUBSCRIPTION_PLANS: Plan[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price: 0,
+    period: '/month',
+    description: 'Perfect for trying out NOX',
+    servers: 1,
+    actions: 100,
+    color: 'text-white',
+    border: 'border-[rgba(255,255,255,0.15)]',
+    bg: 'bg-[rgba(255,255,255,0.02)]',
+    features: [
+      { name: '1 Server', included: true },
+      { name: '100 AI actions/month', included: true },
+      { name: 'Basic AI models', included: true },
+      { name: 'Community support', included: true },
+      { name: 'Unlimited servers', included: false },
+      { name: 'Priority support', included: false },
+      { name: 'Custom AI models', included: false },
+      { name: '24/7 support', included: false },
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 19,
+    period: '/month',
+    description: 'For serious FiveM developers',
+    servers: 5,
+    actions: 1000,
+    color: 'text-[#5E6AD2]',
+    border: 'border-[rgba(94,106,210,0.5)]',
+    bg: 'bg-[rgba(94,106,210,0.08)]',
+    highlighted: true,
+    features: [
+      { name: '5 Servers', included: true },
+      { name: '1,000 AI actions/month', included: true },
+      { name: 'All AI models', included: true },
+      { name: 'Priority support', included: true },
+      { name: 'Unlimited servers', included: false },
+      { name: 'Custom AI models', included: false },
+      { name: '24/7 support', included: false },
+      { name: 'Advanced analytics', included: false },
+    ],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: 49,
+    period: '/month',
+    description: 'For teams and agencies',
+    servers: Infinity,
+    actions: Infinity,
+    color: 'text-[#22c55e]',
+    border: 'border-[rgba(34,197,94,0.5)]',
+    bg: 'bg-[rgba(34,197,94,0.08)]',
+    features: [
+      { name: 'Unlimited Servers', included: true },
+      { name: 'Unlimited AI actions', included: true },
+      { name: 'All AI models', included: true },
+      { name: '24/7 support', included: true },
+      { name: 'Custom AI models', included: true },
+      { name: 'Advanced analytics', included: true },
+      { name: 'Team collaboration', included: true },
+      { name: 'Dedicated account manager', included: true },
+    ],
+  },
+];
+
+// ─── Helper Functions ─────────────────────────────────────────────────────────
 
 /**
- * Get pricing for a model, with fallback to default
+ * Get plan by ID
  */
-export function getModelPricing(model: string): { input: number; output: number; name: string } {
-  // Try exact match first
-  if (MODEL_PRICING[model]) {
-    return MODEL_PRICING[model];
-  }
-  
-  // Try matching prefix (e.g., "openai/gpt-5.4-turbo" matches "openai/gpt-5.4")
-  for (const key of Object.keys(MODEL_PRICING)) {
-    if (model.startsWith(key) && key !== '_default') {
-      return MODEL_PRICING[key];
-    }
-  }
-  
-  // Fallback to default pricing
-  return MODEL_PRICING['_default'];
+export function getPlan(planId: string): Plan | undefined {
+  return SUBSCRIPTION_PLANS.find((p) => p.id === planId);
 }
 
 /**
- * Calculate cost based on token counts and model
+ * Get all plans
  */
-export function calculateCost(
-  promptTokens: number,
-  completionTokens: number,
-  model: string
-): number {
-  const pricing = getModelPricing(model);
-  const inputCost = (promptTokens / 1_000_000) * pricing.input;
-  const outputCost = (completionTokens / 1_000_000) * pricing.output;
-  return parseFloat((inputCost + outputCost).toFixed(6));
+export function getAllPlans(): Plan[] {
+  return SUBSCRIPTION_PLANS;
 }
 
 /**
- * Format cost as currency string
+ * Check if plan has unlimited servers
  */
-export function formatCost(usd: number): string {
-  if (usd < 0.001) {
-    return `$${(usd * 100).toFixed(2)}¢`;
-  }
-  return `$${usd.toFixed(2)}`;
+export function isUnlimitedServers(planId: string): boolean {
+  const plan = getPlan(planId);
+  return plan?.servers === Infinity;
 }
 
 /**
- * Format token count with commas
+ * Check if plan has unlimited actions
  */
-export function formatTokens(count: number): string {
-  return count.toLocaleString();
+export function isUnlimitedActions(planId: string): boolean {
+  const plan = getPlan(planId);
+  return plan?.actions === Infinity;
 }

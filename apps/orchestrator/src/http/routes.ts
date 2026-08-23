@@ -585,12 +585,12 @@ export async function registerRoutes(fastify: FastifyInstance) {
         activeConversations: num(msgStats[0]?.active_conversations),
         totalTokensIn: num(usageStats[0]?.total_tokens_in),
         totalTokensOut: num(usageStats[0]?.total_tokens_out),
-        totalCostUsd: num(usageStats[0]?.total_cost_usd),
+        totalCostUsd: 0, // Subscription-based — no per-token costs
         modelBreakdown: (modelBreakdown || []).map((m: any) => ({
           model: m.model,
           tokensIn: num(m.tokens_in),
           tokensOut: num(m.tokens_out),
-          costUsd: num(m.cost_usd),
+          costUsd: 0,
           entries: num(m.entries),
         })),
         dailyTrend: Object.values(byDay),
@@ -598,15 +598,14 @@ export async function registerRoutes(fastify: FastifyInstance) {
         limits: {
           maxTokensPerDay: 50000,
           maxConcurrentThreads: 5,
-          monthlyCostCap: org?.monthly_cost_cap_usd != null ? Number(org.monthly_cost_cap_usd) : 20,
+          monthlyCostCap: 0, // No cost cap — subscription covers all usage
         },
-        pricingInfo: {
-          note: 'Costs calculated using provider-listed per-token rates',
-          models: [
-            { id: 'openai/gpt-5.4', name: 'GPT-5.4', input: '$7.50/M', output: '$37.50/M' },
-            { id: 'anthropic/claude-sonnet-4-5', name: 'Claude Sonnet 4.5', input: '$3.00/M', output: '$15.00/M' },
-            { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', input: '$0.075/M', output: '$0.30/M' },
-            { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat', input: '$0.27/M', output: '$1.10/M' },
+        subscription: {
+          note: 'All AI usage included in monthly subscription',
+          plans: [
+            { id: 'starter', name: 'Starter', price: '$0', features: '1 Server, 100 actions' },
+            { id: 'pro', name: 'Pro', price: '$19', features: '5 Servers, 1,000 actions' },
+            { id: 'enterprise', name: 'Enterprise', price: '$49', features: 'Unlimited everything' },
           ],
         },
       };

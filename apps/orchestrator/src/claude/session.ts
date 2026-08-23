@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import { prisma } from '@fivem-ai/db';
 import type { ChatMessage, ResourceIndex } from '@prisma/client';
-import { getModelPricing, calculateCost } from './pricing';
 
 const openai = new OpenAI({
   apiKey: process.env.OMNIROUTE_API_KEY || 'omni-key',
@@ -478,12 +477,9 @@ export async function* streamChat(
       }
     }
 
-    // Log usage with proper token counts and model-based pricing
+    // Log usage stats (informational only — included in subscription)
     if (totalTokens > 0) {
-      const pricing = getModelPricing(modelUsed);
-      const costUsd = calculateCost(promptTokens, completionTokens, modelUsed);
-      
-      console.log(`[streamChat] Usage: ${modelUsed} | Input: ${promptTokens} | Output: ${completionTokens} | Total: ${totalTokens} | Cost: $${costUsd.toFixed(4)}`);
+      console.log(`[streamChat] Usage: ${modelUsed} | Input: ${promptTokens} | Output: ${completionTokens} | Total: ${totalTokens}`);
       
       await prisma.usage.create({
         data: {
@@ -491,7 +487,7 @@ export async function* streamChat(
           threadId: context.threadId,
           tokensIn: promptTokens,
           tokensOut: completionTokens,
-          costUsd,
+          costUsd: 0,
           model: modelUsed,
         },
       });
