@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
 import dynamic from 'next/dynamic';
+import { InteractiveDemo } from '@/components/landing/InteractiveDemo';
 
 const ParticleCanvas = dynamic(
   () => import('./ParticleCanvas').then((mod) => mod.ParticleCanvas),
@@ -316,78 +317,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="relative bg-[#16161E] border border-[rgba(255,255,255,0.08)] aspect-video flex items-center justify-center overflow-hidden group cursor-pointer">
-              {/* Simulated UI mockup */}
-              <div className="absolute inset-0 flex flex-col">
-                {/* Top bar */}
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-[#0A0A0F] border-b border-[rgba(255,255,255,0.08)]">
-                  <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 bg-[rgba(255,255,255,0.15)] rounded-full" />
-                    <div className="w-2.5 h-2.5 bg-[rgba(255,255,255,0.15)] rounded-full" />
-                    <div className="w-2.5 h-2.5 bg-[rgba(255,255,255,0.15)] rounded-full" />
-                  </div>
-                  <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)] ml-3 uppercase tracking-wider">
-                    NOX — Shadow RP
-                  </span>
-                </div>
-                {/* Main area */}
-                <div className="flex flex-1">
-                  {/* Sidebar */}
-                  <div className="w-48 bg-[#0A0A0F] border-r border-[rgba(255,255,255,0.08)] p-3 hidden sm:block">
-                    <div className="font-mono text-[10px] text-[rgba(255,255,255,0.3)] uppercase tracking-wider mb-3">
-                      Resources
-                    </div>
-                    {['qb-core', 'mission-ui', 'andy-scripts', 'apartments', 'phones'].map((r, i) => (
-                      <div key={i} className="font-mono text-[11px] text-[rgba(255,255,255,0.5)] py-1 px-2 border-l-2 border-transparent hover:border-[#5E6AD2] hover:text-white transition-colors cursor-pointer">
-                        {r}
-                      </div>
-                    ))}
-                  </div>
-                  {/* Chat area */}
-                  <div className="flex-1 p-4 flex flex-col gap-3">
-                    <div className="flex gap-2">
-                      <div className="w-6 h-6 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] flex items-center justify-center flex-shrink-0">
-                        <span className="font-mono text-[9px] text-[#5E6AD2]">AI</span>
-                      </div>
-                      <div className="bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] px-3 py-2">
-                        <p className="font-sans text-xs text-[rgba(255,255,255,0.7)] leading-[1.5]">
-                          I added a new vehicle spawn point at coords <span className="font-mono text-[#5E6AD2]">-320.5, 5892.3, 11.2</span>. Here is the diff:
-                        </p>
-                      </div>
-                    </div>
-                    {/* Diff preview */}
-                    <div className="bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] p-3 font-mono text-[11px]">
-                      <div className="text-[rgba(255,255,255,0.3)] mb-1"> spawns.lua</div>
-                      <div className="text-[rgba(255,255,255,0.2)]">{'  local spawns = ' + '{' + '}'}</div>
-                      <div className="text-[rgba(0,212,170,0.8)]">{'+ local spawn = ' + '{' + 'x = -320.5, y = 5892.3, z = 11.2' + '}'}</div>
-                      <div className="text-[rgba(0,212,170,0.8)]">+ table.insert(spawns, spawn)</div>
-                      <div className="text-[rgba(255,255,255,0.2)]">  return spawns</div>
-                    </div>
-                    {/* Action buttons */}
-                    <div className="flex gap-2 mt-auto">
-                      <button className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 bg-white text-[#0F0F14] hover:opacity-85 transition-opacity">
-                        Apply
-                      </button>
-                      <button className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border border-[rgba(255,255,255,0.2)] text-[rgba(255,255,255,0.6)] hover:border-[rgba(255,255,255,0.4)] transition-colors">
-                        Request Edit
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Play overlay */}
-              <div className="absolute inset-0 bg-[rgba(15,15,20,0.6)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-100">
-                <div className="w-14 h-14 bg-white flex items-center justify-center">
-                  <Play className="w-6 h-6 text-[#0F0F14] ml-0.5" />
-                </div>
-              </div>
-            </div>
-            <p className="font-mono text-xs text-[rgba(255,255,255,0.3)] text-center mt-4 uppercase tracking-wider">
-              Interactive demo — click to play
-            </p>
-          </div>
+          <InteractiveDemo />
         </div>
       </Section>
 

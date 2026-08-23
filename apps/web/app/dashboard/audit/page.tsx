@@ -127,7 +127,13 @@ export default function AuditLogPage() {
           {loading ? (
             <div className="p-8 text-center text-white/30 font-mono text-sm">Loading...</div>
           ) : filteredLogs.length === 0 ? (
-            <div className="p-8 text-center text-white/30 font-mono text-sm">No audit logs found</div>
+          <div className="p-8 text-center">
+            <GitCommit className="w-10 h-10 text-[rgba(255,255,255,0.15)] mx-auto mb-4" />
+            <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">No audit logs</h3>
+            <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] max-w-sm mx-auto leading-[1.6]">
+              System events and actions will appear here as your team works.
+            </p>
+          </div>
           ) : (
             <div className="divide-y divide-white/5">
               {filteredLogs.map((log) => {

@@ -1,77 +1,303 @@
 'use client';
 
-import { useUser, useClerk, useSession } from '@clerk/nextjs';
+import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useUser, useClerk } from '@clerk/nextjs';
+import { toast } from 'sonner';
 import {
   User,
   Mail,
   Calendar,
-  LogOut,
-  Shield,
   Key,
-  ExternalLink,
+  Shield,
+  Bell,
+  Lock,
+  Trash2,
   CheckCircle2,
+  XCircle,
   Clock,
+  LogOut,
+  Upload,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Server,
+  Copy,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 
-const PROVIDER_ICONS: Record<string, { icon: string; label: string; color: string }> = {
-  discord: { icon: '🎮', label: 'Discord', color: '#5865F2' },
-  google: { icon: 'G', label: 'Google', color: '#DB4437' },
-  github: { icon: '⌨', label: 'GitHub', color: '#6e40c9' },
+type Tab = 'profile' | 'security' | 'api_keys' | 'activity';
+
+interface ApiKey {
+  id: string;
+  name: string;
+  key: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  lastIp?: string;
+}
+
+interface SecurityEvent {
+  id: string;
+  type: 'login' | 'logout' | 'password_change' | 'api_key_created' | 'api_key_deleted';
+  message: string;
+  ipAddress?: string;
+  userAgent?: string;
+  timestamp: string;
+}
+
+function getProviderColor(provider: string): string {
+  switch (provider) {
+    case 'oauth_google': return '#ea4335';
+    case 'oauth_discord': return '#5865f2';
+    case 'oauth_github': return '#6e5494';
+    default: return '#5E6AD2';
+  }
+}
+
+function getProviderLabel(provider: string): string {
+  switch (provider) {
+    case 'oauth_google': return 'Google';
+    case 'oauth_discord': return 'Discord';
+    case 'oauth_github': return 'GitHub';
+    default: return provider;
+  }
+}
+
+const PROVIDER_ICONS: Record<string, string> = {
+  google: 'G',
+  discord: 'D',
+  github: 'GH',
 };
 
-function getProviderLabel(externalAccount: { provider: string }) {
-  const key = externalAccount.provider.toLowerCase();
-  return PROVIDER_ICONS[key]?.label ?? externalAccount.provider;
-}
-
-function getProviderColor(externalAccount: { provider: string }) {
-  const key = externalAccount.provider.toLowerCase();
-  return PROVIDER_ICONS[key]?.color ?? '#5E6AD2';
-}
-
 export default function AccountPage() {
-  const { user, isLoaded } = useUser();
+  const { user } = useUser();
   const { signOut } = useClerk();
-  const { session } = useSession();
+  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [isEditing, setIsEditing] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [apiKeyName, setApiKeyName] = useState('');
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasAvatar, setHasAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.fullName) {
+      setDisplayName(user.fullName);
+    }
+    setHasAvatar(!!user?.imageUrl);
+  }, [user]);
+
+  useEffect(() => {
+    fetchApiKeys();
+    fetchSecurityEvents();
+  }, []);
+
+  const fetchApiKeys = async () => {
+    try {
+      const res = await fetch('/api/account/api-keys');
+      if (res.ok) {
+        const data = await res.json();
+        setApiKeys(data.keys || []);
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  const fetchSecurityEvents = async () => {
+    try {
+      const res = await fetch('/api/account/security-events');
+      if (res.ok) {
+        const data = await res.json();
+        setSecurityEvents(data.events || []);
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/account/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName: displayName }),
+      });
+      if (res.ok) {
+        toast.success('Profile updated');
+        setIsEditing(false);
+      } else {
+        toast.error('Failed to update profile');
+      }
+    } catch {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsLoading(true);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch('/api/account/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        toast.success('Avatar updated');
+        setHasAvatar(true);
+        // Force refresh user data
+        window.location.reload();
+      } else {
+        toast.error('Failed to update avatar');
+      }
+    } catch {
+      toast.error('Failed to update avatar');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/account/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: password, newPassword }),
+      });
+
+      if (res.ok) {
+        toast.success('Password updated');
+        setPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to update password');
+      }
+    } catch {
+      toast.error('Failed to update password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateApiKey = async () => {
+    if (!newKeyName.trim()) {
+      toast.error('Please enter a key name');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/account/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newKeyName }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCreatedKey(data.key);
+        setApiKeys((prev) => [...prev, data.key]);
+        setNewKeyName('');
+        toast.success('API key created');
+        setActiveTab('api_keys');
+      } else {
+        toast.error('Failed to create API key');
+      }
+    } catch {
+      toast.error('Failed to create API key');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteApiKey = async (keyId: string) => {
+    if (!confirm('Are you sure you want to delete this API key?')) return;
+
+    try {
+      const res = await fetch(`/api/account/api-keys/${keyId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setApiKeys((prev) => prev.filter((k) => k.id !== keyId));
+        toast.success('API key deleted');
+      } else {
+        toast.error('Failed to delete API key');
+      }
+    } catch {
+      toast.error('Failed to delete API key');
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
+  };
 
   const handleLogout = async () => {
     await signOut({ redirectUrl: '/' });
   };
 
-  if (!isLoaded || !user) {
-    return (
-      <div className="flex-1 overflow-y-auto p-6 bg-[#0F0F14] flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[rgba(255,255,255,0.3)]">
-          <Clock className="w-4 h-4 animate-spin" />
-          <span className="font-mono text-xs uppercase tracking-wider">Loading…</span>
-        </div>
-      </div>
-    );
-  }
+  const handleDeleteAccount = () => {
+    if (confirm('Are you sure you want to delete your account? This cannot be undone.')) {
+      // Clerk handles account deletion
+      user?.delete();
+      toast.success('Account deleted');
+    }
+  };
 
-  const primaryEmail = user.primaryEmailAddress?.emailAddress ?? '';
-  const createdAt = user.createdAt?.toLocaleDateString('en-US', {
+  const tabs: { id: Tab; label: string; icon: typeof User }[] = [
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'security', label: 'Security', icon: Shield },
+    { id: 'api_keys', label: 'API Keys', icon: Key },
+    { id: 'activity', label: 'Activity', icon: Clock },
+  ];
+
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress ?? '';
+  const createdAt = user?.createdAt?.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
-  const externalAccounts = user.externalAccounts ?? [];
+  const externalAccounts = user?.externalAccounts ?? [];
   const linkedProviders = externalAccounts.map((ea) => ({
     provider: ea.provider,
     identifier: ea.emailAddress ?? ea.providerUserId ?? '',
   }));
 
-  const handleDeleteAccount = () => {
-    if (confirm('Are you sure you want to delete your account? This cannot be undone.')) {
-      // Clerk handles account deletion via the Clerk Dashboard or by prompting
-      user.delete();
-    }
-  };
-
   return (
     <div className="flex-1 overflow-y-auto p-6 bg-[#0F0F14]">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div>
           <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-white">Account</h1>
@@ -80,195 +306,485 @@ export default function AccountPage() {
           </p>
         </div>
 
-        {/* Profile Card */}
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6"
-        >
-          <div className="flex items-start gap-4">
-            {/* Avatar */}
-            <img
-              src={user.imageUrl}
-              alt={user.fullName ?? 'User'}
-              className="w-16 h-16 ring-2 ring-[rgba(255,255,255,0.1)] flex-shrink-0 object-cover"
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                img.src = '/nox-avatar.svg';
-                img.className = 'w-16 h-16 flex-shrink-0 opacity-80';
-              }}
-            />
-            <div className="flex-1 min-w-0 pt-1">
-              <h2 className="font-mono text-base text-white font-medium truncate">
-                {user.fullName ?? 'Unnamed User'}
-              </h2>
-              <p className="font-sans text-sm text-[rgba(255,255,255,0.4)] mt-0.5 truncate">
-                {primaryEmail}
-              </p>
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {linkedProviders.map((acct) => (
-                  <span
-                    key={acct.provider}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)] rounded text-[10px] font-mono uppercase tracking-wider text-[rgba(255,255,255,0.6)]"
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full inline-block"
-                      style={{ background: getProviderColor(acct) }}
+        {/* Tabs */}
+        <div className="flex gap-1 bg-[#16161E] p-1 rounded-lg border border-[rgba(255,255,255,0.08)]">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 font-mono text-xs uppercase tracking-wider rounded transition-all duration-100 ${
+                activeTab === tab.id
+                  ? 'bg-[#5E6AD2] text-white'
+                  : 'text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.05)]'
+              }`}
+            >
+              <tab.icon className="w-3.5 h-3.5" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            {/* Profile Card */}
+            <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
+              <div className="flex items-start gap-4">
+                {/* Avatar */}
+                <div className="relative">
+                  {hasAvatar ? (
+                    <img
+                      src={user?.imageUrl}
+                      alt={user?.fullName ?? 'User'}
+                      className="w-20 h-20 ring-2 ring-[rgba(255,255,255,0.1)] rounded object-cover"
                     />
-                    {getProviderLabel(acct)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Details */}
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <User className="w-4 h-4 text-[#5E6AD2]" />
-            <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Details</h2>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-center gap-2.5">
-                <User className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
-                <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
-                  Display Name
-                </span>
-              </div>
-              <span className="font-sans text-sm text-white">
-                {user.fullName ?? <span className="text-[rgba(255,255,255,0.3)]">Not set</span>}
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-center gap-2.5">
-                <Mail className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
-                <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
-                  Email
-                </span>
-              </div>
-              <span className="font-sans text-sm text-white truncate max-w-[200px]">{primaryEmail}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-center gap-2.5">
-                <Calendar className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
-                <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
-                  Joined
-                </span>
-              </div>
-              <span className="font-sans text-sm text-[rgba(255,255,255,0.6)]">{createdAt}</span>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-2.5">
-                <Key className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
-                <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
-                  User ID
-                </span>
-              </div>
-              <span className="font-mono text-[11px] text-[rgba(255,255,255,0.3)] truncate max-w-[160px]" title={user.id}>
-                {user.id}
-              </span>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Linked Accounts */}
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="w-4 h-4 text-[#5E6AD2]" />
-            <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Linked Accounts</h2>
-          </div>
-          {linkedProviders.length === 0 ? (
-            <p className="font-sans text-xs text-[rgba(255,255,255,0.3)]">
-              No external accounts linked.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {linkedProviders.map((acct) => (
-                <div
-                  key={acct.provider}
-                  className="flex items-center gap-3 p-3 bg-[#0A0A0F] border border-[rgba(255,255,255,0.06)]"
-                >
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                    style={{ background: getProviderColor(acct) + '22', color: getProviderColor(acct) }}
+                  ) : (
+                    <div className="w-20 h-20 ring-2 ring-[rgba(255,255,255,0.1)] rounded bg-[rgba(94,106,210,0.2)] flex items-center justify-center">
+                      <span className="font-mono text-2xl text-[#5E6AD2]">
+                        {(user?.fullName ?? 'U')[0].toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 w-6 h-6 bg-[#5E6AD2] rounded-full flex items-center justify-center hover:bg-[#7c8aff] transition-colors"
                   >
-                    {PROVIDER_ICONS[acct.provider.toLowerCase()]?.icon ?? acct.provider[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-mono text-xs uppercase tracking-wider text-white">
-                      {getProviderLabel(acct)}
-                    </p>
-                    <p className="font-sans text-[11px] text-[rgba(255,255,255,0.35)] truncate">
-                      {acct.identifier}
-                    </p>
-                  </div>
-                  <CheckCircle2 className="w-4 h-4 text-[#5E6AD2] flex-shrink-0" />
+                    <Upload className="w-3 h-3 text-white" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleUploadAvatar}
+                  />
                 </div>
-              ))}
+                <div className="flex-1 min-w-0 pt-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-mono text-base text-white font-medium">
+                      {user?.fullName ?? 'Unnamed User'}
+                    </h2>
+                    {isEditing && (
+                      <button
+                        onClick={handleUpdateProfile}
+                        disabled={isLoading}
+                        className="px-2 py-1 bg-[#5E6AD2] text-white text-xs font-mono rounded hover:bg-[#7c8aff] transition-colors disabled:opacity-50"
+                      >
+                        Save
+                      </button>
+                    )}
+                  </div>
+                  <p className="font-sans text-sm text-[rgba(255,255,255,0.4)] mt-0.5 truncate">
+                    {primaryEmail}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {linkedProviders.map((acct) => (
+                      <span
+                        key={acct.provider}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)] rounded text-[10px] font-mono uppercase tracking-wider text-[rgba(255,255,255,0.6)]"
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full inline-block"
+                          style={{ background: getProviderColor(acct.provider) }}
+                        />
+                        {getProviderLabel(acct.provider)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </motion.section>
 
-        {/* Danger Zone */}
-        <motion.section
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-[#16161E] border border-[rgba(255,80,80,0.15)] p-5"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="w-4 h-4 text-[#ff5050]" />
-            <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[#ff5050]">Danger Zone</h2>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.7)]">
-                  Sign Out
-                </p>
-                <p className="font-sans text-xs text-[rgba(255,255,255,0.35)] mt-0.5">
-                  Log out of your NOX account on this device
-                </p>
+            {/* Editable Fields */}
+            <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-[#5E6AD2]" />
+                  <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
+                    Profile Details
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="text-xs font-mono text-[rgba(255,255,255,0.5)] hover:text-white transition-colors"
+                >
+                  {isEditing ? 'Cancel' : 'Edit'}
+                </button>
               </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.6)] border border-[rgba(255,255,255,0.12)] hover:border-[rgba(255,80,80,0.4)] hover:text-white transition-colors duration-100"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </button>
-            </div>
-            <div className="flex items-center justify-between pt-3 border-t border-[rgba(255,80,80,0.1)]">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-[#ff5050]">
-                  Delete Account
-                </p>
-                <p className="font-sans text-xs text-[rgba(255,255,255,0.35)] mt-0.5">
-                  Permanently remove your account and all associated data
-                </p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.06)]">
+                  <div className="flex items-center gap-2.5">
+                    <User className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
+                      Display Name
+                    </span>
+                  </div>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="font-sans text-sm text-white bg-transparent border-b border-[rgba(255,255,255,0.2)] focus:border-[#5E6AD2] outline-none w-40"
+                    />
+                  ) : (
+                    <span className="font-sans text-sm text-white">
+                      {user?.fullName ?? <span className="text-[rgba(255,255,255,0.3)]">Not set</span>}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.06)]">
+                  <div className="flex items-center gap-2.5">
+                    <Mail className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
+                      Email
+                    </span>
+                  </div>
+                  <span className="font-sans text-sm text-white truncate max-w-[200px]">{primaryEmail}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-[rgba(255,255,255,0.06)]">
+                  <div className="flex items-center gap-2.5">
+                    <Calendar className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
+                      Joined
+                    </span>
+                  </div>
+                  <span className="font-sans text-sm text-[rgba(255,255,255,0.6)]">{createdAt}</span>
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2.5">
+                    <Key className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
+                      User ID
+                    </span>
+                  </div>
+                  <span className="font-mono text-[11px] text-[rgba(255,255,255,0.3)] truncate max-w-[160px]" title={user?.id}>
+                    {user?.id}
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={handleDeleteAccount}
-                className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-[#ff5050] border border-[rgba(255,80,80,0.3)] hover:bg-[rgba(255,80,80,0.1)] transition-colors duration-100"
-              >
-                Delete
-              </button>
             </div>
-          </div>
-        </motion.section>
+
+            {/* Linked Accounts */}
+            <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="w-4 h-4 text-[#5E6AD2]" />
+                <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
+                  Linked Accounts
+                </h2>
+              </div>
+              {linkedProviders.length === 0 ? (
+                <p className="font-sans text-xs text-[rgba(255,255,255,0.3)]">
+                  No external accounts linked.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {linkedProviders.map((acct) => (
+                    <div
+                      key={acct.provider}
+                      className="flex items-center gap-3 p-3 bg-[#0A0A0F] border border-[rgba(255,255,255,0.06)]"
+                    >
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                        style={{ background: getProviderColor(acct.provider) + '22', color: getProviderColor(acct.provider) }}
+                      >
+                        {PROVIDER_ICONS[acct.provider.toLowerCase()] ?? acct.provider[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-mono text-xs uppercase tracking-wider text-white">
+                          {getProviderLabel(acct.provider)}
+                        </p>
+                        <p className="font-sans text-[11px] text-[rgba(255,255,255,0.35)] truncate">
+                          {acct.identifier}
+                        </p>
+                      </div>
+                      <CheckCircle2 className="w-4 h-4 text-[#5E6AD2] flex-shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Security Tab */}
+        {activeTab === 'security' && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            {/* Password Change */}
+            <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Lock className="w-4 h-4 text-[#5E6AD2]" />
+                <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
+                  Change Password
+                </h2>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
+                    Current Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white pr-10 focus:border-[#5E6AD2] outline-none"
+                    />
+                    <button
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.3)] hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white pr-10 focus:border-[#5E6AD2] outline-none"
+                    />
+                    <button
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.3)] hover:text-white"
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white focus:border-[#5E6AD2] outline-none"
+                  />
+                </div>
+                <button
+                  onClick={handleChangePassword}
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider rounded hover:bg-[#7c8aff] transition-colors disabled:opacity-50"
+                >
+                  {isLoading ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="bg-[#16161E] border border-[rgba(255,80,80,0.15)] p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="w-4 h-4 text-[#ff5050]" />
+                <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[#ff5050]">
+                  Danger Zone
+                </h2>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.7)]">
+                      Sign Out
+                    </p>
+                    <p className="font-sans text-xs text-[rgba(255,255,255,0.35)] mt-0.5">
+                      Log out of your NOX account on this device
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.6)] border border-[rgba(255,255,255,0.12)] hover:border-[rgba(255,80,80,0.4)] hover:text-white transition-colors duration-100"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sign Out
+                  </button>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-[rgba(255,80,80,0.1)]">
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-wider text-[#ff5050]">
+                      Delete Account
+                    </p>
+                    <p className="font-sans text-xs text-[rgba(255,255,255,0.35)] mt-0.5">
+                      Permanently remove your account and all associated data
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-[#ff5050] border border-[rgba(255,80,80,0.3)] hover:bg-[rgba(255,80,80,0.1)] transition-colors duration-100"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* API Keys Tab */}
+        {activeTab === 'api_keys' && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Key className="w-4 h-4 text-[#5E6AD2]" />
+                <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
+                  API Keys
+                </h2>
+              </div>
+
+              {/* Create New Key */}
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="Key name (e.g., 'Production Server')"
+                  className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white placeholder:text-[rgba(255,255,255,0.2)] focus:border-[#5E6AD2] outline-none"
+                />
+                <button
+                  onClick={handleCreateApiKey}
+                  disabled={isLoading || !newKeyName.trim()}
+                  className="px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider rounded hover:bg-[#7c8aff] transition-colors disabled:opacity-50"
+                >
+                  Create
+                </button>
+              </div>
+
+              {/* Keys List */}
+              {apiKeys.length === 0 ? (
+                <p className="font-sans text-xs text-[rgba(255,255,255,0.3)]">
+                  No API keys yet. Create one to access the API programmatically.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {apiKeys.map((key) => (
+                    <div
+                      key={key.id}
+                      className="flex items-center gap-3 p-3 bg-[#0A0A0F] border border-[rgba(255,255,255,0.06)]"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-mono text-xs text-white truncate">{key.name}</p>
+                        <p className="font-mono text-[11px] text-[rgba(255,255,255,0.4)] mt-0.5">
+                          {key.key.slice(0, 12)}...{key.key.slice(-4)}
+                        </p>
+                        <p className="font-mono text-[10px] text-[rgba(255,255,255,0.25)] mt-0.5">
+                          Created {new Date(key.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(key.key)}
+                        className="p-2 text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteApiKey(key.id)}
+                        className="p-2 text-[rgba(255,255,255,0.4)] hover:text-[#ff5050] transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {createdKey && (
+              <div className="bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)] p-4">
+                <p className="font-mono text-xs uppercase tracking-wider text-[#5E6AD2] mb-2">
+                  Your new API key (save it now — you won't see it again)
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 font-mono text-sm text-white break-all bg-[#0A0A0F] p-2 rounded">
+                    {createdKey}
+                  </code>
+                  <button
+                    onClick={() => copyToClipboard(createdKey)}
+                    className="p-2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Activity Tab */}
+        {activeTab === 'activity' && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#5E6AD2]" />
+                  <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
+                    Security Activity
+                  </h2>
+                </div>
+                <button
+                  onClick={fetchSecurityEvents}
+                  className="p-2 text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+              {securityEvents.length === 0 ? (
+                <p className="font-sans text-xs text-[rgba(255,255,255,0.3)]">
+                  No security events recorded yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {securityEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="flex items-start gap-3 p-3 bg-[#0A0A0F] border border-[rgba(255,255,255,0.06)]"
+                    >
+                      <div className={`mt-0.5 ${
+                        event.type === 'login' ? 'text-[#22c55e]' :
+                        event.type === 'logout' ? 'text-[rgba(255,255,255,0.4)]' :
+                        event.type === 'password_change' ? 'text-[#f59e0b]' :
+                        event.type === 'api_key_created' ? 'text-[#5E6AD2]' :
+                        'text-[#ef4444]'
+                      }`}>
+                        {event.type === 'login' && <CheckCircle2 className="w-4 h-4" />}
+                        {event.type === 'logout' && <LogOut className="w-4 h-4" />}
+                        {event.type === 'password_change' && <Lock className="w-4 h-4" />}
+                        {event.type === 'api_key_created' && <Key className="w-4 h-4" />}
+                        {event.type === 'api_key_deleted' && <Trash2 className="w-4 h-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-mono text-xs text-white">{event.message}</p>
+                        <p className="font-sans text-[11px] text-[rgba(255,255,255,0.4)] mt-0.5">
+                          {event.ipAddress && <span className="mr-2">IP: {event.ipAddress}</span>}
+                          {new Date(event.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );

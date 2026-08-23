@@ -24,6 +24,7 @@ import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from '@/context/ThemeContext';
 import AgentStatusBadge from '@/components/status/AgentStatusBadge';
+import { NotificationBell } from '@/components/notifications';
 
 const navItems = [
   { href: '/dashboard', label: 'Servers', icon: Server },
@@ -259,6 +260,9 @@ export default function SidebarNav() {
 
           {/* User section */}
           <div className={`px-3 py-4 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <NotificationBell />
+            </div>
             <SignedIn>
               <Link href="/dashboard/account">
                 <div className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-100 rounded ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}>

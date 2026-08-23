@@ -150,6 +150,35 @@ export async function fetchResourceCatalog(params?: {
   }
 }
 
+/** Install a resource */
+export async function installResource(serverId: string, slug: string): Promise<any> {
+  const res = await fetch(`${ORCHESTRATOR_URL}/api/resources/install`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ serverId, slug }),
+  });
+  if (!res.ok) throw new Error(`Failed to install resource: ${res.status}`);
+  return res.json();
+}
+
+/** Fetch install history for a server */
+export async function fetchResourceInstalls(serverId: string): Promise<any[]> {
+  try {
+    return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/installs/${serverId}`);
+  } catch {
+    return [];
+  }
+}
+
+/** Rollback a resource install */
+export async function rollbackResourceInstall(installId: string): Promise<void> {
+  const res = await fetch(`${ORCHESTRATOR_URL}/api/resources/installs/${installId}/rollback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Failed to rollback: ${res.status}`);
+}
+
 /** Delete a server */
 export async function deleteServer(serverId: string, confirmName: string): Promise<void> {
   const res = await fetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}`, {

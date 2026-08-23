@@ -2,6 +2,7 @@ import { Inter } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AgentStatusProvider } from '@/contexts/AgentStatusContext';
+import { NotificationProvider } from '@/components/notifications';
 import { Toaster } from '@/components/ui/sonner';
 import { KeyboardShortcuts } from '@/components/layout/KeyboardShortcuts';
 import './globals.css';

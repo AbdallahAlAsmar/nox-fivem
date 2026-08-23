@@ -170,6 +170,7 @@ model Server {
   threads      ChatThread[]
   changes      Change[]
   players      Player[]
+  resourceInstalls ResourceInstall[]
 
   @@map("servers")
 }
@@ -324,4 +325,28 @@ model AuditLog {
   @@index([serverId, createdAt])
   @@index([userId, createdAt])
   @@map("audit_logs")
+}
+
+model ResourceInstall {
+  id          String   @id @default(cuid())
+  serverId    String
+  slug        String
+  name        String
+  version     String?
+  status      String   @default("installing") // installing | installed | failed | rollback_requested | rollbacked
+  progress    Int      @default(0)
+  error       String?  @db.Text
+  log         Json     @default("{}")
+  startedAt   DateTime?
+  completedAt DateTime?
+  failedAt    DateTime?
+  rolledBackAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, status])
+  @@index([serverId, createdAt])
+  @@map("resource_installs")
 }

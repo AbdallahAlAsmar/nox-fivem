@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { fetchOnboardingStatus } from '@/lib/api';
 import SidebarNav from '@/components/dashboard/SidebarNav';
+import { OnboardingTour } from '@/components/landing/OnboardingTour';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -41,6 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 flex flex-col overflow-hidden ml-[48px] transition-all duration-300">
         {children}
       </main>
+      <OnboardingTour />
     </div>
   );
 }

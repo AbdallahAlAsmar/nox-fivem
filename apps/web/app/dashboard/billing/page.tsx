@@ -157,7 +157,7 @@ export default function BillingPage() {
               <div key={i} className="bg-[#16161E] dark:bg-[#16161E] light:bg-white light:border light:border-gray-200 border border-[rgba(255,255,255,0.08)] h-24 animate-pulse" />
             ))}
           </div>
-        ) : (
+        ) : org ? (
           <>
             <AnimatePresence mode="wait">
               {/* ─── Overview Tab ─── */}
@@ -603,6 +603,14 @@ export default function BillingPage() {
               </div>
             </div>
           </>
+        ) : (
+          <div className="text-center py-20 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
+            <CreditCard className="w-10 h-10 text-[rgba(255,255,255,0.15)] mx-auto mb-4" />
+            <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">No billing data</h3>
+            <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] max-w-sm mx-auto leading-[1.6]">
+              Complete your onboarding to access billing details and manage your subscription.
+            </p>
+          </div>
         )}
       </div>
     </div>
