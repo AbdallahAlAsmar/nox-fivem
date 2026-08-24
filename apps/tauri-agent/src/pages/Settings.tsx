@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Server, Shield } from 'lucide-react'
+import { invoke } from '@tauri-apps/api/core'
 
 // The desktop app ships a single dark theme — there is no light-mode
 // implementation to switch to, so no theme selector is rendered (honesty over
 // dead controls). Display toggles that nothing reads were also removed.
+//
+// Auto-connect persists to the RUST config (auto_start) because that is what
+// main.rs actually reads at startup; localStorage is only a dev-in-browser
+// fallback where Tauri IPC is unavailable.
 export default function Settings() {
   const [settings, setSettings] = useState({
     serverDirectory: '',
@@ -18,10 +23,20 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
+      const cfg = await invoke<Record<string, unknown>>('get_config_cmd')
+      setSettings({
+        serverDirectory: (cfg.server_directory as string) || '',
+        autoConnect: !!cfg.auto_start,
+      })
+      return
+    } catch {
+      // Not running inside Tauri (plain browser dev) — use localStorage.
+    }
+    try {
       const saved = localStorage.getItem('nox-settings')
       if (saved) {
         const parsed = JSON.parse(saved)
-        setSettings(s => ({ ...s, ...parsed }))
+        setSettings(s => ({ ...s, serverDirectory: parsed.serverDirectory || '', autoConnect: !!parsed.autoStart }))
       }
     } catch (error) {
       console.error('Failed to load settings:', error)
@@ -31,12 +46,20 @@ export default function Settings() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      localStorage.setItem('nox-settings', JSON.stringify({
-        serverDirectory: settings.serverDirectory,
-        autoStart: settings.autoConnect,
-      }))
-    } catch (error) {
-      console.error('Failed to save settings:', error)
+      const cfg = await invoke<Record<string, unknown>>('get_config_cmd')
+      cfg.server_directory = settings.serverDirectory
+      cfg.auto_start = settings.autoConnect
+      await invoke('update_config_cmd', { newConfig: cfg })
+    } catch {
+      // Fallback persistence for browser dev.
+      try {
+        localStorage.setItem('nox-settings', JSON.stringify({
+          serverDirectory: settings.serverDirectory,
+          autoStart: settings.autoConnect,
+        }))
+      } catch (error) {
+        console.error('Failed to save settings:', error)
+      }
     } finally {
       setSaving(false)
     }
