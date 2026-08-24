@@ -824,34 +824,35 @@ function ServerConsoleView({ serverId, orchUrl, hasAgent }: { serverId: string; 
   // not a stream — no polling interval is wired up yet.
   const loadedRef = useRef(false);
 
+  const load = useCallback(async () => {
+    try {
+      setError(null);
+      const res = await authedFetch(`${orchUrl}/api/servers/${serverId}/console`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const fetched: string[] = Array.isArray(data?.lines)
+        ? data.lines
+        : Array.isArray(data?.output)
+        ? data.output
+        : typeof data?.content === 'string'
+        ? data.content.split('\n')
+        : [];
+      setLines(fetched);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load console output');
+    } finally {
+      setLoading(false);
+    }
+  }, [serverId, orchUrl]);
+
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
-
-    (async () => {
-      try {
-        setError(null);
-        const res = await authedFetch(`${orchUrl}/api/servers/${serverId}/console`);
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body?.error || `HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        const fetched: string[] = Array.isArray(data?.lines)
-          ? data.lines
-          : Array.isArray(data?.output)
-          ? data.output
-          : typeof data?.content === 'string'
-          ? data.content.split('\n')
-          : [];
-        setLines(fetched);
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load console output');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [serverId, orchUrl]);
+    load();
+  }, [load]);
 
   return (
     <div className="flex-1 flex flex-col p-4 bg-[#0A0A0F] font-mono text-xs overflow-hidden">
@@ -862,7 +863,10 @@ function ServerConsoleView({ serverId, orchUrl, hasAgent }: { serverId: string; 
           Server Console (last 200 lines)
         </span>
         <button
-          onClick={() => { loadedRef.current = false; setLoading(true); setLines([]); loadedRef.current = true; }}
+          onClick={async () => {
+            setLoading(true);
+            await load();
+          }}
           disabled={loading}
           className="flex items-center gap-1.5 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors border border-[rgba(255,255,255,0.08)] disabled:opacity-40"
         >
