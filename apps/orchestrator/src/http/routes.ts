@@ -296,16 +296,22 @@ export async function registerRoutes(fastify: FastifyInstance) {
     const user = requireAuth(request, reply);
     const orgId = user.orgId;
     const url = request.url as string;
-    const serverId = new URLSearchParams(url.split('?')[1] || '').get('serverId');
+    const searchParams = new URLSearchParams(url.split('?')[1] || '');
+    const serverId = searchParams.get('serverId');
+    const pagination = parsePagination(searchParams as unknown as Record<string, unknown>);
 
-    const threads = await prisma.chatThread.findMany({
-      where: serverId
-        ? { serverId, server: { orgId } }
-        : { server: { orgId } },
-      orderBy: { updatedAt: 'desc' },
-      take: 50,
-      include: { server: { select: { id: true, name: true } } },
-    });
+    const where = serverId ? { serverId, server: { orgId } } : { server: { orgId } };
+    const [threads, total] = await Promise.all([
+      prisma.chatThread.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        take: pagination.take,
+        skip: pagination.skip,
+        include: { server: { select: { id: true, name: true } } },
+      }),
+      prisma.chatThread.count({ where }),
+    ]);
+    setTotalCount(reply, total);
 
     return threads;
   });
@@ -319,12 +325,19 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }).parse(request.params);
 
     if (!await assertServerAccess(request, reply, params.serverId)) return;
+    const pagination = parsePagination(request.query as Record<string, unknown>);
 
-    const threads = await prisma.chatThread.findMany({
-      where: { serverId: params.serverId, server: { orgId } },
-      orderBy: { updatedAt: 'desc' },
-      take: 50,
-    });
+    const where = { serverId: params.serverId, server: { orgId } };
+    const [threads, total] = await Promise.all([
+      prisma.chatThread.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        take: pagination.take,
+        skip: pagination.skip,
+      }),
+      prisma.chatThread.count({ where }),
+    ]);
+    setTotalCount(reply, total);
 
     return threads;
   });
@@ -351,11 +364,21 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
     const thread = await assertThreadAccess(request, reply, params.threadId);
     if (!thread) return;
+    // Default take is raised for messages (they are small and chats read
+    // better whole), but still bounded by MAX_PAGE_SIZE.
+    const pagination = parsePagination(request.query as Record<string, unknown>);
 
-    const messages = await prisma.chatMessage.findMany({
-      where: { threadId: params.threadId },
-      orderBy: { createdAt: 'asc' },
-    });
+    const where = { threadId: params.threadId };
+    const [messages, total] = await Promise.all([
+      prisma.chatMessage.findMany({
+        where,
+        orderBy: { createdAt: 'asc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+      prisma.chatMessage.count({ where }),
+    ]);
+    setTotalCount(reply, total);
 
     return messages;
   });
@@ -548,7 +571,9 @@ export async function registerRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Merge live presence with stored ban status.
+      // Merge live presence with stored ban status. Pagination applies to the
+      // merged list (live players are the source of truth for presence).
+      const pagination = parsePagination(request.query as Record<string, unknown>);
       const dbPlayers = await prisma.player.findMany({
         where: { serverId: params.serverId },
         select: { id: true, playerId: true, name: true, isBanned: true, banReason: true, bannedAt: true },
@@ -569,8 +594,10 @@ export async function registerRoutes(fastify: FastifyInstance) {
         })
         .filter((p: any) => p.playerId);
 
+      setTotalCount(reply, enriched.length);
+      const paged = enriched.slice(pagination.skip, pagination.skip + pagination.take);
       cache.set(`players:${params.serverId}`, enriched, 15000);
-      return enriched;
+      return paged;
     } catch (e: any) {
       const msg = e?.message || (typeof e === 'string' ? e : 'Failed to fetch players');
       return reply.status(500).send({ error: msg });
@@ -692,18 +719,22 @@ export async function registerRoutes(fastify: FastifyInstance) {
     const orgId = user.orgId;
     const { searchParams } = new URL(request.url, 'http://localhost');
     const filter = searchParams.get('filter') || '';
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const pagination = parsePagination(searchParams as unknown as Record<string, unknown>);
 
-    const logs = await (prisma.auditLog as any).findMany({
-      where: filter
-        ? { orgId, action: { contains: filter } }
-        : { orgId },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      include: {
-        server: { select: { id: true, name: true } },
-      },
-    });
+    const where = filter ? { orgId, action: { contains: filter } } : { orgId };
+    const [logs, total] = await Promise.all([
+      (prisma.auditLog as any).findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: pagination.take,
+        skip: pagination.skip,
+        include: {
+          server: { select: { id: true, name: true } },
+        },
+      }),
+      (prisma.auditLog as any).count({ where }),
+    ]);
+    setTotalCount(reply, total);
 
     return { logs };
   });
@@ -1003,12 +1034,19 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }).parse(request.params);
 
     if (!await assertServerAccess(request, reply, params.serverId)) return;
+    const pagination = parsePagination(request.query as Record<string, unknown>);
 
-    const changes = await prisma.change.findMany({
-      where: { serverId: params.serverId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const where = { serverId: params.serverId };
+    const [changes, total] = await Promise.all([
+      prisma.change.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: pagination.take,
+        skip: pagination.skip,
+      }),
+      prisma.change.count({ where }),
+    ]);
+    setTotalCount(reply, total);
 
     return changes;
   });
@@ -1212,11 +1250,19 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }).parse(request.params);
 
     if (!await assertServerAccess(request, reply, params.serverId)) return;
+    const pagination = parsePagination(request.query as Record<string, unknown>);
 
-    const resources = await prisma.resourceIndex.findMany({
-      where: { serverId: params.serverId },
-      orderBy: { resourceName: 'asc' },
-    });
+    const where = { serverId: params.serverId };
+    const [resources, total] = await Promise.all([
+      prisma.resourceIndex.findMany({
+        where,
+        orderBy: { resourceName: 'asc' },
+        take: pagination.take,
+        skip: pagination.skip,
+      }),
+      prisma.resourceIndex.count({ where }),
+    ]);
+    setTotalCount(reply, total);
 
     return resources;
   });
@@ -1656,19 +1702,30 @@ export async function registerRoutes(fastify: FastifyInstance) {
     const query = z.object({
       serverId: z.string().optional(),
       status: z.enum(['pending', 'applied', 'failed', 'rolled_back']).optional(),
-      limit: z.string().optional().default('50'),
+      limit: z.string().optional(),
+      skip: z.string().optional(),
+      offset: z.string().optional(),
     }).parse(request.query);
+
+    // parsePagination clamps take to MAX_PAGE_SIZE and rejects NaN/negatives —
+    // the old raw parseInt could be driven arbitrarily high.
+    const pagination = parsePagination(query as Record<string, unknown>);
 
     const where: any = { server: { orgId } };
     if (query.serverId) where.serverId = query.serverId;
     if (query.status) where.status = query.status;
 
-    const changes = await prisma.change.findMany({
-      where,
-      include: { server: { select: { id: true, name: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: parseInt(query.limit),
-    });
+    const [changes, total] = await Promise.all([
+      prisma.change.findMany({
+        where,
+        include: { server: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: pagination.take,
+        skip: pagination.skip,
+      }),
+      prisma.change.count({ where }),
+    ]);
+    setTotalCount(reply, total);
 
     return changes.map((c: any) => ({
       ...c,
@@ -1962,4 +2019,37 @@ function generatePairingCode(): string {
     chars[Math.floor(Math.random() * chars.length)]
   ).join('');
   return `${part()}-${part()}`;
+}
+
+/** Pagination bounds shared by every list endpoint. */
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 200;
+
+/**
+ * Parse `?limit=`/`?offset=` (also accepts `page`-style `skip`) into Prisma
+ * { skip, take }. Invalid, negative, or non-numeric input falls back to
+ * defaults instead of NaN; take is clamped to MAX_PAGE_SIZE so a client can
+ * never pull an unbounded result set.
+ */
+export function parsePagination(query: Record<string, unknown>): { skip: number; take: number } {
+  const num = (raw: unknown, fallback: number): number => {
+    const n = typeof raw === 'string' ? parseInt(raw, 10) : Number(raw);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const takeRaw = num(query.limit ?? query.take, DEFAULT_PAGE_SIZE);
+  const take = Math.min(Math.max(1, takeRaw), MAX_PAGE_SIZE);
+
+  const skip = Math.max(0, Math.trunc(num(query.skip ?? query.offset, 0)));
+  return { skip, take };
+}
+
+/**
+ * Set X-Total-Count on a reply when a total count is available. Header-only —
+ * response bodies keep their existing array shape for backward compatibility.
+ */
+export function setTotalCount(reply: FastifyReply, total: number | null): void {
+  if (total !== null && Number.isFinite(total)) {
+    reply.header('X-Total-Count', total);
+  }
 }
