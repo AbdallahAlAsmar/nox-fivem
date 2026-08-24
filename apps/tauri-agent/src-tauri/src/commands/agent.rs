@@ -385,25 +385,23 @@ async fn handle_orchestrator_request(
             match fs::read_to_string(&full_path) {
                 Ok(content) => {
                     let size = content.len() as u64;
-                    let env = serde_json::json!({
-                        "protocolVersion": "2026-08-12.v1",
-                        "messageId": Uuid::new_v4().to_string(),
-                        "type": "agent.response",
-                        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                        "requestId": req_id,
-                        "serverId": server_id,
-                        "agentDeviceId": agent_device_id,
-                        "payload": {
-                            "ok": true,
-                            "action": "fs.read",
-                            "result": {
-                                "content": content,
-                                "path": rel_path,
-                                "size": size
-                            }
-                        }
-                    });
-                    let _ = tx.send(Message::Text(env.to_string()));
+                    // FsReadResultSchema requires sha256 + modifiedAt; the
+                    // orchestrator's config editor echoes both back to the UI.
+                    let sha256 = sha256_hex(content.as_bytes());
+                    let modified_at = fs::metadata(&full_path)
+                        .and_then(|m| m.modified())
+                        .map(|t| {
+                            let dt: chrono::DateTime<chrono::Utc> = t.into();
+                            dt.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+                        })
+                        .unwrap_or_else(|_| chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true));
+                    send_result(&tx, req_id, server_id, agent_device_id, "fs.read", serde_json::json!({
+                        "content": content,
+                        "path": rel_path,
+                        "sha256": sha256,
+                        "size": size,
+                        "modifiedAt": modified_at
+                    }));
                 }
                 Err(e) => {
                     let env = serde_json::json!({
@@ -460,18 +458,31 @@ async fn handle_orchestrator_request(
                 for entry in dir_entries.flatten() {
                     let p = entry.path();
                     let is_dir = p.is_dir();
-                    let size = p.metadata().map(|m| m.len()).unwrap_or(0);
+                    // Only files carry a meaningful size; schema marks size and
+                    // modifiedAt as optional so directories may omit them.
+                    let meta = fs::metadata(&p).ok();
+                    let size = if is_dir { None } else { meta.as_ref().map(|m| m.len()) };
+                    let modified_at = meta.and_then(|m| m.modified().ok()).map(|t| {
+                        let dt: chrono::DateTime<chrono::Utc> = t.into();
+                        dt.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+                    });
                     let entry_name = entry.file_name().to_string_lossy().to_string();
                     let entry_rel = p.strip_prefix(&srv_path)
                         .map(|r| r.to_string_lossy().replace('\\', "/"))
                         .unwrap_or_else(|_| entry_name.clone());
 
-                    entries.push(serde_json::json!({
+                    let mut json_entry = serde_json::json!({
                         "name": entry_name,
                         "path": entry_rel,
-                        "isDirectory": is_dir,
-                        "size": size
-                    }));
+                        "type": if is_dir { "directory" } else { "file" }
+                    });
+                    if let Some(sz) = size {
+                        json_entry["size"] = serde_json::json!(sz);
+                    }
+                    if let Some(mt) = modified_at {
+                        json_entry["modifiedAt"] = serde_json::json!(mt);
+                    }
+                    entries.push(json_entry);
                 }
             }
 
@@ -495,79 +506,114 @@ async fn handle_orchestrator_request(
             let _ = tx.send(Message::Text(env.to_string()));
         }
         "fs.applyPatch" => {
-            let rel_path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
-            let new_content = args.get("newContent")
-                .or_else(|| args.get("content"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-
-            // Writes are the highest-risk operation: validate scope before
-            // creating parent directories or touching disk.
-            let full_path = match crate::commands::filesystem::ensure_scoped(&srv_path, rel_path) {
-                Ok(p) => p,
-                Err(err) => {
-                    let env = serde_json::json!({
-                        "protocolVersion": "2026-08-12.v1",
-                        "messageId": Uuid::new_v4().to_string(),
-                        "type": "agent.response",
-                        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                        "requestId": req_id,
-                        "serverId": server_id,
-                        "agentDeviceId": agent_device_id,
-                        "payload": {
-                            "ok": false,
-                            "action": "fs.applyPatch",
-                            "error": { "code": "PATH_OUTSIDE_ROOT", "message": err, "retryable": false }
-                        }
-                    });
-                    let _ = tx.send(Message::Text(env.to_string()));
+            // FsApplyPatchArgsSchema: { changeId, files: [{ path, expectedSha256?, newContent }] }
+            let change_id = args.get("changeId").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let files = match args.get("files").and_then(|v| v.as_array()) {
+                Some(f) => f.clone(),
+                None => {
+                    send_error(&tx, req_id, server_id, agent_device_id, action, "INVALID_REQUEST", "Missing files array");
                     return;
                 }
             };
-
-            if let Some(parent) = full_path.parent() {
-                let _ = fs::create_dir_all(parent);
+            if files.is_empty() {
+                send_error(&tx, req_id, server_id, agent_device_id, action, "INVALID_REQUEST", "Empty files array");
+                return;
             }
 
-            match fs::write(&full_path, new_content) {
-                Ok(_) => {
-                    let env = serde_json::json!({
-                        "protocolVersion": "2026-08-12.v1",
-                        "messageId": Uuid::new_v4().to_string(),
-                        "type": "agent.response",
-                        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                        "requestId": req_id,
-                        "serverId": server_id,
-                        "agentDeviceId": agent_device_id,
-                        "payload": {
-                            "ok": true,
-                            "action": "fs.applyPatch",
-                            "result": {
-                                "path": rel_path,
-                                "applied": true
+            // ---- Pre-validate EVERYTHING before touching disk --------------
+            // All-or-nothing: a half-applied multi-file patch is worse than
+            // none. Validate every path scope + optional hash first.
+            struct PlannedWrite {
+                rel_path: String,
+                full_path: PathBuf,
+                content: String,
+            }
+            let mut planned: Vec<PlannedWrite> = Vec::new();
+            for file in &files {
+                let fpath = file.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                if fpath.is_empty() {
+                    send_error(&tx, req_id, server_id, agent_device_id, action, "INVALID_REQUEST", "File entry missing path");
+                    return;
+                }
+
+                // Scope check (rejects absolute paths + traversal before any I/O).
+                let full_path = match crate::commands::filesystem::ensure_scoped(&srv_path, fpath) {
+                    Ok(p) => p,
+                    Err(err) => {
+                        send_error(
+                            &tx, req_id, server_id, agent_device_id,
+                            action, "PATH_OUTSIDE_ROOT", &format!("{}: {}", fpath, err),
+                        );
+                        return;
+                    }
+                };
+
+                // Optional optimistic-concurrency check against current content.
+                if let Some(expected) = file.get("expectedSha256").and_then(|v| v.as_str()) {
+                    match fs::read_to_string(&full_path) {
+                        Ok(existing) => {
+                            let actual = sha256_hex(existing.as_bytes());
+                            if !actual.eq_ignore_ascii_case(expected) {
+                                send_error(
+                                    &tx, req_id, server_id, agent_device_id,
+                                    action, "FILE_CHANGED_SINCE_STAGED",
+                                    &format!("{}: content changed since staged (expected sha256 {}, got {})", fpath, expected, actual),
+                                );
+                                return;
                             }
                         }
-                    });
-                    let _ = tx.send(Message::Text(env.to_string()));
-                }
-                Err(e) => {
-                    let env = serde_json::json!({
-                        "protocolVersion": "2026-08-12.v1",
-                        "messageId": Uuid::new_v4().to_string(),
-                        "type": "agent.response",
-                        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                        "requestId": req_id,
-                        "serverId": server_id,
-                        "agentDeviceId": agent_device_id,
-                        "payload": {
-                            "ok": false,
-                            "action": "fs.applyPatch",
-                            "error": { "code": "WRITE_FAILED", "message": e.to_string(), "retryable": false }
+                        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                            // New file — nothing to compare yet, that is fine.
                         }
-                    });
-                    let _ = tx.send(Message::Text(env.to_string()));
+                        Err(e) => {
+                            send_error(
+                                &tx, req_id, server_id, agent_device_id,
+                                action, "READ_FAILED", &format!("{}: {}", fpath, e),
+                            );
+                            return;
+                        }
+                    }
+                }
+
+                planned.push(PlannedWrite {
+                    rel_path: fpath.to_string(),
+                    full_path,
+                    content: file.get("newContent").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                });
+            }
+
+            // ---- Apply phase -------------------------------------------------
+            for p in planned {
+                if let Some(parent) = p.full_path.parent() {
+                    if let Err(e) = fs::create_dir_all(parent) {
+                        send_error(
+                            &tx, req_id, server_id, agent_device_id,
+                            action, "WRITE_FAILED", &format!("{}: mkdir failed: {}", p.rel_path, e),
+                        );
+                        return;
+                    }
+                }
+                if let Err(e) = fs::write(&p.full_path, &p.content) {
+                    send_error(
+                        &tx, req_id, server_id, agent_device_id,
+                        action, "WRITE_FAILED", &format!("{}: {}", p.rel_path, e),
+                    );
+                    return;
                 }
             }
+
+            // FsApplyPatchResultSchema shape — mirrors the frozen Node CLI agent.
+            let applied_files: Vec<serde_json::Value> = files.iter().map(|f| {
+                serde_json::json!({
+                    "path": f.get("path").and_then(|v| v.as_str()).unwrap_or(""),
+                    "success": true
+                })
+            }).collect();
+            send_result(&tx, req_id, server_id, agent_device_id, action, serde_json::json!({
+                "changeId": change_id,
+                "appliedFiles": applied_files,
+                "allSucceeded": true
+            }));
         }
         "fs.write" => {
             let rel_path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
