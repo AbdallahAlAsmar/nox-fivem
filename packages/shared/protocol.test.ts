@@ -5,6 +5,13 @@ import {
   AgentMessageEnvelopeSchema,
   AgentRequestSchema,
   AgentResponseSchema,
+  FsReadResultSchema,
+  FsListResultSchema,
+  FsApplyPatchArgsSchema,
+  FsApplyPatchResultSchema,
+  ScanResourcesResultSchema,
+  RestartResourceArgsSchema,
+  RestartResourceResultSchema,
   PROTOCOL_VERSION,
 } from './src/protocol/index';
 import { ErrorCodes, createError } from './src/protocol/errors';
@@ -111,5 +118,121 @@ describe('Envelope Validation', () => {
 
     const result = AgentMessageEnvelopeSchema.safeParse(envelope);
     expect(result.success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rust (Tauri agent) payload fixtures. These assert that the shapes the
+// desktop agent actually emits over the wire parse against the schemas — the
+// contract between apps/tauri-agent and the orchestrator.
+// ---------------------------------------------------------------------------
+
+describe('Rust agent payload fixtures', () => {
+  it('parses a Tauri fs.read result with sha256 + modifiedAt', () => {
+    // Mirrors send_result() in apps/tauri-agent/src-tauri/src/commands/agent.rs
+    const rustReply = {
+      content: 'fx_version \'cerulean\'\n',
+      path: 'resources/my-res/fxmanifest.lua',
+      sha256: 'a'.repeat(64),
+      size: 22,
+      modifiedAt: '2026-08-24T12:00:00.000Z',
+    };
+    const result = FsReadResultSchema.safeParse(rustReply);
+    expect(result.success).toBe(true);
+  });
+
+  it('parses a Tauri fs.list result with typed entries', () => {
+    const rustReply = {
+      path: 'resources',
+      entries: [
+        { name: 'my-res', path: 'resources/my-res', type: 'directory' },
+        { name: 'fxmanifest.lua', path: 'resources/my-res/fxmanifest.lua', type: 'file', size: 1024, modifiedAt: '2026-08-24T12:00:00.000Z' },
+      ],
+    };
+    const result = FsListResultSchema.safeParse(rustReply);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.entries[0].type).toBe('directory');
+      expect(result.data.entries[1].type).toBe('file');
+    }
+  });
+
+  it('parses Tauri fs.applyPatch args and its success reply', () => {
+    const args = {
+      changeId: '123e4567-e89b-42d3-a456-426614174000',
+      files: [
+        { path: 'resources/my-res/fxmanifest.lua', expectedSha256: 'b'.repeat(64), newContent: 'fx_version \'cerulean\'\n' },
+        { path: 'resources/new-res/server/main.lua', newContent: 'print("hi")\n' },
+      ],
+    };
+    expect(FsApplyPatchArgsSchema.safeParse(args).success).toBe(true);
+
+    const reply = {
+      changeId: '123e4567-e89b-42d3-a456-426614174000',
+      appliedFiles: [
+        { path: 'resources/my-res/fxmanifest.lua', success: true },
+        { path: 'resources/new-res/server/main.lua', success: true },
+      ],
+      allSucceeded: true,
+    };
+    expect(FsApplyPatchResultSchema.safeParse(reply).success).toBe(true);
+  });
+
+  it('parses a Tauri scan.resources result (camelCase keys, lowercase framework, ISO8601 scannedAt)', () => {
+    // Must stay in lockstep with scanner.rs serde renames.
+    const rustScan = {
+      framework: 'qbcore',
+      resources: [
+        {
+          name: 'qb-core',
+          relativePath: 'resources/[qbx]/qb-core',
+          manifestPath: 'resources/[qbx]/qb-core/fxmanifest.lua',
+          dependencies: ['ox_lib'],
+          provides: [],
+          files: ['client.lua', 'server.lua'],
+        },
+        {
+          name: 'standalone-hud',
+          relativePath: 'resources/[cats]/standalone-hud',
+          manifestPath: 'resources/[cats]/standalone-hud/__resource.lua',
+          dependencies: [],
+          provides: ['hud'],
+          files: [],
+        },
+      ],
+      scannedAt: '2026-08-24T13:51:07.123Z',
+    };
+    const result = ScanResourcesResultSchema.safeParse(rustScan);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.framework).toBe('qbcore');
+      expect(result.data.scannedAt).toBe('2026-08-24T13:51:07.123Z');
+    }
+  });
+
+  it('rejects legacy snake_case scan results so drift is caught by tests', () => {
+    const legacyScan = {
+      framework: 'QBCore', // uppercase value is not in the enum
+      resources: [
+        {
+          name: 'qb-core',
+          relative_path: 'resources/qb-core',
+          manifest_path: 'resources/qb-core/fxmanifest.lua',
+        },
+      ],
+      scanned_at: 1724497867, // epoch int, not ISO8601
+    };
+    expect(ScanResourcesResultSchema.safeParse(legacyScan).success).toBe(false);
+  });
+
+  it('parses fivem.restartResource args/result round-trip', () => {
+    const args = { resourceName: 'my-res' };
+    expect(RestartResourceArgsSchema.safeParse(args).success).toBe(true);
+
+    const okResult = { resourceName: 'my-res', success: true };
+    expect(RestartResourceResultSchema.safeParse(okResult).success).toBe(true);
+
+    const failedResult = { resourceName: 'my-res', success: false, error: 'txAdmin not configured' };
+    expect(RestartResourceResultSchema.safeParse(failedResult).success).toBe(true);
   });
 });

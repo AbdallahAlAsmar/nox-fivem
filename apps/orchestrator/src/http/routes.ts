@@ -378,27 +378,68 @@ export async function registerRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'Agent not connected' });
     }
     try {
-      const players = await agentGateway.sendCommand(params.serverId, 'fivem.listPlayers', {}, 10000);
-      // Enrich with ban status from DB
+      const result = await agentGateway.sendCommand(params.serverId, 'fivem.listPlayers', {}, 10000);
+      // Agent dialect: { players: [...], source: 'txadmin' | 'none' }.
+      // Tolerate bare arrays from older agents.
+      const livePlayers: any[] = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.players) ? result.players : [];
+
+      // Persist live players so ban state survives restarts. The Player model
+      // has NO unique constraint on (serverId, playerId) — verified against
+      // packages/db/prisma/schema.prisma — so resolve-or-create inside a
+      // transaction instead of prisma.player.upsert.
+      if (livePlayers.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          for (const p of livePlayers) {
+            const identifier = String(p?.playerId ?? p?.id ?? p?.identifier ?? '').trim();
+            if (!identifier) continue;
+            const name = String(p?.name ?? p?.username ?? identifier);
+            const license = typeof p?.license === 'string' && p.license ? p.license : null;
+            const existing = await tx.player.findFirst({
+              where: { serverId: params.serverId, playerId: identifier },
+              select: { id: true },
+            });
+            if (existing) {
+              await tx.player.update({
+                where: { id: existing.id },
+                data: { name, ...(license ? { license } : {}) },
+              });
+            } else {
+              await tx.player.create({
+                data: { serverId: params.serverId, playerId: identifier, name, license },
+              });
+            }
+          }
+        });
+      }
+
+      // Merge live presence with stored ban status.
       const dbPlayers = await prisma.player.findMany({
         where: { serverId: params.serverId },
         select: { id: true, playerId: true, name: true, isBanned: true, banReason: true, bannedAt: true },
       });
-      const playerMap = new Map(dbPlayers.map((p: any) => [p.playerId || p.id, p]));
-      const enriched = (players || []).map((p: any) => {
-        const db = playerMap.get(p.playerId) || playerMap.get(p.id) || null;
-        return {
-          ...p,
-          isBanned: db?.isBanned ?? false,
-          banReason: db?.banReason ?? null,
-          bannedAt: db?.bannedAt ?? null,
-          dbPlayerId: db?.id,
-        };
-      });
+      const byIdentifier = new Map(dbPlayers.map((row: any) => [row.playerId, row]));
+      const enriched = livePlayers
+        .map((p: any) => {
+          const identifier = String(p?.playerId ?? p?.id ?? p?.identifier ?? '').trim();
+          const row = byIdentifier.get(identifier) || null;
+          return {
+            ...p,
+            playerId: identifier,
+            dbPlayerId: row?.id,
+            isBanned: row?.isBanned ?? false,
+            banReason: row?.banReason ?? null,
+            bannedAt: row?.bannedAt ?? null,
+          };
+        })
+        .filter((p: any) => p.playerId);
+
       cache.set(`players:${params.serverId}`, enriched, 15000);
       return enriched;
-    } catch (e) {
-      return reply.status(500).send({ error: e instanceof Error ? e.message : 'Failed to fetch players' });
+    } catch (e: any) {
+      const msg = e?.message || (typeof e === 'string' ? e : 'Failed to fetch players');
+      return reply.status(500).send({ error: msg });
     }
   });
 
@@ -1350,36 +1391,56 @@ export async function registerRoutes(fastify: FastifyInstance) {
     const user = requireAuth(request, reply);
     const params = z.object({
       serverId: z.string(),
+      // Either a DB player id or the FiveM identifier ("steam:123…") — the
+      // dashboard may hold either depending on how the list was loaded.
       playerId: z.string(),
     }).parse(request.params);
     const body = z.object({ reason: z.string().optional() }).parse(request.body);
 
     if (!await assertServerAccess(request, reply, params.serverId)) return;
 
-    const player = await prisma.player.findFirst({
+    // Resolve by DB id first, then fall back to the raw identifier.
+    let player = await prisma.player.findFirst({
       where: { id: params.playerId, serverId: params.serverId },
     });
-    if (!player) return reply.status(404).send({ error: 'Player not found' });
+    if (!player) {
+      player = await prisma.player.findFirst({
+        where: { playerId: params.playerId, serverId: params.serverId },
+      });
+    }
+    if (!player) {
+      return reply.status(404).send({ error: 'Player not found. Refresh the players list and try again.' });
+    }
+
+    const gateway = (fastify as any).agentGateway as AgentGateway;
+    if (!gateway.isConnected(params.serverId)) {
+      return reply.status(400).send({ error: 'Agent is not connected' });
+    }
+    if (!player.isBanned) {
+      try {
+        // Surface agent errors honestly — agents always reply now.
+        await gateway.sendCommand(params.serverId, 'fivem.banPlayer', {
+          identifier: player.playerId,
+          reason: body.reason || 'Banned via NOX',
+        }, 10000);
+      } catch (e: any) {
+        return reply.status(502).send({ error: `Ban failed on agent: ${e?.message || JSON.stringify(e)}` });
+      }
+    }
 
     const now = new Date();
     const updated = await prisma.player.update({
-      where: { id: params.playerId },
+      where: { id: player.id },
       data: { isBanned: true, banReason: body.reason || 'Banned via NOX', bannedAt: now },
     });
 
-    const gateway = (fastify as any).agentGateway as AgentGateway;
-    if (gateway.isConnected(params.serverId)) {
-      gateway.sendCommand(params.serverId, 'fivem.banPlayer', {
-        playerId: player.playerId,
-        reason: body.reason || 'Banned via NOX',
-      }, 10000).catch(() => {});
-    }
+    cache.invalidate(`players:${params.serverId}`);
 
     return { ...updated, bannedAt: now.toISOString() };
   });
 
   fastify.post('/api/servers/:serverId/players/:playerId/unban', async (request, reply) => {
-    const user = requireAuth(request, reply);
+    requireAuth(request, reply);
     const params = z.object({
       serverId: z.string(),
       playerId: z.string(),
@@ -1387,17 +1448,38 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
     if (!await assertServerAccess(request, reply, params.serverId)) return;
 
+    // Resolve by DB id first, then fall back to the raw identifier.
+    let player = await prisma.player.findFirst({
+      where: { id: params.playerId, serverId: params.serverId },
+    });
+    if (!player) {
+      player = await prisma.player.findFirst({
+        where: { playerId: params.playerId, serverId: params.serverId },
+      });
+    }
+    if (!player) {
+      return reply.status(404).send({ error: 'Player not found. Refresh the players list and try again.' });
+    }
+
+    const gateway = (fastify as any).agentGateway as AgentGateway;
+    if (!gateway.isConnected(params.serverId)) {
+      return reply.status(400).send({ error: 'Agent is not connected' });
+    }
+    try {
+      // Surface agent errors honestly — agents always reply now.
+      await gateway.sendCommand(params.serverId, 'fivem.unbanPlayer', {
+        identifier: player.playerId,
+      }, 10000);
+    } catch (e: any) {
+      return reply.status(502).send({ error: `Unban failed on agent: ${e?.message || JSON.stringify(e)}` });
+    }
+
     const updated = await prisma.player.update({
-      where: { id: params.playerId },
+      where: { id: player.id },
       data: { isBanned: false, banReason: null, bannedAt: null },
     });
 
-    const gateway = (fastify as any).agentGateway as AgentGateway;
-    if (gateway.isConnected(params.serverId)) {
-      gateway.sendCommand(params.serverId, 'fivem.unbanPlayer', {
-        playerId: updated.playerId,
-      }, 10000).catch(() => {});
-    }
+    cache.invalidate(`players:${params.serverId}`);
 
     return updated;
   });
