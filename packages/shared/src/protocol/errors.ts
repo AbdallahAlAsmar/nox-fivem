@@ -7,7 +7,9 @@ export const ErrorCodes = {
   TOKEN_EXPIRED: 'TOKEN_EXPIRED',
   TOKEN_REVOKED: 'TOKEN_REVOKED',
   UNAUTHORIZED: 'UNAUTHORIZED',
-  
+  // Another live connection already holds this serverId slot.
+  ALREADY_CONNECTED: 'ALREADY_CONNECTED',
+
   // Agent errors
   AGENT_NOT_CONNECTED: 'AGENT_NOT_CONNECTED',
   AGENT_OFFLINE: 'AGENT_OFFLINE',

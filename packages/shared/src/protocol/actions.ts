@@ -28,6 +28,9 @@ export const AgentHelloSchema = z.object({
   agentVersion: z.string(),
   platform: z.enum(['windows', 'linux', 'unknown']),
   publicKey: z.string().optional(),
+  // Session token issued at pairing-claim time. Optional for transitional
+  // backwards compatibility (see AGENT_LEGACY_OK in the orchestrator gateway).
+  sessionToken: z.string().optional(),
   capabilities: z.array(z.string()),
 });
 
