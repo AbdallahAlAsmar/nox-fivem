@@ -24,7 +24,8 @@ export class ChatCapError extends Error {
   }
 }
 
-function startOfMonth(): Date {
+/** First instant of the current calendar month (local time). */
+export function startOfMonth(): Date {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }

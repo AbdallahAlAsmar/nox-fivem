@@ -38,4 +38,22 @@ describe('parsePagination', () => {
   it('accepts numeric (non-string) values', () => {
     expect(parsePagination({ limit: 7, offset: 14 })).toEqual({ skip: 14, take: 7 });
   });
+
+  describe('opts.defaultTake', () => {
+    it('raises the no-param default while staying under MAX_PAGE_SIZE', () => {
+      expect(parsePagination({}, { defaultTake: 200 })).toEqual({ skip: 0, take: 200 });
+    });
+
+    it('is capped at MAX_PAGE_SIZE even when raised', () => {
+      expect(parsePagination({}, { defaultTake: 100000 }).take).toBe(200);
+    });
+
+    it('never overrides an explicit client limit', () => {
+      expect(parsePagination({ limit: '10' }, { defaultTake: 200 })).toEqual({ skip: 0, take: 10 });
+    });
+
+    it('invalid input still falls back to the raised default', () => {
+      expect(parsePagination({ limit: 'abc' }, { defaultTake: 200 })).toEqual({ skip: 0, take: 200 });
+    });
+  });
 });

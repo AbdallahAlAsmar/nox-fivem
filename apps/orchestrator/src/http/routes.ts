@@ -13,14 +13,16 @@ import { sanitizeRelativePath } from './pathGuard';
 import { parseDiffToPatch } from './parseDiff';
 import type { AgentGateway } from '../ws/agentGateway';
 import { cache } from '../cache/cache';
-import { handleChatMessage, ChatCapError } from '../chat/chatService';
+import { handleChatMessage, ChatCapError, startOfMonth } from '../chat/chatService';
 import { registerResourceRoutes } from './resourceRoutes';
 
 export async function registerRoutes(fastify: FastifyInstance) {
   // ── Rate limiting ────────────────────────────────────────────────────────
   // Registered BEFORE any routes/sub-plugins so its onRoute hook sees every
-  // registration below (registerResourceRoutes included). Global safety net:
-  // 300 req/min per IP; stricter per-route limits set via route config.
+  // registration below (registerResourceRoutes included). The global limiter
+  // is a 300 req/min-per-IP fallback ONLY for routes without their own
+  // config.rateLimit — a route-level config.rateLimit REPLACES the global
+  // limit entirely (plugin semantics), it does not stack on top of it.
   // Route limiters run in the preHandler hook so they execute AFTER
   // authPlugin's preHandler hook — keyGenerators can therefore read
   // request.authUser synchronously for true per-user keys (falls back to IP
@@ -364,9 +366,13 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
     const thread = await assertThreadAccess(request, reply, params.threadId);
     if (!thread) return;
-    // Default take is raised for messages (they are small and chats read
-    // better whole), but still bounded by MAX_PAGE_SIZE.
-    const pagination = parsePagination(request.query as Record<string, unknown>);
+    // Messages are small and chats read better whole: with no explicit limit,
+    // serve up to MAX_PAGE_SIZE so the dashboard keeps full history (web
+    // callers fetch this endpoint without pagination params). Explicit
+    // client-provided limits are still honored and capped at MAX_PAGE_SIZE.
+    const pagination = parsePagination(request.query as Record<string, unknown>, {
+      defaultTake: MAX_PAGE_SIZE,
+    });
 
     const where = { threadId: params.threadId };
     const [messages, total] = await Promise.all([
@@ -498,7 +504,9 @@ export async function registerRoutes(fastify: FastifyInstance) {
       );
     } catch (error) {
       // Org cost caps are enforced before the first LLM call and re-checked
-      // between tool-loop iterations. Surface them as a typed 402.
+      // between tool-loop iterations. Surface them as a typed 402. The
+      // thread's cached snapshot is stale by at least the user message, so
+      // finally{} below still invalidates before the 402 goes out.
       if (error instanceof ChatCapError) {
         return reply.status(402).send({
           error: 'cost_cap_exceeded',
@@ -507,9 +515,10 @@ export async function registerRoutes(fastify: FastifyInstance) {
         });
       }
       throw error;
+    } finally {
+      cache.invalidate(`threads:${thread!.serverId}:${userId}`);
+      cache.invalidate(`thread:${thread!.serverId}:${userId}`);
     }
-    cache.invalidate(`threads:${thread!.serverId}:${userId}`);
-    cache.invalidate(`thread:${thread!.serverId}:${userId}`);
     if (!chunks.length) {
       if (lastError) return reply.send({ threadId: params.threadId, response: lastError });
       const agentConnected = gateway.isConnected(thread!.serverId);
@@ -528,8 +537,14 @@ export async function registerRoutes(fastify: FastifyInstance) {
     const params = z.object({ serverId: z.string() }).parse(request.params);
     const server = await assertServerAccess(request, reply, params.serverId);
     if (!server) return;
-    const cached = cache.get(`players:${params.serverId}`);
-    if (cached) return cached;
+    // The cache holds the FULL merged list so every request — hit or miss —
+    // applies the same pagination slice + X-Total-Count header below.
+    const cached = cache.get(`players:${params.serverId}`) as any[] | null;
+    if (Array.isArray(cached)) {
+      const pagination = parsePagination(request.query as Record<string, unknown>);
+      setTotalCount(reply, cached.length);
+      return cached.slice(pagination.skip, pagination.skip + pagination.take);
+    }
     const agentGateway = (fastify as any).agentGateway;
     if (!agentGateway || !agentGateway.isConnected(params.serverId)) {
       return reply.status(400).send({ error: 'Agent not connected' });
@@ -847,9 +862,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
       // Real estimated spend from Usage.costUsd (written per LLM call by the
       // chat session) against the org's configured caps.
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
       const monthSpend = await prisma.usage.aggregate({
-        where: { orgId, createdAt: { gte: monthStart } },
+        where: { orgId, createdAt: { gte: startOfMonth() } },
         _sum: { costUsd: true },
       });
 
@@ -2029,15 +2043,19 @@ const MAX_PAGE_SIZE = 200;
  * Parse `?limit=`/`?offset=` (also accepts `page`-style `skip`) into Prisma
  * { skip, take }. Invalid, negative, or non-numeric input falls back to
  * defaults instead of NaN; take is clamped to MAX_PAGE_SIZE so a client can
- * never pull an unbounded result set.
+ * never pull an unbounded result set. Callers may raise the no-param default
+ * via opts.defaultTake (still capped at MAX_PAGE_SIZE).
  */
-export function parsePagination(query: Record<string, unknown>): { skip: number; take: number } {
+export function parsePagination(
+  query: Record<string, unknown>,
+  opts: { defaultTake?: number } = {},
+): { skip: number; take: number } {
   const num = (raw: unknown, fallback: number): number => {
     const n = typeof raw === 'string' ? parseInt(raw, 10) : Number(raw);
     return Number.isFinite(n) ? n : fallback;
   };
 
-  const takeRaw = num(query.limit ?? query.take, DEFAULT_PAGE_SIZE);
+  const takeRaw = num(query.limit ?? query.take, opts.defaultTake ?? DEFAULT_PAGE_SIZE);
   const take = Math.min(Math.max(1, takeRaw), MAX_PAGE_SIZE);
 
   const skip = Math.max(0, Math.trunc(num(query.skip ?? query.offset, 0)));
