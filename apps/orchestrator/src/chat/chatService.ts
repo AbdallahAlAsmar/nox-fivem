@@ -1,7 +1,100 @@
 import { prisma } from '@fivem-ai/db';
 import type { AgentGateway } from '../ws/agentGateway';
 import { streamChat, type ChatContext } from '../claude/session';
+import { estimateCostUsd } from '../claude/pricing';
 import { sanitizeRelativePath } from '../http/pathGuard';
+
+export const MAX_TOOL_ITERATIONS = 10;
+const HISTORY_WINDOW = 30;
+
+/** Thrown when an org's conversation or monthly cost cap blocks a chat turn. */
+export class ChatCapError extends Error {
+  readonly scope: 'conversation' | 'monthly';
+  readonly limit: number;
+
+  constructor(scope: 'conversation' | 'monthly', limit: number) {
+    super(
+      scope === 'monthly'
+        ? `Monthly cost cap of $${limit.toFixed(2)} reached for this organization.`
+        : `Conversation cost cap of $${limit.toFixed(2)} reached for this thread.`
+    );
+    this.name = 'ChatCapError';
+    this.scope = scope;
+    this.limit = limit;
+  }
+}
+
+function startOfMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+/**
+ * Sum estimated costs of the current thread's usage rows (conversation cap)
+ * plus the org's calendar-month total (monthly cap), and throw ChatCapError
+ * when either is at/over its configured Organization cap.
+ */
+export async function assertWithinCostCaps(orgId: string, threadId: string): Promise<void> {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: {
+      conversation_cost_cap_usd: true,
+      monthly_cost_cap_usd: true,
+    },
+  });
+  if (!org) return; // No org row — nothing to enforce against.
+
+  const conversationCap =
+    org.conversation_cost_cap_usd != null ? Number(org.conversation_cost_cap_usd) : null;
+  if (conversationCap !== null && conversationCap >= 0) {
+    const agg = await prisma.usage.aggregate({
+      where: { threadId },
+      _sum: { costUsd: true },
+    });
+    const spent = Number(agg._sum.costUsd ?? 0);
+    if (spent >= conversationCap) {
+      throw new ChatCapError('conversation', conversationCap);
+    }
+  }
+
+  const monthlyCap = org.monthly_cost_cap_usd != null ? Number(org.monthly_cost_cap_usd) : null;
+  if (monthlyCap !== null && monthlyCap >= 0) {
+    const agg = await prisma.usage.aggregate({
+      where: { orgId, createdAt: { gte: startOfMonth() } },
+      _sum: { costUsd: true },
+    });
+    const spent = Number(agg._sum.costUsd ?? 0);
+    if (spent >= monthlyCap) {
+      throw new ChatCapError('monthly', monthlyCap);
+    }
+  }
+}
+
+/**
+ * Mid-turn re-check used between tool-loop iterations. Each completed LLM call
+ * persists its Usage row (see claude/session.ts), so aggregating by threadId
+ * here sees the running cost of THIS turn plus everything before it — no
+ * caller-side accumulation needed.
+ */
+async function recheckConversationCap(context: ChatContext): Promise<void> {
+  if (!context.orgId) return;
+  const org = await prisma.organization.findUnique({
+    where: { id: context.orgId },
+    select: { conversation_cost_cap_usd: true },
+  });
+  const conversationCap =
+    org?.conversation_cost_cap_usd != null ? Number(org.conversation_cost_cap_usd) : null;
+  if (conversationCap === null || conversationCap < 0) return;
+
+  const agg = await prisma.usage.aggregate({
+    where: { threadId: context.threadId },
+    _sum: { costUsd: true },
+  });
+  const spent = Number(agg._sum.costUsd ?? 0);
+  if (spent >= conversationCap) {
+    throw new ChatCapError('conversation', conversationCap);
+  }
+}
 
 export async function handleChatMessage(
   gateway: AgentGateway,
@@ -19,10 +112,20 @@ export async function handleChatMessage(
 
   if (!server) throw new Error('Server not found');
 
-  const previousMessages = await prisma.chatMessage.findMany({
+  const allPreviousMessages = await prisma.chatMessage.findMany({
     where: { threadId },
     orderBy: { createdAt: 'asc' },
   });
+  // Window history to the last N messages so long threads don't grow the
+  // prompt (and its token cost) without bound.
+  const previousMessages =
+    allPreviousMessages.length > HISTORY_WINDOW
+      ? allPreviousMessages.slice(-HISTORY_WINDOW)
+      : allPreviousMessages;
+
+  // Enforce org cost caps BEFORE the first LLM call of the turn. Thrown
+  // ChatCapError propagates to the HTTP layer, which maps it to a typed 402.
+  await assertWithinCostCaps(server.orgId, threadId);
 
   await prisma.chatMessage.create({
     data: { threadId, role: 'user', content: userMessage },
@@ -48,8 +151,20 @@ export async function handleChatMessage(
 
   try {
     let currentTurnMessages: any[] = [{ role: 'user', content: userMessage }];
+    let iterations = 0;
 
     while (true) {
+      // Hard stop for runaway tool loops — without it a model that keeps
+      // requesting tools would loop (and spend) indefinitely.
+      if (++iterations > MAX_TOOL_ITERATIONS) {
+        const limitMsg = 'Reached tool-call limit for this turn.';
+        onStream({ type: 'text', content: `\n\n${limitMsg}` });
+        await prisma.chatMessage.create({
+          data: { threadId, role: 'assistant', content: limitMsg, model: 'Noxes AI' },
+        });
+        break;
+      }
+
       let assistantContent = '';
       const toolCalls: any[] = [];
       let hasToolCalls = false;
@@ -99,12 +214,19 @@ export async function handleChatMessage(
           });
         }
 
-        // Update context to include the new messages from DB
-        context.previousMessages = await prisma.chatMessage.findMany({
+        // Update context to include the new messages from DB, windowed to the
+        // same HISTORY_WINDOW bound as the initial load.
+        const allMessages = await prisma.chatMessage.findMany({
           where: { threadId },
           orderBy: { createdAt: 'asc' },
         });
-        
+        context.previousMessages =
+          allMessages.length > HISTORY_WINDOW ? allMessages.slice(-HISTORY_WINDOW) : allMessages;
+
+        // Each completed LLM call above persisted its Usage row — re-check the
+        // conversation cap before paying for another tool-loop iteration.
+        await recheckConversationCap(context);
+
         // Reset turn messages, streamChat will use context.previousMessages
         currentTurnMessages = [];
       } else {
@@ -112,6 +234,9 @@ export async function handleChatMessage(
       }
     }
   } catch (error: any) {
+    // Cost-cap rejections are typed control flow, not stream errors — let them
+    // propagate so the HTTP layer can answer with the typed 402 shape.
+    if (error instanceof ChatCapError) throw error;
     onStream({ type: 'error', content: error.message });
   }
 }

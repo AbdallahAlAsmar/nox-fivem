@@ -12,7 +12,7 @@ import { sanitizeRelativePath } from './pathGuard';
 import { parseDiffToPatch } from './parseDiff';
 import type { AgentGateway } from '../ws/agentGateway';
 import { cache } from '../cache/cache';
-import { handleChatMessage } from '../chat/chatService';
+import { handleChatMessage, ChatCapError } from '../chat/chatService';
 import { registerResourceRoutes } from './resourceRoutes';
 
 export async function registerRoutes(fastify: FastifyInstance) {
@@ -416,18 +416,31 @@ export async function registerRoutes(fastify: FastifyInstance) {
     if (!gateway) return reply.status(500).send({ error: 'Agent gateway not initialized' });
     const chunks: string[] = [];
     let lastError: string | undefined;
-    await handleChatMessage(
-      gateway,
-      thread!.serverId,
-      params.threadId,
-      userId,
-      body.message,
-      (chunk: any) => {
-        if (chunk.type === 'text') chunks.push(chunk.content);
-        if (chunk.type === 'error') lastError = chunk.content;
-      },
-      body.selectedSkills,
-    );
+    try {
+      await handleChatMessage(
+        gateway,
+        thread!.serverId,
+        params.threadId,
+        userId,
+        body.message,
+        (chunk: any) => {
+          if (chunk.type === 'text') chunks.push(chunk.content);
+          if (chunk.type === 'error') lastError = chunk.content;
+        },
+        body.selectedSkills,
+      );
+    } catch (error) {
+      // Org cost caps are enforced before the first LLM call and re-checked
+      // between tool-loop iterations. Surface them as a typed 402.
+      if (error instanceof ChatCapError) {
+        return reply.status(402).send({
+          error: 'cost_cap_exceeded',
+          scope: error.scope,
+          limit: error.limit,
+        });
+      }
+      throw error;
+    }
     cache.invalidate(`threads:${thread!.serverId}:${userId}`);
     cache.invalidate(`thread:${thread!.serverId}:${userId}`);
     if (!chunks.length) {
@@ -756,18 +769,26 @@ export async function registerRoutes(fastify: FastifyInstance) {
         }
       }
 
+      // Real estimated spend from Usage.costUsd (written per LLM call by the
+      // chat session) against the org's configured caps.
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      const monthSpend = await prisma.usage.aggregate({
+        where: { orgId, createdAt: { gte: monthStart } },
+        _sum: { costUsd: true },
+      });
+
       return {
         totalMessages: num(msgStats[0]?.total_messages),
         messagesLast7Days: num(msgStats[0]?.messages_last_7d),
         activeConversations: num(msgStats[0]?.active_conversations),
         totalTokensIn: num(usageStats[0]?.total_tokens_in),
         totalTokensOut: num(usageStats[0]?.total_tokens_out),
-        totalCostUsd: 0, // Subscription-based — no per-token costs
+        totalCostUsd: num(usageStats[0]?.total_cost_usd),
         modelBreakdown: (modelBreakdown || []).map((m: any) => ({
           model: m.model,
           tokensIn: num(m.tokens_in),
           tokensOut: num(m.tokens_out),
-          costUsd: 0,
+          costUsd: num(m.cost_usd),
           entries: num(m.entries),
         })),
         dailyTrend: Object.values(byDay),
@@ -775,7 +796,9 @@ export async function registerRoutes(fastify: FastifyInstance) {
         limits: {
           maxTokensPerDay: 50000,
           maxConcurrentThreads: 5,
-          monthlyCostCap: 0, // No cost cap — subscription covers all usage
+          monthlyCostCap:
+            org?.monthly_cost_cap_usd != null ? Number(org.monthly_cost_cap_usd) : 20,
+          monthSpendUsd: Number(monthSpend._sum.costUsd ?? 0),
         },
         subscription: {
           note: 'All AI usage included in monthly subscription',
