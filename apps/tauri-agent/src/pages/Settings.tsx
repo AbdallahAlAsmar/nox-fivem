@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Sun, Server, Cpu, Shield } from 'lucide-react'
+import { Server, Shield } from 'lucide-react'
 
-interface SettingsProps {
-  onThemeChange: (theme: 'dark' | 'light') => void
-}
-
-export default function Settings({ onThemeChange }: SettingsProps) {
+// The desktop app ships a single dark theme — there is no light-mode
+// implementation to switch to, so no theme selector is rendered (honesty over
+// dead controls). Display toggles that nothing reads were also removed.
+export default function Settings() {
   const [settings, setSettings] = useState({
-    theme: 'dark' as 'dark' | 'light',
     serverDirectory: '',
-    showFileTree: true,
-    showCodeChanges: true,
-    autoStart: false,
-    agentPort: 0,
+    autoConnect: false,
   })
   const [saving, setSaving] = useState(false)
 
@@ -37,13 +32,9 @@ export default function Settings({ onThemeChange }: SettingsProps) {
     setSaving(true)
     try {
       localStorage.setItem('nox-settings', JSON.stringify({
-        theme: settings.theme,
         serverDirectory: settings.serverDirectory,
-        showFileTree: settings.showFileTree,
-        showCodeChanges: settings.showCodeChanges,
-        autoStart: settings.autoStart,
+        autoStart: settings.autoConnect,
       }))
-      onThemeChange(settings.theme)
     } catch (error) {
       console.error('Failed to save settings:', error)
     } finally {
@@ -56,36 +47,6 @@ export default function Settings({ onThemeChange }: SettingsProps) {
       <div>
         <h2 className="font-mono text-sm uppercase tracking-[0.2em] text-white">Settings</h2>
         <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-1">Configure your NOX // FiveM experience</p>
-      </div>
-
-      {/* Appearance */}
-      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Sun className="w-4 h-4 text-[#5E6AD2]" />
-          <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Appearance</h3>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSettings(s => ({ ...s, theme: 'dark' }))}
-            className={`flex-1 px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
-              settings.theme === 'dark'
-                ? 'bg-white text-[#0F0F14]'
-                : 'bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.5)] hover:bg-[rgba(255,255,255,0.08)]'
-            }`}
-          >
-            Dark
-          </button>
-          <button
-            onClick={() => setSettings(s => ({ ...s, theme: 'light' }))}
-            className={`flex-1 px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
-              settings.theme === 'light'
-                ? 'bg-white text-[#0F0F14]'
-                : 'bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.5)] hover:bg-[rgba(255,255,255,0.08)]'
-            }`}
-          >
-            Light
-          </button>
-        </div>
       </div>
 
       {/* Server */}
@@ -107,55 +68,34 @@ export default function Settings({ onThemeChange }: SettingsProps) {
               className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
             />
           </div>
+          <p className="font-mono text-[10px] text-[rgba(255,255,255,0.35)] leading-relaxed">
+            Used as the fallback server-data folder when connecting an agent.
+          </p>
         </div>
       </div>
 
-      {/* Display */}
+      {/* Behavior */}
       <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="w-4 h-4 text-[#5E6AD2]" />
-          <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Display</h3>
+          <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Behavior</h3>
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)]">Show File Tree</span>
-            <button
-              onClick={() => setSettings(s => ({ ...s, showFileTree: !s.showFileTree }))}
-              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.showFileTree ? 'bg-[#5E6AD2]' : 'bg-[rgba(255,255,255,0.15)]'}`}
-            >
-              <div className={`w-3 h-3 bg-white transition-transform duration-100 ${settings.showFileTree ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)]">Show Code Changes</span>
-            <button
-              onClick={() => setSettings(s => ({ ...s, showCodeChanges: !s.showCodeChanges }))}
-              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.showCodeChanges ? 'bg-[#5E6AD2]' : 'bg-[rgba(255,255,255,0.15)]'}`}
-            >
-              <div className={`w-3 h-3 bg-white transition-transform duration-100 ${settings.showCodeChanges ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Keyboard Shortcuts */}
-      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-[#5E6AD2]" />
-          <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Keyboard Shortcuts</h3>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { label: 'Command Palette', key: 'Ctrl+K' },
-            { label: 'New Chat', key: 'Ctrl+N' },
-            { label: 'Refresh', key: 'Ctrl+R' },
-            { label: 'Search', key: '/' },
-          ].map((shortcut) => (
-            <div key={shortcut.label} className="flex items-center justify-between p-2 bg-[#0A0A0F] border border-[rgba(255,255,255,0.06)]">
-              <span className="font-sans text-xs text-[rgba(255,255,255,0.5)]">{shortcut.label}</span>
-              <kbd className="font-mono text-[10px] text-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.06)] px-2 py-0.5 uppercase tracking-wider">{shortcut.key}</kbd>
+            <div>
+              <span className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)]">Auto-connect on launch</span>
+              <p className="font-sans text-xs text-[rgba(255,255,255,0.35)] mt-0.5">
+                Connect the agent to your last paired server when NOX starts.
+              </p>
             </div>
-          ))}
+            <button
+              onClick={() => setSettings(s => ({ ...s, autoConnect: !s.autoConnect }))}
+              aria-label="Toggle auto-connect on launch"
+              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.autoConnect ? 'bg-[#5E6AD2]' : 'bg-[rgba(255,255,255,0.15)]'}`}
+            >
+              <div className={`w-3 h-3 bg-white transition-transform duration-100 ${settings.autoConnect ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
         </div>
       </div>
 

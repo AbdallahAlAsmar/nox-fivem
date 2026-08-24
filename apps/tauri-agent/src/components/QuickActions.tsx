@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Play, RotateCcw, Terminal, Users,
+  RotateCcw, Terminal, Users,
   Ban, RefreshCw, AlertCircle, CheckCircle2,
   X, Eye, MessageSquare
 } from 'lucide-react'
-
-const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
+import * as api from '../api'
 
 interface QuickAction {
   id: string
@@ -35,21 +34,29 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
     setResult(null)
     try {
       await action()
-      setResult({ type: 'success', message: `${label} executed` })
+      if (id !== 'players' && id !== 'console') {
+        setResult({ type: 'success', message: `${label} executed` })
+      }
     } catch (err) {
-      setResult({ type: 'error', message: `${label} failed: ${err}` })
+      const detail = err instanceof Error ? err.message : String(err)
+      setResult({ type: 'error', message: `${label} failed: ${detail}` })
     } finally {
       setActiveAction(null)
     }
   }
+
+  // 'local' is a UI placeholder, not a real orchestrator server ID.
+  const realServerId = serverId && serverId !== 'local' ? serverId : ''
 
   const actions: QuickAction[] = [
     {
       id: 'restart',
       label: 'Restart Server',
       icon: RotateCcw,
+      disabled: !realServerId,
       action: async () => {
-        await fetch(`${ORCH}/api/servers/${serverId}/restart`, { method: 'POST' })
+        if (!realServerId) throw new Error('select a connected server first')
+        await api.restartServer(realServerId)
       },
       variant: 'default',
     },
@@ -57,8 +64,10 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
       id: 'scan',
       label: 'Scan Resources',
       icon: RefreshCw,
+      disabled: !realServerId,
       action: async () => {
-        await fetch(`${ORCH}/api/servers/${serverId}/scan`, { method: 'POST' })
+        if (!realServerId) throw new Error('select a connected server first')
+        await api.scanServerResources(realServerId)
       },
       variant: 'default',
     },
@@ -66,6 +75,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
       id: 'players',
       label: 'View Players',
       icon: Users,
+      disabled: !realServerId,
       action: () => setShowPlayers(!showPlayers),
       variant: 'default',
     },
@@ -82,9 +92,10 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
       id: 'status',
       label: 'Server Status',
       icon: Eye,
+      disabled: !realServerId,
       action: async () => {
-        const res = await fetch(`${ORCH}/api/servers/${serverId}`)
-        const data = await res.json()
+        if (!realServerId) throw new Error('select a connected server first')
+        const data = await api.fetchServerDetail(realServerId)
         setResult({ type: 'info', message: `Status: ${data.status} | Framework: ${data.framework}` })
       },
       variant: 'default',
@@ -93,10 +104,12 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
       id: 'ban',
       label: 'Ban Player',
       icon: Ban,
+      disabled: !realServerId,
       action: async () => {
+        if (!realServerId) throw new Error('select a connected server first')
         const playerId = prompt('Enter player identifier:')
         if (playerId) {
-          await fetch(`${ORCH}/api/servers/${serverId}/players/${playerId}/ban`, { method: 'POST' })
+          await api.banPlayer(realServerId, playerId, 'Banned via NOX quick action')
           setResult({ type: 'success', message: `Player ${playerId} banned` })
         }
       },
@@ -195,7 +208,14 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
                     <span className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)]">
                       Online Players ({players.length})
                     </span>
-                    <button onClick={() => { fetch(`${ORCH}/api/servers/${serverId}/players`).then(r => r.json()).then(setPlayers) }} className="text-[rgba(255,255,255,0.3)] hover:text-white">
+                    <button
+                      onClick={() => {
+                        api.fetchPlayers(realServerId)
+                          .then(setPlayers)
+                          .catch(e => setResult({ type: 'error', message: `Failed to load players: ${e instanceof Error ? e.message : e}` }))
+                      }}
+                      className="text-[rgba(255,255,255,0.3)] hover:text-white"
+                    >
                       <RefreshCw className="w-3 h-3" />
                     </button>
                   </div>
@@ -221,34 +241,32 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
                   </div>
                 </motion.div>
               )}
-            </div>
 
-            {/* Result Toast */}
-            <AnimatePresence>
-              {result && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className={`m-3 p-3 font-mono text-xs border ${
-                    result.type === 'success' ? 'border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.05)] text-[#22c55e]' :
-                    result.type === 'error' ? 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)] text-[#ef4444]' :
-                    'border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.05)] text-[#5E6AD2]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {result.type === 'success' ? <CheckCircle2 className="w-3 h-3" /> :
-                     result.type === 'error' ? <AlertCircle className="w-3 h-3" /> :
-                     <MessageSquare className="w-3 h-3" />}
-                    {result.message}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              {/* Result Toast */}
+              <AnimatePresence>
+                {result && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className={`mt-3 p-3 font-mono text-xs border ${
+                      result.type === 'success' ? 'border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.05)] text-[#22c55e]' :
+                      result.type === 'error' ? 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)] text-[#ef4444]' :
+                      'border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.05)] text-[#5E6AD2]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {result.type === 'success' ? <CheckCircle2 className="w-3 h-3" /> :
+                       result.type === 'error' ? <AlertCircle className="w-3 h-3" /> :
+                       <MessageSquare className="w-3 h-3" />}
+                      {result.message}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            {/* Footer */}
-            <div className="p-3 border-t border-[rgba(255,255,255,0.06)]">
-              <p className="font-mono text-[10px] text-[rgba(255,255,255,0.2)] text-center uppercase tracking-wider">
+              {/* Footer */}
+              <p className="pt-3 font-mono text-[10px] text-[rgba(255,255,255,0.2)] text-center uppercase tracking-wider">
                 {serverId.slice(0, 8)}...
               </p>
             </div>

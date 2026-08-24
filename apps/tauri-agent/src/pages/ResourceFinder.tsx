@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Search, Filter, Package, CheckCircle2, AlertCircle } from 'lucide-react'
+import * as api from '../api'
 
 interface ResourceFinderProps {
   serverId?: string
@@ -17,41 +18,33 @@ export default function ResourceFinder({ serverId }: ResourceFinderProps) {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [scanning, setScanning] = useState(false)
-  const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
 
   useEffect(() => {
-    if (!serverId) return
+    if (!serverId || serverId === 'local') return
     fetchResources()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId])
 
   const fetchResources = async () => {
-    if (!serverId) return
+    if (!serverId || serverId === 'local') return
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${ORCH}/api/servers/${serverId}/resources`)
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error || `HTTP ${res.status}`)
-      }
-      const data = await res.json()
-      setResources(data)
+      const data = await api.fetchServerResources(serverId)
+      setResources(Array.isArray(data) ? data : [])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load resources')
+      setResources([])
     } finally {
       setLoading(false)
     }
   }
 
   const handleScan = async () => {
-    if (!serverId) return
+    if (!serverId || serverId === 'local') return
     setScanning(true)
     try {
-      const res = await fetch(`${ORCH}/api/servers/${serverId}/scan`, { method: 'POST' })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error || 'Scan failed')
-      }
+      await api.scanServerResources(serverId)
       await fetchResources()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Scan failed')

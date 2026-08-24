@@ -37,18 +37,42 @@ export interface PairingResult {
   server: Server
 }
 
+// ─── Auth ────────────────────────────────────────────────────────────────────
+//
+// Clerk JWTs expire after ~60 seconds, so a token captured at login goes stale
+// and every later request silently 401s. Instead of caching a token, the
+// provider in App.tsx registers its Clerk getToken() here and the fetch
+// wrapper below resolves a FRESH token for every request.
+
+type TokenGetter = () => Promise<string | null | undefined>
+
+let getTokenImpl: TokenGetter | null = null
+
+/** Called once by the ClerkProvider wiring in App.tsx. */
+export function setTokenGetter(getter: TokenGetter): void {
+  getTokenImpl = getter
+}
+
+async function currentToken(): Promise<string | null | undefined> {
+  try {
+    return getTokenImpl ? await getTokenImpl() : null
+  } catch {
+    return null
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-async function apiFetch(path: string, options: RequestInit = {}): Promise<any> {
+export async function apiFetch(path: string, options: RequestInit = {}): Promise<any> {
   const url = `${ORCHESTRATOR_URL}${path.startsWith('/') ? '' : '/'}${path}`
-  const token = (window as any).__nox_clerk_token as string | undefined
+  const token = await currentToken()
   const res = await fetch(url, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
-    ...options,
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -58,24 +82,29 @@ async function apiFetch(path: string, options: RequestInit = {}): Promise<any> {
 }
 
 // ─── Servers ─────────────────────────────────────────────────────────────────
+//
+// Read helpers PROPAGATE errors instead of silently returning empty data —
+// callers render honest error states rather than fake "no servers" screens.
 
 export async function fetchServers(): Promise<Server[]> {
-  try {
-    return await apiFetch('/api/servers')
-  } catch {
-    return []
-  }
+  const data = await apiFetch('/api/servers')
+  return Array.isArray(data) ? data : []
 }
 
-export async function fetchServer(serverId: string): Promise<Server | null> {
-  try {
-    return await apiFetch(`/api/servers/${serverId}`)
-  } catch {
-    return null
-  }
+export async function fetchServer(serverId: string): Promise<Server> {
+  return apiFetch(`/api/servers/${serverId}`)
 }
 
-export async function createServer(name: string, directory?: string): Promise<Server & { pairingCode: string }> {
+export interface CreateServerResult {
+  server: { id: string; name: string; status: string }
+  connect: { serverId: string; agentDeviceId: string; wsUrl: string }
+}
+
+/**
+ * Create a server. The orchestrator auto-creates a PAIRED agent device and
+ * returns its id under `connect` (it never returns a pairing code).
+ */
+export async function createServer(name: string, directory?: string): Promise<CreateServerResult> {
   return apiFetch('/api/servers', {
     method: 'POST',
     body: JSON.stringify({ name, directory }),
@@ -97,17 +126,22 @@ export async function claimPairing(
   })
 }
 
-export async function autoPairServer(
+/**
+ * Create a server ready for the desktop agent to connect. The orchestrator
+ * auto-pairs the device at creation time — no separate pairing-code claim is
+ * involved (that flow only applies to servers paired from the web dashboard).
+ */
+export async function createAndConnect(
   name: string,
   directory: string,
-): Promise<{ id: string; agentDeviceId: string; pairingCode: string }> {
+): Promise<{ id: string; agentDeviceId: string }> {
   const result = await createServer(name, directory)
-  const pairingCode = result.pairingCode
-  if (!pairingCode) {
-    throw new Error('No pairing code returned from server creation')
+  const serverId = result.connect?.serverId || result.server?.id
+  const agentDeviceId = result.connect?.agentDeviceId
+  if (!serverId || !agentDeviceId) {
+    throw new Error('Server created but no agent device was returned')
   }
-  const claim = await claimPairing(pairingCode, directory)
-  return { id: claim.serverId, agentDeviceId: claim.agentDeviceId, pairingCode }
+  return { id: serverId, agentDeviceId }
 }
 
 export async function startServer(serverId: string): Promise<any> {
@@ -191,17 +225,41 @@ export async function restartServer(serverId: string): Promise<any> {
   return apiFetch(`/api/servers/${serverId}/restart`, { method: 'POST' })
 }
 
+// ─── Server settings / lifecycle ─────────────────────────────────────────────
+
+export async function fetchServerDetail(serverId: string): Promise<any> {
+  return apiFetch(`/api/servers/${serverId}`)
+}
+
+export async function updateServerSettings(
+  serverId: string,
+  body: { settings?: Record<string, unknown>; serverDir?: string },
+): Promise<{ settings: any; serverDir: string | null }> {
+  return apiFetch(`/api/servers/${serverId}/settings`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function deleteServer(serverId: string, confirmName: string): Promise<any> {
+  return apiFetch(`/api/servers/${serverId}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ confirmName }),
+  })
+}
+
+export async function fetchConsoleLines(serverId: string): Promise<any> {
+  return apiFetch(`/api/servers/${serverId}/console`)
+}
+
 // ─── Changes ─────────────────────────────────────────────────────────────────
 
 export async function fetchChanges(serverId?: string): Promise<any[]> {
-  try {
-    const url = serverId
-      ? `/api/changes?serverId=${serverId}&limit=100`
-      : '/api/changes?limit=100'
-    return await apiFetch(url)
-  } catch {
-    return []
-  }
+  const url = serverId
+    ? `/api/changes?serverId=${serverId}&limit=100`
+    : '/api/changes?limit=100'
+  const data = await apiFetch(url)
+  return Array.isArray(data) ? data : []
 }
 
 /**
@@ -259,7 +317,10 @@ export async function sendChatMessage(threadId: string, message: string): Promis
 export async function fetchServerThread(serverId: string): Promise<{ id: string; messages: any[] } | null> {
   try {
     return await apiFetch(`/api/servers/${serverId}/thread`)
-  } catch {
+  } catch (e) {
+    // Thread fetch is a background poll — a transient failure should not
+    // clear the visible conversation, so null is the right contract here.
+    console.warn('fetchServerThread failed:', e)
     return null
   }
 }
@@ -267,11 +328,8 @@ export async function fetchServerThread(serverId: string): Promise<{ id: string;
 // ─── Players ─────────────────────────────────────────────────────────────────
 
 export async function fetchPlayers(serverId: string): Promise<any[]> {
-  try {
-    return await apiFetch(`/api/servers/${serverId}/players`)
-  } catch {
-    return []
-  }
+  const data = await apiFetch(`/api/servers/${serverId}/players`)
+  return Array.isArray(data) ? data : []
 }
 
 export async function banPlayer(serverId: string, playerId: string, reason?: string): Promise<any> {
@@ -289,20 +347,17 @@ export async function unbanPlayer(serverId: string, playerId: string): Promise<a
 
 // ─── Resources ───────────────────────────────────────────────────────────────
 
-export async function fetchServerResources(serverId: string): Promise<any[]> {
-  try {
-    return await apiFetch(`/api/servers/${serverId}/resources`)
-  } catch {
-    return []
-  }
+export async function fetchServerResources(serverId: string): Promise<any> {
+  return apiFetch(`/api/servers/${serverId}/resources`)
+}
+
+/** Trigger an orchestrator-side scan (agent scans + syncs the resource index). */
+export async function scanServerResources(serverId: string): Promise<any> {
+  return apiFetch(`/api/servers/${serverId}/scan`, { method: 'POST' })
 }
 
 // ─── Org / Billing ───────────────────────────────────────────────────────────
 
 export async function fetchOrg(): Promise<any> {
-  try {
-    return await apiFetch('/api/org')
-  } catch {
-    return null
-  }
+  return apiFetch('/api/org')
 }

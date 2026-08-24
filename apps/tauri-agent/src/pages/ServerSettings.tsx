@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { Trash2, Settings as SettingsIcon, FolderOpen, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import * as api from '../api'
 
 interface ServerSettingsProps {
   serverId?: string
@@ -14,48 +16,43 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [serverName, setServerName] = useState('')
-  const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
+  // 'local' is a UI placeholder, not a real orchestrator server ID.
+  const effectiveServerId = serverId && serverId !== 'local' ? serverId : ''
 
   useEffect(() => {
-    if (!serverId) return
     loadSettings()
-  }, [serverId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveServerId])
 
   const loadSettings = async () => {
-    if (!serverId) return
+    if (!effectiveServerId) return
     setLoading(true)
     try {
-      const res = await fetch(`${ORCH}/api/servers/${serverId}`)
-      if (!res.ok) return
-      const data = await res.json()
+      const data = await api.fetchServerDetail(effectiveServerId)
       setName(data.name || '')
       setServerDir(data.settings?.serverDir || data.rootLabel || '')
       setFramework(data.framework || 'unknown')
       setServerName(data.name || '')
     } catch (e) {
       console.error('Failed to load settings:', e)
+      setMessage({ type: 'error', text: e instanceof Error ? `Failed to load settings: ${e.message}` : 'Failed to load settings' })
     } finally {
       setLoading(false)
     }
   }
 
   const handleSave = async () => {
-    if (!serverId) return
+    if (!effectiveServerId) return
     setSaving(true)
     setMessage(null)
     try {
-      const res = await fetch(`${ORCH}/api/servers/${serverId}/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          settings: { name, serverDir },
-          serverDir,
-        }),
+      await api.updateServerSettings(effectiveServerId, {
+        settings: { name, serverDir },
+        serverDir,
       })
-      if (!res.ok) throw new Error('Failed to save')
       setMessage({ type: 'success', text: 'Settings saved successfully' })
     } catch (e) {
-      setMessage({ type: 'error', text: 'Failed to save settings' })
+      setMessage({ type: 'error', text: e instanceof Error ? `Failed to save settings: ${e.message}` : 'Failed to save settings' })
     } finally {
       setSaving(false)
     }
@@ -63,17 +60,20 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
 
   const handleBrowseDir = async () => {
     try {
-      const result = await (window as any).invoke('open_folder_cmd')
+      // Real Tauri command — the previous `(window as any).invoke` never
+      // existed and silently failed.
+      const result = await invoke<string>('open_folder_cmd')
       if (result) {
         setServerDir(result)
       }
     } catch (e) {
       console.error('Failed to open folder:', e)
+      setMessage({ type: 'error', text: 'Could not open folder dialog' })
     }
   }
 
   const handleDelete = async () => {
-    if (!serverId) return
+    if (!effectiveServerId) return
     const confirmName = prompt('Type the server name to confirm deletion:')
     if (!confirmName || confirmName.trim() !== serverName) {
       if (confirmName) {
@@ -84,15 +84,9 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
 
     setDeleting(true)
     try {
-      const res = await fetch(`${ORCH}/api/servers/${serverId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirmName: serverName }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error || 'Failed to delete')
-      }
+      await api.deleteServer(effectiveServerId, serverName)
+      localStorage.removeItem(`agent_device_${effectiveServerId}`)
+      localStorage.removeItem(`server_dir_${effectiveServerId}`)
       setMessage({ type: 'success', text: 'Server deleted successfully' })
       setTimeout(() => {
         window.location.reload()

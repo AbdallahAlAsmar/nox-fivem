@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MessageSquare, FileDiff, Settings, Server, Package, Users, CreditCard, User, BookOpen } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import QuickActions from './QuickActions'
 import SidebarNav from './SidebarNav'
 
@@ -12,7 +12,9 @@ interface LayoutProps {
 
 export default function Layout({ children, currentPage, onNavigate, selectedServerId }: LayoutProps) {
   const [quickActionsOpen, setQuickActionsOpen] = useState(false)
-  const isAuthenticated = typeof window !== 'undefined' && !!window.__nox_clerk_token
+  // This layout only renders after App.tsx confirms a Clerk session, so the
+  // header dot reflects that rather than probing a stale window global.
+  const isAuthenticated = true
 
   return (
     <div className="flex h-screen bg-[#0F0F14] text-white overflow-hidden">

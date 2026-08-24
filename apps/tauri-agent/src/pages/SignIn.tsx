@@ -4,7 +4,10 @@ import { ArrowRight, Eye, EyeOff, Loader2, Mail, Lock, ExternalLink } from 'luci
 import { SignIn as ClerkSignIn } from '@clerk/clerk-react'
 
 const PK = 'pk_test_cmVsZXZhbnQtcmFtLTkxMjAuY2xlcmsuYWNjb3VudHMuZGV2JA'
-const REDIRECT = 'tauri://localhost/'
+// Windows Tauri WebView serves the app from http://tauri.localhost (NOT
+// tauri://localhost, which is the macOS/Linux scheme). Windows is the
+// primary target, so use its origin for OAuth redirects.
+const REDIRECT = 'http://tauri.localhost/'
 
 // OAuth provider URL template — opens browser for the full Clerk auth flow
 const oauthUrl = (provider: string) =>

@@ -13,8 +13,8 @@ import Players from './pages/Players'
 import Account from './pages/Account'
 import Billing from './pages/Billing'
 import SignIn from './pages/SignIn'
-import { useState, useEffect } from 'react'
-import type { Server } from './api'
+import { useState } from 'react'
+import { setTokenGetter } from './api'
 
 type Page = 'dashboard' | 'chat' | 'resources' | 'changes' | 'players' | 'settings' | 'errors' | 'account' | 'billing'
 
@@ -23,26 +23,19 @@ const CLERK_PUBLISHABLE_KEY = 'pk_test_cmVsZXZhbnQtcmFtLTkxMjAuY2xlcmsuYWNjb3Vud
 function AppContent() {
   const { user, isLoaded } = useUser()
   const { getToken } = useAuth()
+  // Register Clerk's getToken with the api layer so every request resolves a
+  // FRESH short-lived JWT instead of a stale cached one.
+  setTokenGetter(async () => {
+    try {
+      return await getToken?.()
+    } catch {
+      return null
+    }
+  })
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [selectedServerId, setSelectedServerId] = useState<string | undefined>(() => {
     return localStorage.getItem('selected_server_id') || undefined
   })
-
-  useEffect(() => {
-    if (user && isLoaded) {
-      window.__nox_clerk_user = {
-        id: user.id,
-        email: user.primaryEmailAddress?.emailAddress ?? '',
-        name: user.fullName ?? user.username ?? user.id,
-      }
-      getToken?.().then((t) => {
-        if (t) window.__nox_clerk_token = t
-      }).catch(() => {})
-    } else if (!user && isLoaded) {
-      window.__nox_clerk_user = null
-      window.__nox_clerk_token = null
-    }
-  }, [user, isLoaded, getToken])
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page as Page)
@@ -81,7 +74,7 @@ function AppContent() {
       case 'resources': return <ResourceFinder serverId={selectedServerId} />
       case 'changes': return <Changes serverId={selectedServerId} />
       case 'players': return <Players serverId={selectedServerId} />
-      case 'settings': return <Settings onThemeChange={() => {}} />
+      case 'settings': return <Settings />
       case 'account': return <Account />
       case 'billing': return <Billing />
       case 'errors': return <ErrorAnalysis serverId={selectedServerId || 'local'} />

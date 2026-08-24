@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import {
   MessageSquare, Bot, Send, Sparkles,
   Settings, Car, Bug, Palette, User, Package,
@@ -11,7 +12,6 @@ import {
 import {
   sendChatMessage, fetchServerThread, fetchServers, connectExistingServer, syncResources, type ChatMessage, type Server
 } from '../api'
-import { useClerk } from '../contexts/ClerkContext'
 import Players from './Players'
 import Changes from './Changes'
 import ResourceFinder from './ResourceFinder'
@@ -58,7 +58,6 @@ interface ChatProps {
 }
 
 export default function Chat({ serverId }: ChatProps) {
-  const { user } = useClerk()
   const [servers, setServers] = useState<Server[]>([])
   const [currentServerId, setCurrentServerId] = useState<string>(() => {
     return serverId || localStorage.getItem('selected_server_id') || ''
@@ -78,6 +77,9 @@ export default function Chat({ serverId }: ChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const lastMessageIdRef = useRef<string | null>(null)
+  // True while a locally-echoed (optimistic) message exists that the next poll
+  // must reconcile, even if the server's last message id is unchanged.
+  const hasLocalEchoRef = useRef(false)
 
   // Load server list
   useEffect(() => {
@@ -98,7 +100,9 @@ export default function Chat({ serverId }: ChatProps) {
     }
   }, [serverId])
 
-  // Check agent connection state
+  // Check agent connection state, then keep it live via backend events.
+  // main.rs / agent lifecycle emits `agent:connected`; without the listener the
+  // badge only ever refreshed on server switch and showed stale state.
   useEffect(() => {
     if (!currentServerId) return
     invoke('get_agent_state_cmd').then((state: any) => {
@@ -107,6 +111,19 @@ export default function Chat({ serverId }: ChatProps) {
     }).catch(() => {
       setIsAgentConnected(false)
     })
+
+    let unlisten: (() => void) | undefined
+    listen<boolean>('agent:connected', (event) => {
+      if (event.payload === false) {
+        setIsAgentConnected(false)
+        return
+      }
+      invoke('get_agent_state_cmd').then((state: any) => {
+        setIsAgentConnected(state?.connected === true && state?.server_id === currentServerId)
+      }).catch(() => setIsAgentConnected(false))
+    }).then((fn) => { unlisten = fn }).catch(() => {})
+
+    return () => { unlisten?.() }
   }, [currentServerId])
 
   // Load stored messages
@@ -142,16 +159,29 @@ export default function Chat({ serverId }: ChatProps) {
       const msgs = thread.messages ?? []
       if (!msgs.length) return
       const last = msgs[msgs.length - 1]
-      if (lastMessageIdRef.current === last.id) return
+      if (lastMessageIdRef.current === last.id && !hasLocalEchoRef.current) return
       lastMessageIdRef.current = last.id
-      setMessages(
-        msgs.map((m: any) => ({
+
+      // Merge fetched messages with any still-optimistic local ones. Local
+      // echoes use numeric Date.now() ids; once their content shows up in the
+      // persisted list they are dropped so nothing flashes as a duplicate.
+      setMessages((prev) => {
+        hasLocalEchoRef.current = false
+        const fetchedIds = new Set(msgs.map((m: any) => m.id))
+        const fetchedContents = new Set(msgs.map((m: any) => `${m.role}:${m.content}`))
+        const localOnly = prev.filter(
+          (m) =>
+            !fetchedIds.has(m.id) &&
+            !fetchedContents.has(`${m.role === 'user' ? 'user' : 'assistant'}:${m.content}`),
+        )
+        const mappedFetched = msgs.map((m: any) => ({
           id: m.id,
-          role: m.role === 'user' ? 'user' : 'assistant',
+          role: m.role === 'user' ? ('user' as const) : ('assistant' as const),
           content: m.content,
           timestamp: new Date(m.createdAt).getTime(),
         }))
-      )
+        return [...mappedFetched, ...localOnly.filter((m) => m.id.length > 0 && /^\d+$/.test(m.id))]
+      })
     }, 2000)
     return () => clearInterval(interval)
   }, [activeThreadId, currentServerId])
@@ -161,6 +191,16 @@ export default function Chat({ serverId }: ChatProps) {
       prev.includes(skillId) ? prev.filter(id => id !== skillId) : [...prev, skillId]
     )
   }
+
+  // Close the skill picker with Escape.
+  useEffect(() => {
+    if (!showSkillPicker) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowSkillPicker(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showSkillPicker])
 
   const handleConnectAgent = async () => {
     if (!currentServerId) return
@@ -215,6 +255,11 @@ export default function Chat({ serverId }: ChatProps) {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading || !currentServerId) return
+    if (!activeThreadId) {
+      setError('Chat is still loading — try again in a moment.')
+      return
+    }
+    const threadId = activeThreadId
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -224,12 +269,13 @@ export default function Chat({ serverId }: ChatProps) {
     }
 
     setMessages((prev) => [...prev, userMsg])
+    hasLocalEchoRef.current = true
     setInput('')
     setIsLoading(true)
     setError(null)
 
     try {
-      await sendChatMessage(activeThreadId!, userMsg.content)
+      await sendChatMessage(threadId, userMsg.content)
       await loadThread()
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Failed to send message'
@@ -242,6 +288,7 @@ export default function Chat({ serverId }: ChatProps) {
         isError: true,
       }
       setMessages((prev) => [...prev, errMsgObj])
+      hasLocalEchoRef.current = true
     } finally {
       setIsLoading(false)
     }

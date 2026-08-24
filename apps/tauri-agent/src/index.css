@@ -30,7 +30,23 @@ body {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Text selection policy ───────────────────────────────────────── */
+/* App-chrome (nav/sidebar/header) is not selectable, so dragging doesn't
+   highlight labels — but real content (chat answers, diffs, console logs,
+   code) must be copyable. */
+aside nav button,
+aside,
+header {
   user-select: none;
+}
+
+/* Content surfaces always win over the chrome rule above. */
+pre, code, textarea, input,
+[class*="whitespace-pre"],
+.overflow-y-auto pre {
+  user-select: text;
 }
 
 /* ─── Animations ─────────────────────────────────────────────────── */
@@ -75,7 +91,7 @@ body {
 
 /* ─── Selection ─────────────────────────────────────────────────── */
 ::selection {
-  background: rgba(0, 255, 148, 0.3);
+  background: rgba(94, 106, 210, 0.4);
   color: white;
 }
 
@@ -102,11 +118,4 @@ html {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.text-gradient {
-  background: linear-gradient(135deg, #00FF94 0%, #00D4FF 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
