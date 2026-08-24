@@ -141,12 +141,16 @@ pub async fn connect_agent_cmd(
             "capabilities": [
                 "fs.read",
                 "fs.list",
+                "fs.write",
                 "fs.applyPatch",
                 "git.checkpoint",
                 "git.rollback",
                 "fivem.restartResource",
                 "fivem.restartServer",
                 "fivem.tailConsole",
+                "fivem.listPlayers",
+                "fivem.banPlayer",
+                "fivem.unbanPlayer",
                 "scan.resources",
             ],
         }
@@ -565,6 +569,159 @@ async fn handle_orchestrator_request(
                 }
             }
         }
+        "fs.write" => {
+            let rel_path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
+            let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Writes are the highest-risk operation: validate scope before
+            // creating parent directories or touching disk.
+            let full_path = match crate::commands::filesystem::ensure_scoped(&srv_path, rel_path) {
+                Ok(p) => p,
+                Err(err) => {
+                    send_error(
+                        &tx, req_id, server_id, agent_device_id,
+                        "fs.write", "PATH_OUTSIDE_ROOT", &err,
+                    );
+                    return;
+                }
+            };
+
+            if let Some(parent) = full_path.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+
+            match fs::write(&full_path, content) {
+                Ok(_) => {
+                    // sha256 of the written content — mirrors the frozen Node
+                    // CLI agent's fs.write dialect consumed by routes.ts.
+                    let sha256 = sha256_hex(content.as_bytes());
+                    send_result(&tx, req_id, server_id, agent_device_id, "fs.write", serde_json::json!({
+                        "path": rel_path,
+                        "success": true,
+                        "sha256": sha256
+                    }));
+                }
+                Err(e) => {
+                    send_error(&tx, req_id, server_id, agent_device_id, "fs.write", "WRITE_FAILED", &e.to_string());
+                }
+            }
+        }
+        "fivem.listPlayers" => {
+            let use_txadmin = args.get("useTxAdmin").and_then(|v| v.as_bool()).unwrap_or(false);
+            let txadmin_url = args.get("txadminUrl").and_then(|v| v.as_str()).unwrap_or("");
+            let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
+
+            if use_txadmin && !txadmin_url.is_empty() && !txadmin_api_key.is_empty() {
+                match call_txadmin_players(txadmin_url, txadmin_api_key).await {
+                    Ok(players) => {
+                        send_result(&tx, req_id, server_id, agent_device_id, "fivem.listPlayers", serde_json::json!({
+                            "players": players,
+                            "source": "txadmin"
+                        }));
+                        return;
+                    }
+                    Err(e) => {
+                        // txAdmin configured but the call failed: report it
+                        // honestly rather than silently reporting zero players.
+                        send_error(&tx, req_id, server_id, agent_device_id, "fivem.listPlayers", "TXADMIN_ERROR", &e);
+                        return;
+                    }
+                }
+            }
+
+            // No txAdmin configured — an empty list is an HONEST answer ("we
+            // cannot see any players"), unlike a fabricated success. The
+            // orchestrator upserts whatever arrives.
+            send_result(&tx, req_id, server_id, agent_device_id, "fivem.listPlayers", serde_json::json!({
+                "players": [],
+                "source": "none"
+            }));
+        }
+        "fivem.banPlayer" | "fivem.unbanPlayer" => {
+            let identifier = args.get("identifier")
+                .or_else(|| args.get("playerId"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            if identifier.is_empty() {
+                send_error(&tx, req_id, server_id, agent_device_id, action, "INVALID_REQUEST", "Missing player identifier");
+                return;
+            }
+
+            let reason = args.get("reason")
+                .and_then(|v| v.as_str())
+                .unwrap_or(if action == "fivem.banPlayer" { "Banned via NOX" } else { "" })
+                .to_string();
+
+            let use_txadmin = args.get("useTxAdmin").and_then(|v| v.as_bool()).unwrap_or(false);
+            let txadmin_url = args.get("txadminUrl").and_then(|v| v.as_str()).unwrap_or("");
+            let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
+
+            if !(use_txadmin && !txadmin_url.is_empty() && !txadmin_api_key.is_empty()) {
+                send_error(
+                    &tx, req_id, server_id, agent_device_id,
+                    action, "NOT_IMPLEMENTED",
+                    "txAdmin not configured — ban/unban requires a txAdmin connection on the agent machine",
+                );
+                return;
+            }
+
+            let result = if action == "fivem.banPlayer" {
+                call_txadmin_ban(txadmin_url, txadmin_api_key, &identifier, &reason).await
+            } else {
+                call_txadmin_unban(txadmin_url, txadmin_api_key, &identifier).await
+            };
+
+            match result {
+                Ok(()) => {
+                    send_result(&tx, req_id, server_id, agent_device_id, action, serde_json::json!({
+                        "identifier": identifier,
+                        "success": true
+                    }));
+                }
+                Err(e) => {
+                    send_error(&tx, req_id, server_id, agent_device_id, action, "TXADMIN_ERROR", &e);
+                }
+            }
+        }
+        "fivem.restartResource" => {
+            let resource_name = args.get("resourceName")
+                .or_else(|| args.get("resource"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            if resource_name.is_empty() {
+                send_error(&tx, req_id, server_id, agent_device_id, action, "INVALID_REQUEST", "Missing resourceName");
+                return;
+            }
+
+            let use_txadmin = args.get("useTxAdmin").and_then(|v| v.as_bool()).unwrap_or(false);
+            let txadmin_url = args.get("txadminUrl").and_then(|v| v.as_str()).unwrap_or("");
+            let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
+
+            if !(use_txadmin && !txadmin_url.is_empty() && !txadmin_api_key.is_empty()) {
+                send_error(
+                    &tx, req_id, server_id, agent_device_id,
+                    action, "NOT_IMPLEMENTED",
+                    "txAdmin not configured — resource restart requires a txAdmin connection on the agent machine",
+                );
+                return;
+            }
+
+            match call_txadmin_restart_resource(txadmin_url, txadmin_api_key, &resource_name).await {
+                Ok(()) => {
+                    send_result(&tx, req_id, server_id, agent_device_id, action, serde_json::json!({
+                        "resourceName": resource_name,
+                        "success": true
+                    }));
+                }
+                Err(e) => {
+                    send_error(&tx, req_id, server_id, agent_device_id, action, "TXADMIN_ERROR", &e);
+                }
+            }
+        }
         "fivem.tailConsole" => {
             let lines = args.get("lines").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
             let log_path = srv_path.join("server.log");
@@ -707,7 +864,7 @@ async fn handle_orchestrator_request(
                 "payload": {
                     "ok": false,
                     "action": action,
-                    "error": { "code": "ACTION_UNKNOWN", "message": format!("Unknown action: {}", action), "retryable": false }
+                    "error": { "code": "UNKNOWN_ACTION", "message": format!("Unknown action: {}", action), "retryable": false }
                 }
             });
             let _ = tx.send(Message::Text(env.to_string()));
@@ -890,4 +1047,161 @@ async fn call_txadmin_console(txadmin_url: &str, api_key: &str, lines: usize) ->
     let all_lines: Vec<&str> = text.lines().collect();
     let start = if all_lines.len() > lines { all_lines.len() - lines } else { 0 };
     Ok(all_lines[start..].join("\n"))
+}
+
+/// Hex-encoded SHA-256 digest of `bytes`. Used for fs.write/fs.read results so
+/// the orchestrator can issue optimistic-concurrency expectedSha256 checks.
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+/// Send a successful agent.response envelope for the given action.
+fn send_result(
+    tx: &mpsc::UnboundedSender<Message>,
+    req_id: &str,
+    server_id: &str,
+    agent_device_id: &str,
+    action: &str,
+    result: serde_json::Value,
+) {
+    let env = serde_json::json!({
+        "protocolVersion": "2026-08-12.v1",
+        "messageId": Uuid::new_v4().to_string(),
+        "type": "agent.response",
+        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+        "requestId": req_id,
+        "serverId": server_id,
+        "agentDeviceId": agent_device_id,
+        "payload": {
+            "ok": true,
+            "action": action,
+            "result": result
+        }
+    });
+    let _ = tx.send(Message::Text(env.to_string()));
+}
+
+/// Send an error agent.response envelope. Every request MUST get exactly one
+/// reply — an unanswered request burns the orchestrator's full timeout.
+fn send_error(
+    tx: &mpsc::UnboundedSender<Message>,
+    req_id: &str,
+    server_id: &str,
+    agent_device_id: &str,
+    action: &str,
+    code: &str,
+    message: &str,
+) {
+    let env = serde_json::json!({
+        "protocolVersion": "2026-08-12.v1",
+        "messageId": Uuid::new_v4().to_string(),
+        "type": "agent.response",
+        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+        "requestId": req_id,
+        "serverId": server_id,
+        "agentDeviceId": agent_device_id,
+        "payload": {
+            "ok": false,
+            "action": action,
+            "error": { "code": code, "message": message, "retryable": false }
+        }
+    });
+    let _ = tx.send(Message::Text(env.to_string()));
+}
+
+async fn call_txadmin_players(txadmin_url: &str, api_key: &str) -> Result<serde_json::Value, String> {
+    let client = reqwest::Client::new();
+    // txAdmin v3 player list endpoint.
+    let url = format!("{}/api/v3/player/pushpoints", txadmin_url.trim_end_matches('/'));
+
+    let response = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("txAdmin players request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("txAdmin returned error: {}", response.status()));
+    }
+
+    let value: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse txAdmin players response: {}", e))?;
+
+    // txAdmin returns either a bare array or { players: [...] } depending on
+    // version; normalise to our array-of-players shape.
+    let players = match value {
+        serde_json::Value::Array(arr) => serde_json::Value::Array(arr),
+        obj @ serde_json::Value::Object(_) => obj.get("players").cloned().unwrap_or_else(|| serde_json::json!([])),
+        _ => serde_json::json!([]),
+    };
+    Ok(players)
+}
+
+async fn call_txadmin_ban(txadmin_url: &str, api_key: &str, identifier: &str, reason: &str) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/v3/player/ban", txadmin_url.trim_end_matches('/'));
+
+    let response = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "identifier": identifier,
+            "reason": reason
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("txAdmin ban failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("txAdmin ban returned error: {}", response.status()));
+    }
+    Ok(())
+}
+
+async fn call_txadmin_unban(txadmin_url: &str, api_key: &str, identifier: &str) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/v3/player/unban", txadmin_url.trim_end_matches('/'));
+
+    let response = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({ "identifier": identifier }))
+        .send()
+        .await
+        .map_err(|e| format!("txAdmin unban failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("txAdmin unban returned error: {}", response.status()));
+    }
+    Ok(())
+}
+
+async fn call_txadmin_restart_resource(txadmin_url: &str, api_key: &str, resource_name: &str) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    // txAdmin v3 resource control endpoint.
+    let url = format!("{}/api/v3/server/resources", txadmin_url.trim_end_matches('/'));
+
+    let response = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "action": "restart",
+            "resource": resource_name
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("txAdmin resource restart failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("txAdmin resource restart returned error: {}", response.status()));
+    }
+    Ok(())
 }
