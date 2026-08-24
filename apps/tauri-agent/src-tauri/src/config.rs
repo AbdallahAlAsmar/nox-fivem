@@ -12,9 +12,17 @@ pub struct Config {
     pub agent_device_id: String,
     /// One-time session token issued by POST /api/pairing/claim (or the
     /// connect object of POST /api/servers). Sent as `sessionToken` in
-    /// agent.hello; only its sha256 is stored server-side.
+    /// agent.hello; only its sha256 is stored server-side. Bound to the
+    /// server it was minted for so a multi-server install never sends
+    /// server A's token to server B.
     #[serde(default)]
     pub session_token: Option<String>,
+    /// The serverId `session_token` was minted for. Persisted TOGETHER with
+    /// the token (single mutate_config) so first-connect can match on it —
+    /// config.server_id is only written AFTER a successful connect and would
+    /// otherwise withhold the token exactly when it is needed most.
+    #[serde(default)]
+    pub session_token_server_id: Option<String>,
     pub ai_mode: AiMode,
     pub show_file_tree: bool,
     pub show_code_changes: bool,
@@ -31,6 +39,7 @@ impl Default for Config {
             server_id: None,
             agent_device_id: String::new(),
             session_token: None,
+            session_token_server_id: None,
             ai_mode: AiMode::AI,
             show_file_tree: true,
             show_code_changes: true,
@@ -110,8 +119,16 @@ pub fn save_config_to_disk() {
             return;
         }
     };
-    let tmp = path.with_extension("json.tmp");
-    if let Err(e) = std::fs::write(&tmp, json) {
+    // Unique tmp name per save: concurrent mutate_config calls (e.g. a WS
+    // handler and a Tauri command racing) must not share/truncate each
+    // other's tmp before either rename lands.
+    static TMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let tmp = path.with_extension(format!(
+        "json.tmp.{}.{}",
+        std::process::id(),
+        TMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    ));
+    if let Err(e) = std::fs::write(&tmp, &json) {
         eprintln!("[Config] Failed to write {}: {}", tmp.display(), e);
         return;
     }
@@ -253,6 +270,7 @@ mod tests {
         let parsed: Config = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.theme, Theme::Dark);
         assert_eq!(parsed.session_token, None);
+        assert_eq!(parsed.session_token_server_id, None);
         assert_eq!(parsed.auto_start, false);
     }
 
@@ -274,5 +292,6 @@ mod tests {
         }"#;
         let parsed: Config = serde_json::from_str(legacy).unwrap();
         assert_eq!(parsed.session_token, None);
+        assert_eq!(parsed.session_token_server_id, None);
     }
 }

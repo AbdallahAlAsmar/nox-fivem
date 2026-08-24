@@ -228,9 +228,14 @@ export default function Chat({ serverId }: ChatProps) {
       }
 
       // Persist a freshly-minted session token BEFORE connecting so the WS
-      // hello can present it (freshly-paired devices require it).
+      // hello can present it (freshly-paired devices require it). Bound to
+      // this server at persist time — that binding is what first-connect
+      // matches on.
       if (freshSessionToken) {
-        await invoke('set_session_token_cmd', { sessionToken: freshSessionToken })
+        await invoke('set_session_token_cmd', {
+          serverId: currentServerId,
+          sessionToken: freshSessionToken,
+        })
       }
 
       await invoke('connect_agent_cmd', {

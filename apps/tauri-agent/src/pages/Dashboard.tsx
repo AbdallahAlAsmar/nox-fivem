@@ -480,7 +480,10 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
 
       // Persist a token if the orchestrator ever includes one in `connect`.
       if (result.sessionToken) {
-        await invoke('set_session_token_cmd', { sessionToken: result.sessionToken })
+        await invoke('set_session_token_cmd', {
+          serverId: result.id,
+          sessionToken: result.sessionToken,
+        })
       }
 
       // Connect agent WebSocket via Tauri
@@ -617,9 +620,14 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
       }
 
       // Persist a freshly-minted session token BEFORE connecting so the WS
-      // hello can present it (freshly-paired devices require it).
+      // hello can present it (freshly-paired devices require it). Bound to
+      // this server at persist time — that binding is what first-connect
+      // matches on.
       if (freshSessionToken) {
-        await invoke('set_session_token_cmd', { sessionToken: freshSessionToken })
+        await invoke('set_session_token_cmd', {
+          serverId: server.id,
+          sessionToken: freshSessionToken,
+        })
       }
 
       // Connect WebSocket directly using the stored agentDeviceId

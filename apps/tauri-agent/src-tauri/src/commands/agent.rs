@@ -128,7 +128,9 @@ fn spawn_reconnect_loop(mut server_id: String, mut agent_device_id: String, mut 
                 return;
             }
             println!("[Agent] Reconnect attempt {} for server {}", attempt, server_id);
-            match connect_agent_cmd(server_id.clone(), agent_device_id.clone(), server_directory.clone()).await {
+            // perform_connect directly — going through the tauri command
+            // would cancel_reconnect() and kill this loop on attempt 2.
+            match perform_connect(server_id.clone(), agent_device_id.clone(), server_directory.clone()).await {
                 Ok(_) => {
                     println!("[Agent] Reconnected to server {}", server_id);
                     return;
@@ -161,15 +163,18 @@ fn cancel_reconnect() {
     RECONNECT_TOKEN.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 }
 
-/// Store a pairing-claim session token so the NEXT connect (and reconnects)
-/// authenticates with it. Called by the frontend immediately after a claim
-/// response arrives — D1's config persistence lands it in config.json.
+/// Store a pairing-claim session token bound to the server it was minted
+/// for, atomically in one config write. Called by the frontend immediately
+/// after a claim response arrives — D1's persistence lands both fields in
+/// config.json so the FIRST connect can present the token (config.server_id
+/// is only written after a successful connect and cannot be relied on here).
 #[tauri::command]
-pub fn set_session_token_cmd(session_token: String) -> Result<(), String> {
+pub fn set_session_token_cmd(server_id: String, session_token: String) -> Result<(), String> {
     mutate_config(|cfg| {
         cfg.session_token = Some(session_token);
+        cfg.session_token_server_id = Some(server_id);
     });
-    println!("[Agent] Session token stored for server {:?}", get_config().server_id);
+    println!("[Agent] Session token stored for server {}", get_config().session_token_server_id.unwrap_or_default());
     Ok(())
 }
 
@@ -179,10 +184,28 @@ pub async fn connect_agent_cmd(
     agent_device_id: String,
     server_directory: String,
 ) -> Result<AgentState, String> {
+    // Explicit entry point: supersede any pending reconnect loop FIRST — an
+    // armed loop would otherwise open a duplicate WS alongside this healthy
+    // one and bounce the connection on its next attempt. The reconnect loop
+    // itself calls perform_connect directly, which does NOT touch the token,
+    // so the loop survives its own attempts.
+    cancel_reconnect();
+    perform_connect(server_id, agent_device_id, server_directory).await
+}
+
+/// Establish the WebSocket connection to the orchestrator. Shared by explicit
+/// connects (via connect_agent_cmd) and the reconnect loop. Never touches
+/// RECONNECT_TOKEN.
+async fn perform_connect(
+    server_id: String,
+    agent_device_id: String,
+    server_directory: String,
+) -> Result<AgentState, String> {
     let config = get_config();
-    // Only reuse the persisted token when it belongs to THIS server — a
-    // token minted for server A must never leak into server B's hello.
-    let session_token = if config.server_id.as_deref() == Some(server_id.as_str()) {
+    // Only reuse the persisted token when it was minted for THIS server —
+    // the binding is recorded at persist time (set_session_token_cmd), not
+    // inferred from the post-connect server_id, so first connects work.
+    let session_token = if config.session_token_server_id.as_deref() == Some(server_id.as_str()) {
         config.session_token.clone()
     } else {
         None
@@ -193,12 +216,6 @@ pub async fn connect_agent_cmd(
     println!("[Agent] Connecting to {} for server {} (device {}, token: {})",
         ws_url, server_id, agent_device_id,
         if session_token.is_some() { "present" } else { "absent" });
-
-    // NOTE: deliberately NOT cancelling the reconnect loop here — the loop
-    // itself calls this function, and an unconditional cancel would kill the
-    // loop on its second attempt. Deliberate disconnects cancel via
-    // disconnect_agent_cmd; a successful manual connect simply supersedes
-    // whatever the loop was doing (generation guards keep state coherent).
 
     update_agent_state(|state| {
         state.status = AgentConnectionStatus::Connecting;
