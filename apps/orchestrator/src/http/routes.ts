@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import rateLimit from '@fastify/rate-limit';
 import * as crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '@fivem-ai/db';
@@ -16,6 +17,29 @@ import { handleChatMessage, ChatCapError } from '../chat/chatService';
 import { registerResourceRoutes } from './resourceRoutes';
 
 export async function registerRoutes(fastify: FastifyInstance) {
+  // ── Rate limiting ────────────────────────────────────────────────────────
+  // Registered BEFORE any routes/sub-plugins so its onRoute hook sees every
+  // registration below (registerResourceRoutes included). Global safety net:
+  // 300 req/min per IP; stricter per-route limits set via route config.
+  // Route limiters run in the preHandler hook so they execute AFTER
+  // authPlugin's preHandler hook — keyGenerators can therefore read
+  // request.authUser synchronously for true per-user keys (falls back to IP
+  // when authUser is absent, e.g. anon mode).
+  await fastify.register(rateLimit, {
+    global: true,
+    max: 300,
+    timeWindow: '1 minute',
+    // 429s must be machine-readable JSON for the dashboard/agent clients.
+    errorResponseBuilder: (_req, context) => ({
+      statusCode: 429,
+      error: 'rate_limited',
+      message: `Rate limit exceeded, retry in ${context.after}`,
+    }),
+  });
+
+  const perUserKey = (request: FastifyRequest): string =>
+    `${request.authUser?.userId ?? request.ip}:${request.ip}`;
+
   await fastify.register(registerResourceRoutes);
 
   // Zod .parse() throws ZodError on bad input; without this handler Fastify
@@ -25,6 +49,11 @@ export async function registerRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({
         error: error.issues[0]?.message || 'Invalid request payload',
       });
+    }
+    if ((error as any)?.statusCode === 429 && !reply.sent) {
+      // Rate-limit rejections carry the plugin's JSON body through untouched,
+      // preserving the machine-readable `error: 'rate_limited'` shape.
+      return reply.status(429).send(error);
     }
     return reply.send(error);
   });
@@ -383,8 +412,23 @@ export async function registerRoutes(fastify: FastifyInstance) {
     return thread;
   });
 
-  // Non-streaming chat endpoint
-  fastify.post('/api/threads/:threadId/chat', async (request, reply) => {
+  // Non-streaming chat endpoint — expensive (LLM calls), so per-user throttle
+  // is much tighter than the global IP limit. hook: 'preHandler' is required:
+  // the plugin default (onRequest) would run BEFORE authPlugin's preHandler,
+  // so authUser would not exist yet and every user would share one IP bucket.
+  fastify.post(
+    '/api/threads/:threadId/chat',
+    {
+      config: {
+        rateLimit: {
+          max: 20,
+          timeWindow: '1 minute',
+          keyGenerator: perUserKey,
+          hook: 'preHandler',
+        },
+      },
+    },
+    async (request, reply) => {
     const user = requireAuth(request, reply);
     const params = z.object({ threadId: z.string() }).parse(request.params);
     const body = z.object({
@@ -450,7 +494,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
       return reply.send({ threadId: params.threadId, response: 'The AI did not return a response. Please try again.' });
     }
     return { threadId: params.threadId, response: chunks.join('') };
-  });
+    }
+  );
 
   // ============================================
   // Players
@@ -1375,8 +1420,16 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // Agent Pairing
   // ============================================
 
-  // Claim pairing code (called by agent)
-  fastify.post('/api/pairing/claim', async (request, reply) => {
+  // Claim pairing code (called by agent) — unauthenticated endpoint, so the
+  // brute-force surface is throttled per IP.
+  fastify.post(
+    '/api/pairing/claim',
+    {
+      config: {
+        rateLimit: { max: 10, timeWindow: '1 minute' }, // default keyGenerator = req.ip
+      },
+    },
+    async (request, reply) => {
     const body = z.object({
       pairingCode: z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/),
       agentVersion: z.string(),
@@ -1432,7 +1485,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
       sessionToken,
       wsUrl: process.env.ORCHESTRATOR_WS_URL || 'ws://localhost:3001/ws/agent',
     };
-  });
+    }
+  );
 
   // Refresh pairing code for an unpaired server
   fastify.post('/api/servers/:serverId/pairing', async (request, reply) => {

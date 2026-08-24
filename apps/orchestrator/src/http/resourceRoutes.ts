@@ -91,8 +91,16 @@ export async function registerResourceRoutes(fastify: FastifyInstance) {
     return resource;
   });
 
-  // Submit a resource (no auth — returns 202 for manual review)
-  fastify.post('/api/resources/catalog/submit', async (request, reply) => {
+  // Submit a resource (no auth — returns 202 for manual review). Throttled
+  // per IP since it accepts unauthenticated writes into the review queue.
+  fastify.post(
+    '/api/resources/catalog/submit',
+    {
+      config: {
+        rateLimit: { max: 10, timeWindow: '1 minute' }, // default keyGenerator = req.ip
+      },
+    },
+    async (request, reply) => {
     const body = z.object({
       name: z.string().min(1).max(200),
       slug: z.string().min(1).max(100),
@@ -112,7 +120,8 @@ export async function registerResourceRoutes(fastify: FastifyInstance) {
       message: 'Resource submitted for review',
       slug: body.slug,
     });
-  });
+    }
+  );
 
   // Install a resource (requires auth + server)
   fastify.post('/api/resources/install', async (request, reply) => {
