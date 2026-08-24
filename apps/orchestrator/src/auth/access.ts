@@ -62,12 +62,3 @@ export async function assertInstallAccess(
     where: { id: installId, server: { orgId: user.orgId } },
   }).then((install) => (install ? install : notFound(reply)));
 }
-
-/**
- * Non-resource-scoped guard: returns the authenticated caller or throws a 403
- * (safe to `await` directly in handlers; Fastify converts thrown errors with
- * statusCode into responses).
- */
-export async function assertOrg(request: FastifyRequest) {
-  return requireAuth(request);
-}

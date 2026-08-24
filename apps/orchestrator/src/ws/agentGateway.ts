@@ -57,6 +57,8 @@ export class AgentGateway {
   private connections: Map<string, AgentConnection> = new Map();
   private pendingRequests: Map<string, PendingRequest> = new Map();
   private heartbeatReaper: NodeJS.Timeout | null = null;
+  /** Subscribers (e.g. /ws/status sockets) notified when the connection set changes. */
+  public readonly statusListeners: Set<() => void> = new Set();
 
   constructor() {
     // Single reaper for the process lifetime of the gateway instance.
@@ -386,9 +388,14 @@ export class AgentGateway {
 
   // Broadcast status to all connected WebSocket clients
   broadcastStatus() {
-    // This would broadcast to any registered status subscribers
-    // For now, we rely on the /ws/status endpoint
     const servers = this.getConnectedServers();
     console.log(`[StatusBroadcast] ${servers.length} agents connected: ${servers.join(', ') || 'none'}`);
+    for (const listener of this.statusListeners) {
+      try {
+        listener();
+      } catch (err) {
+        console.error('[StatusBroadcast] listener failed:', err);
+      }
+    }
   }
 }

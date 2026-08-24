@@ -61,10 +61,18 @@ function isPublicPath(method: string, pathname: string): boolean {
  * Transitional flag: defaults to TRUE so existing deploys keep working.
  * Flipping it to false is an ops action, not a code change.
  */
-function authAllowAnon(): boolean {
+export function authAllowAnon(): boolean {
   const raw = process.env.AUTH_ALLOW_ANON;
   if (raw === undefined || raw === '') return true;
   return raw === 'true' || raw === '1';
+}
+
+/**
+ * Verify a bearer token through Clerk + provisioning. Exported for endpoints
+ * that authenticate outside the preHandler hook (e.g. WS upgrades).
+ */
+export async function verifyBearerToken(token: string): Promise<AuthUser | null> {
+  return verifyClerkToken(token);
 }
 
 async function verifyClerkToken(token: string): Promise<AuthUser | null> {

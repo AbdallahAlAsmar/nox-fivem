@@ -12,9 +12,11 @@ async function getOrgContext(): Promise<{ orgId: string; userId: string } | null
     where: { clerkUserId: userId },
     select: { organizationId: true },
   });
-  if (!appUser) return null;
 
-  return { orgId: appUser.organizationId, userId };
+  return {
+    orgId: appUser?.organizationId ?? '',
+    userId,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -22,6 +24,11 @@ export async function GET(request: NextRequest) {
     const ctx = await getOrgContext();
     if (!ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Signed in but not yet provisioned (no AppUser row): graceful empty list.
+    if (!ctx.orgId) {
+      return NextResponse.json({ logs: [] });
     }
 
     const { searchParams } = new URL(request.url);
@@ -58,6 +65,21 @@ export async function POST(request: NextRequest) {
 
     if (!action) {
       return NextResponse.json({ error: 'Action is required' }, { status: 400 });
+    }
+
+    // Signed in but not yet provisioned: nothing to scope against — accept the
+    // entry without a server link rather than failing the caller.
+    if (!ctx.orgId) {
+      const log = await prisma.auditLog.create({
+        data: {
+          orgId: null,
+          userId: ctx.userId,
+          serverId: null,
+          action,
+          metadata: metadata || {},
+        },
+      });
+      return NextResponse.json({ id: log.id, ok: true });
     }
 
     // serverId is only accepted when it belongs to the caller's org.

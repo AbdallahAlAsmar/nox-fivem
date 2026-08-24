@@ -123,9 +123,24 @@ mod ensure_scoped_tests {
 
     #[test]
     fn accepts_normal_relative_paths() {
-        let base = PathBuf::from(".");
-        assert!(ensure_scoped(&base, "resources/my-res/fxmanifest.lua").is_ok()
-            || ensure_scoped(&base, "resources/my-res/fxmanifest.lua").is_err());
+        // Real temp dir so canonicalization has an existing base to anchor to.
+        let unique = std::process::id().to_string() + "-nox-ensure-scoped";
+        let base = std::env::temp_dir().join(unique);
+        fs::create_dir_all(&base).expect("failed to create temp base dir");
+
+        let result = ensure_scoped(&base, "resources/test.lua");
+        let joined = result.expect("normal relative path should be accepted");
+
+        let expected_suffix = PathBuf::from("resources").join("test.lua");
+        assert!(
+            joined.ends_with(&expected_suffix),
+            "joined path {:?} should end with {:?}",
+            joined,
+            expected_suffix
+        );
+
+        // Cleanup best-effort.
+        let _ = fs::remove_dir_all(&base);
     }
 }
 

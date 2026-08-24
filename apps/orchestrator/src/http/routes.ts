@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import * as crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '@fivem-ai/db';
-import { requireAuth } from '../auth';
+import { requireAuth, verifyBearerToken, authAllowAnon } from '../auth';
 import {
   assertServerAccess,
   assertThreadAccess,
@@ -101,13 +101,14 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get server details (includes pairing codes — strictly org-scoped)
   fastify.get('/api/servers/:serverId', async (request, reply) => {
-    requireAuth(request);
+    const authUser = await requireAuth(request);
+    if (!authUser) return;
     const params = z.object({
       serverId: z.string(),
     }).parse(request.params);
 
     const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: request.authUser!.orgId },
+      where: { id: params.serverId, orgId: authUser.orgId },
       include: {
         agentDevices: {
           orderBy: { createdAt: 'desc' },
@@ -419,26 +420,68 @@ export async function registerRoutes(fastify: FastifyInstance) {
     return { connectedServers: servers, total: servers.length };
   });
 
-  // WebSocket endpoint for client status subscriptions
+  // WebSocket endpoint for client status subscriptions.
+  // Transitional auth: `?token=<bearer>` present → payload scoped to the
+  // caller's org. No token + AUTH_ALLOW_ANON (default true) → legacy global
+  // broadcast preserved during transition. No token + flag off → rejected.
   fastify.register(async function (fastify) {
-    fastify.get('/ws/status', { websocket: true }, (connection, req) => {
+    fastify.get('/ws/status', { websocket: true }, async (connection, req) => {
       const gateway = (fastify as any).agentGateway;
       if (!gateway) {
         connection.close();
         return;
       }
 
+      let scopedServerIds: Set<string> | null = null; // null = unscoped broadcast
+
+      try {
+        const token = new URL(req.url, 'http://internal').searchParams.get('token');
+        if (token) {
+          const user = await verifyBearerToken(token);
+          if (!user) {
+            connection.close();
+            return;
+          }
+          const orgServers = await prisma.server.findMany({
+            where: { orgId: user.orgId },
+            select: { id: true },
+          });
+          scopedServerIds = new Set(orgServers.map((s) => s.id));
+        } else if (!authAllowAnon()) {
+          // No token and the transitional anon window is closed.
+          connection.close();
+          return;
+        }
+      } catch (err) {
+        console.error('[ws/status] handshake failed:', err);
+        connection.close();
+        return;
+      }
+
+      const sendStatus = () => {
+        const all = gateway.getConnectedServers() as string[];
+        const servers = scopedServerIds ? all.filter((id) => scopedServerIds!.has(id)) : all;
+        try {
+          connection.send(JSON.stringify({
+            type: 'agent.status',
+            connectedServers: servers,
+            total: servers.length,
+          }));
+        } catch {
+          // socket already closing
+        }
+      };
+
       // Send initial status
-      const servers = gateway.getConnectedServers();
-      connection.send(JSON.stringify({
-        type: 'agent.status',
-        connectedServers: servers,
-        total: servers.length,
-      }));
+      sendStatus();
+
+      // Push updates when agents connect/disconnect.
+      const onStatusChanged = () => sendStatus();
+      gateway.statusListeners.add(onStatusChanged);
 
       // Listen for disconnects
       connection.on('close', () => {
-        // Client disconnected
+        gateway.statusListeners.delete(onStatusChanged);
       });
     });
   });
@@ -662,14 +705,15 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Read a resource's manifest/config file
   fastify.get('/api/servers/:serverId/resources/:resourceName/config', async (request, reply) => {
-    requireAuth(request, reply);
+    const authUser = await requireAuth(request, reply);
+    if (!authUser) return;
     const params = z.object({
       serverId: z.string(),
       resourceName: z.string(),
     }).parse(request.params);
 
     const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: request.authUser!.orgId },
+      where: { id: params.serverId, orgId: authUser.orgId },
       include: { resources: { where: { resourceName: params.resourceName } } },
     });
 
@@ -711,7 +755,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Save a resource's manifest/config file
   fastify.post('/api/servers/:serverId/resources/:resourceName/config', async (request, reply) => {
-    requireAuth(request, reply);
+    const authUser = await requireAuth(request, reply);
+    if (!authUser) return;
     const params = z.object({
       serverId: z.string(),
       resourceName: z.string(),
@@ -722,7 +767,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }).parse(request.body);
 
     const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: request.authUser!.orgId },
+      where: { id: params.serverId, orgId: authUser.orgId },
       include: { resources: { where: { resourceName: params.resourceName } } },
     });
 
