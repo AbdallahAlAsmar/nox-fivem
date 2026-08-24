@@ -18,6 +18,17 @@ import { registerResourceRoutes } from './resourceRoutes';
 export async function registerRoutes(fastify: FastifyInstance) {
   await fastify.register(registerResourceRoutes);
 
+  // Zod .parse() throws ZodError on bad input; without this handler Fastify
+  // would surface it as a 500. Map it to 400 with the first issue message.
+  fastify.setErrorHandler((error, _request, reply) => {
+    if (error instanceof z.ZodError && !reply.sent) {
+      return reply.status(400).send({
+        error: error.issues[0]?.message || 'Invalid request payload',
+      });
+    }
+    return reply.send(error);
+  });
+
   /**
    * Extract optional txAdmin connection details from a Server's settings JSON
    * so agent commands (listPlayers/ban/unban/restart*) can reach txAdmin.
