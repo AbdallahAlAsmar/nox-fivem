@@ -483,7 +483,7 @@ export async function* streamChat(
       
       await prisma.usage.create({
         data: {
-          orgId: context.orgId || 'dev-org',
+          orgId: context.orgId,
           threadId: context.threadId,
           tokensIn: promptTokens,
           tokensOut: completionTokens,

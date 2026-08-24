@@ -1,7 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '@fivem-ai/db';
-import type { AuthUser } from '../auth';
+import { requireAuth } from '../auth';
+import {
+  assertServerAccess,
+  assertInstallAccess,
+} from '../auth/access';
 
 const PUBLIC_RESOURCE_CATALOG: Array<{
   slug: string;
@@ -117,18 +121,10 @@ export async function registerResourceRoutes(fastify: FastifyInstance) {
       slug: z.string(),
     }).parse(request.body);
 
-    const user = request.authUser as AuthUser | null;
-    if (!user) return reply.code(401).send({ error: 'Unauthorized' });
+    requireAuth(request, reply);
 
-    const org = await prisma.organization.findUnique({
-      where: { id: user.orgId },
-    });
-    if (!org) return reply.code(404).send({ error: 'Org not found' });
-
-    const server = await prisma.server.findFirst({
-      where: { id: serverId, orgId: org.id },
-    });
-    if (!server) return reply.code(404).send({ error: 'Server not found' });
+    const server = await assertServerAccess(request, reply, serverId);
+    if (!server) return;
 
     const resource = PUBLIC_RESOURCE_CATALOG.find((r) => r.slug === slug);
     if (!resource) return reply.code(404).send({ error: 'Resource not found' });
@@ -211,18 +207,9 @@ export async function registerResourceRoutes(fastify: FastifyInstance) {
       serverId: z.string(),
     }).parse(request.params);
 
-    const user = request.authUser as AuthUser | null;
-    if (!user) return reply.code(401).send({ error: 'Unauthorized' });
+    requireAuth(request, reply);
 
-    const org = await prisma.organization.findUnique({
-      where: { id: user.orgId },
-    });
-    if (!org) return reply.code(404).send({ error: 'Org not found' });
-
-    const server = await prisma.server.findFirst({
-      where: { id: serverId, orgId: org.id },
-    });
-    if (!server) return reply.code(404).send({ error: 'Server not found' });
+    if (!await assertServerAccess(request, reply, serverId)) return;
 
     const installs = await prisma.resourceInstall.findMany({
       where: { serverId },
@@ -239,22 +226,10 @@ export async function registerResourceRoutes(fastify: FastifyInstance) {
       installId: z.string(),
     }).parse(request.params);
 
-    const user = request.authUser as AuthUser | null;
-    if (!user) return reply.code(401).send({ error: 'Unauthorized' });
+    requireAuth(request, reply);
 
-    const org = await prisma.organization.findUnique({
-      where: { id: user.orgId },
-    });
-    if (!org) return reply.code(404).send({ error: 'Org not found' });
-
-    const install = await prisma.resourceInstall.findFirst({
-      where: { id: installId },
-      include: { server: true },
-    });
-
-    if (!install || install.server.orgId !== org.id) {
-      return reply.code(404).send({ error: 'Install not found' });
-    }
+    const install = await assertInstallAccess(request, reply, installId);
+    if (!install) return;
 
     if (install.status !== 'installed') {
       return reply.code(400).send({ error: 'Resource is not in installed state' });

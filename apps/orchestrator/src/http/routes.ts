@@ -1,8 +1,14 @@
 import { FastifyInstance } from 'fastify';
+import * as crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '@fivem-ai/db';
-import { authPlugin, requireAuth } from '../auth';
-import type { AuthUser } from '../auth';
+import { requireAuth } from '../auth';
+import {
+  assertServerAccess,
+  assertThreadAccess,
+  assertChangeAccess,
+} from '../auth/access';
+import { sanitizeRelativePath } from './pathGuard';
 import { parseDiffToPatch } from './parseDiff';
 import type { AgentGateway } from '../ws/agentGateway';
 import { cache } from '../cache/cache';
@@ -11,16 +17,14 @@ import { registerResourceRoutes } from './resourceRoutes';
 
 export async function registerRoutes(fastify: FastifyInstance) {
   await fastify.register(registerResourceRoutes);
-  await fastify.register(authPlugin);
   // ============================================
   // Servers
   // ============================================
 
-  // List servers for an org (public endpoint for development)
+  // List servers for the caller's org
     fastify.get('/api/servers', async (request, reply) => {
-      // In development, use default org if not authenticated
-      const user = request.authUser;
-      const orgId = user?.orgId || 'dev-org';
+      const user = requireAuth(request);
+      const orgId = user.orgId;
 
       const servers = await prisma.server.findMany({
         where: { orgId },
@@ -52,9 +56,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Create a new server
   fastify.post('/api/servers', async (request, reply) => {
-    // In development, allow creating servers without auth
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const user = requireAuth(request);
+    const orgId = user.orgId;
 
     const body = z.object({
       name: z.string().min(1).max(100),
@@ -96,17 +99,16 @@ export async function registerRoutes(fastify: FastifyInstance) {
     };
   });
 
-  // Get server details
+  // Get server details (includes pairing codes — strictly org-scoped)
   fastify.get('/api/servers/:serverId', async (request, reply) => {
-    // In development, use default org if not authenticated
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const requireAuthUser = requireAuth(request);
+    void requireAuthUser;
     const params = z.object({
       serverId: z.string(),
     }).parse(request.params);
 
     const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId },
+      where: { id: params.serverId, orgId: request.authUser!.orgId },
       include: {
         agentDevices: {
           orderBy: { createdAt: 'desc' },
@@ -119,7 +121,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
     });
 
     if (!server) {
-      return reply.status(404).send({ error: 'Server not found' });
+      return reply.status(404).send({ error: 'Not found' });
     }
 
     const pairedDevice = server.agentDevices.find((d: any) => d.status === 'paired');
@@ -180,13 +182,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }).parse(request.params);
 
     // Verify server belongs to user's org
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-
-    if (!server) {
-      return reply.status(404).send({ error: 'Server not found' });
-    }
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
 
     const body = z.object({
       title: z.string().optional(),
@@ -206,8 +203,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // List all threads for an org (used by web dashboard)
   fastify.get('/api/threads', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const user = requireAuth(request, reply);
+    const orgId = user.orgId;
     const url = request.url as string;
     const serverId = new URLSearchParams(url.split('?')[1] || '').get('serverId');
 
@@ -225,11 +222,13 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get threads for a server
   fastify.get('/api/servers/:serverId/threads', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const user = requireAuth(request, reply);
+    const orgId = user.orgId;
     const params = z.object({
       serverId: z.string(),
     }).parse(request.params);
+
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
 
     const threads = await prisma.chatThread.findMany({
       where: { serverId: params.serverId, server: { orgId } },
@@ -242,15 +241,11 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Delete a thread
   fastify.delete('/api/threads/:threadId', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    requireAuth(request, reply);
     const params = z.object({ threadId: z.string() }).parse(request.params);
 
-    const thread = await prisma.chatThread.findFirst({
-      where: { id: params.threadId, server: { orgId } },
-    });
-
-    if (!thread) return reply.status(404).send({ error: 'Thread not found' });
+    const thread = await assertThreadAccess(request, reply, params.threadId);
+    if (!thread) return;
 
     await prisma.chatMessage.deleteMany({ where: { threadId: params.threadId } });
     await prisma.chatThread.delete({ where: { id: params.threadId } });
@@ -259,19 +254,13 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get messages in a thread
   fastify.get('/api/threads/:threadId/messages', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    requireAuth(request, reply);
     const params = z.object({
       threadId: z.string(),
     }).parse(request.params);
 
-    const thread = await prisma.chatThread.findFirst({
-      where: { id: params.threadId, server: { orgId } },
-    });
-
-    if (!thread) {
-      return reply.status(404).send({ error: 'Thread not found' });
-    }
+    const thread = await assertThreadAccess(request, reply, params.threadId);
+    if (!thread) return;
 
     const messages = await prisma.chatMessage.findMany({
       where: { threadId: params.threadId },
@@ -283,10 +272,12 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get or create one persistent thread per server/user
   fastify.get('/api/servers/:serverId/thread', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const user = requireAuth(request, reply);
     const params = z.object({ serverId: z.string() }).parse(request.params);
-    const userId = user ? user.userId : 'anonymous';
+    const userId = user.userId;
+
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
 
     let thread = await prisma.chatThread.findFirst({
       where: { serverId: params.serverId, userId },
@@ -306,35 +297,54 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // Chat
   // ============================================
 
-  // Get or create a thread for a server and user
+  // Get or create a thread for a server. The :userId path segment is kept for
+  // backwards compatibility with older dashboard builds but IGNORED — the
+  // caller identity always comes from the verified token.
   fastify.get('/api/servers/:serverId/threads/:userId', async (request, reply) => {
+    const user = requireAuth(request, reply);
     const params = z.object({ serverId: z.string(), userId: z.string() }).parse(request.params);
-    const cached = cache.get(`thread:${params.serverId}:${params.userId}`);
+
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
+
+    const cacheKey = `thread:${params.serverId}:${user.userId}`;
+    const cached = cache.get(cacheKey);
     if (cached) return cached;
     let thread = await prisma.chatThread.findFirst({
-      where: { serverId: params.serverId, userId: params.userId },
+      where: { serverId: params.serverId, userId: user.userId },
       include: { messages: { orderBy: { createdAt: 'asc' }, take: 50 } },
       orderBy: { createdAt: 'desc' },
     });
     if (!thread) {
-      thread = await prisma.chatThread.create({ data: { serverId: params.serverId, userId: params.userId, title: 'General Chat', status: 'open' }, include: { messages: { orderBy: { createdAt: 'asc' } } } });
+      thread = await prisma.chatThread.create({ data: { serverId: params.serverId, userId: user.userId, title: 'General Chat', status: 'open' }, include: { messages: { orderBy: { createdAt: 'asc' } } } });
     }
-    cache.set(`thread:${params.serverId}:${params.userId}`, thread, 60000);
+    cache.set(cacheKey, thread, 60000);
     return thread;
   });
 
   // Non-streaming chat endpoint
   fastify.post('/api/threads/:threadId/chat', async (request, reply) => {
+    const user = requireAuth(request, reply);
     const params = z.object({ threadId: z.string() }).parse(request.params);
     const body = z.object({ message: z.string().min(1).max(10000), userId: z.string().optional() }).parse(request.body);
-    const userId = body.userId || 'anonymous';
-    let thread = await prisma.chatThread.findUnique({ where: { id: params.threadId }, include: { server: true, messages: { orderBy: { createdAt: 'asc' }, take: 50 } } });
-    if (!thread) {
-      const serverId = params.threadId.replace(/^thread_/, '');
-      const server = await prisma.server.findUnique({ where: { id: serverId } });
-      if (!server) return reply.status(404).send({ error: 'Server not found' });
-      thread = (await prisma.chatThread.create({ data: { id: params.threadId, serverId, userId, title: 'New Chat', status: 'open' }, include: { server: true, messages: { orderBy: { createdAt: 'asc' }, take: 50 } } })) as any;
+    // Client-sent userId values are ignored — identity comes from the token.
+    void body.userId;
+    const userId = user.userId;
+    let thread = await prisma.chatThread.findFirst({
+      where: { id: params.threadId, server: { orgId: user.orgId } },
+      include: { server: true, messages: { orderBy: { createdAt: 'asc' }, take: 50 } },
+    });
+    if (!thread && /^thread_[a-z0-9]{14,}$/i.test(params.threadId)) {
+      // Legacy synthetic ids ("thread_<serverId>") — resolve the underlying
+      // server through the org scope so cross-org access still fails.
+      const legacyServerId = params.threadId.replace(/^thread_/, '');
+      const server = await prisma.server.findFirst({
+        where: { id: legacyServerId, orgId: user.orgId },
+      });
+      if (!server) return reply.status(404).send({ error: 'Not found' });
+      thread = (await prisma.chatThread.create({ data: { id: params.threadId, serverId: legacyServerId, userId, title: 'New Chat', status: 'open' }, include: { server: true, messages: { orderBy: { createdAt: 'asc' }, take: 50 } } })) as any;
     }
+    if (!thread) return reply.status(404).send({ error: 'Not found' });
     const gateway = (fastify as any).agentGateway;
     if (!gateway) return reply.status(500).send({ error: 'Agent gateway not initialized' });
     const chunks: string[] = [];
@@ -360,6 +370,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   fastify.get('/api/servers/:serverId/players', async (request, reply) => {
     const params = z.object({ serverId: z.string() }).parse(request.params);
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
     const cached = cache.get(`players:${params.serverId}`);
     if (cached) return cached;
     const agentGateway = (fastify as any).agentGateway;
@@ -396,9 +407,16 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // ============================================
 
   fastify.get('/api/agent/status', async (request, reply) => {
+    const user = requireAuth(request, reply);
     const gateway = (fastify as any).agentGateway;
     if (!gateway) return { connectedServers: [], total: 0 };
-    const servers = gateway.getConnectedServers();
+    // Only report agent connections for servers owned by the caller's org.
+    const orgServers = await prisma.server.findMany({
+      where: { orgId: user.orgId },
+      select: { id: true },
+    });
+    const orgServerIds = new Set(orgServers.map((s) => s.id));
+    const servers = gateway.getConnectedServers().filter((id: string) => orgServerIds.has(id));
     return { connectedServers: servers, total: servers.length };
   });
 
@@ -431,8 +449,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // ============================================
 
   fastify.post('/api/audit', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const user = requireAuth(request, reply);
+    const orgId = user.orgId;
     const body = z.object({
       action: z.string(),
       serverId: z.string().optional(),
@@ -442,7 +460,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
     await prisma.auditLog.create({
       data: {
         orgId,
-        userId: user?.userId,
+        userId: user.userId,
         serverId: body.serverId,
         action: body.action,
         metadata: (body.metadata || {}) as any,
@@ -453,8 +471,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
   });
 
   fastify.get('/api/audit', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const user = requireAuth(request, reply);
+    const orgId = user.orgId;
     const { searchParams } = new URL(request.url, 'http://localhost');
     const filter = searchParams.get('filter') || '';
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -478,8 +496,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // ============================================
 
   fastify.get('/api/usage', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const user = requireAuth(request, reply);
+    const orgId = user.orgId;
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -620,17 +638,21 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // ============================================
 
   fastify.get('/api/servers/:serverId/settings', async (request, reply) => {
+    requireAuth(request, reply);
     const params = z.object({ serverId: z.string() }).parse(request.params);
-    const server = await prisma.server.findUnique({ where: { id: params.serverId }, select: { settings: true, rootLabel: true } });
-    return { settings: server?.settings || {}, serverDir: server?.rootLabel || '' };
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
+    return { settings: (server as any).settings || {}, serverDir: server.rootLabel || '' };
   });
 
   fastify.put('/api/servers/:serverId/settings', async (request, reply) => {
+    requireAuth(request, reply);
     const params = z.object({ serverId: z.string() }).parse(request.params);
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
     const body = z.object({ settings: z.record(z.unknown()).optional(), serverDir: z.string().optional() }).parse(request.body);
     const updates: any = {};
     if (body.settings !== undefined) updates.settings = body.settings;
-    if (body.serverDir !== undefined) updates.rootLabel = body.serverDir;
+    if (body.serverDir !== undefined) updates.rootLabel = sanitizeRelativePath(body.serverDir) ?? null;
     const server = await prisma.server.update({ where: { id: params.serverId }, data: updates, select: { settings: true, rootLabel: true } });
     return { settings: server.settings, serverDir: server.rootLabel };
   });
@@ -641,21 +663,20 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Read a resource's manifest/config file
   fastify.get('/api/servers/:serverId/resources/:resourceName/config', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    requireAuth(request, reply);
     const params = z.object({
       serverId: z.string(),
       resourceName: z.string(),
     }).parse(request.params);
 
     const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId },
+      where: { id: params.serverId, orgId: request.authUser!.orgId },
       include: { resources: { where: { resourceName: params.resourceName } } },
     });
 
-    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    if (!server) return reply.status(404).send({ error: 'Not found' });
     const resource = server.resources[0];
-    if (!resource) return reply.status(404).send({ error: 'Resource not found' });
+    if (!resource) return reply.status(404).send({ error: 'Not found' });
 
     const agentGateway = (fastify as any).agentGateway;
     if (!agentGateway || !agentGateway.isConnected(params.serverId)) {
@@ -663,7 +684,12 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const manifestPath = resource.manifestPath || `resources/${resource.resourceName}/fxmanifest.lua`;
+      const manifestPath = sanitizeRelativePath(
+        resource.manifestPath || `resources/${resource.resourceName}/fxmanifest.lua`
+      );
+      if (!manifestPath) {
+        return reply.status(400).send({ error: 'Invalid resource manifest path' });
+      }
       const result = await agentGateway.sendCommand(
         params.serverId,
         'fs.read',
@@ -686,8 +712,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Save a resource's manifest/config file
   fastify.post('/api/servers/:serverId/resources/:resourceName/config', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    requireAuth(request, reply);
     const params = z.object({
       serverId: z.string(),
       resourceName: z.string(),
@@ -698,13 +723,21 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }).parse(request.body);
 
     const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId },
+      where: { id: params.serverId, orgId: request.authUser!.orgId },
       include: { resources: { where: { resourceName: params.resourceName } } },
     });
 
-    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    if (!server) return reply.status(404).send({ error: 'Not found' });
     const resource = server.resources[0];
-    if (!resource) return reply.status(404).send({ error: 'Resource not found' });
+    if (!resource) return reply.status(404).send({ error: 'Not found' });
+
+    // Guard the relayed path against traversal before it reaches the agent.
+    const safeManifestPath = sanitizeRelativePath(
+      resource.manifestPath || `resources/${resource.resourceName}/fxmanifest.lua`
+    );
+    if (!safeManifestPath) {
+      return reply.status(400).send({ error: 'Invalid resource manifest path' });
+    }
 
     const agentGateway = (fastify as any).agentGateway;
     if (!agentGateway || !agentGateway.isConnected(params.serverId)) {
@@ -712,11 +745,10 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const manifestPath = resource.manifestPath || `resources/${resource.resourceName}/fxmanifest.lua`;
       const result = await agentGateway.sendCommand(
         params.serverId,
         'fs.write',
-        { path: manifestPath, content: body.content },
+        { path: safeManifestPath, content: body.content },
         15000
       );
 
@@ -736,9 +768,12 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get pending changes for a server
   fastify.get('/api/servers/:serverId/changes', async (request, reply) => {
+    requireAuth(request, reply);
     const params = z.object({
       serverId: z.string(),
     }).parse(request.params);
+
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
 
     const changes = await prisma.change.findMany({
       where: { serverId: params.serverId },
@@ -751,17 +786,13 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get a specific change
   fastify.get('/api/changes/:changeId', async (request, reply) => {
+    requireAuth(request, reply);
     const params = z.object({
       changeId: z.string(),
     }).parse(request.params);
 
-    const change = await prisma.change.findUnique({
-      where: { id: params.changeId },
-    });
-
-    if (!change) {
-      return reply.status(404).send({ error: 'Change not found' });
-    }
+    const change = await assertChangeAccess(request, reply, params.changeId);
+    if (!change) return;
 
     return change;
   });
@@ -773,14 +804,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
       changeId: z.string(),
     }).parse(request.params);
 
-    const change = await prisma.change.findFirst({
-      where: { id: params.changeId, server: { orgId: user.orgId } },
-      include: { server: true },
-    });
-
-    if (!change) {
-      return reply.status(404).send({ error: 'Change not found' });
-    }
+    const change = await assertChangeAccess(request, reply, params.changeId);
+    if (!change) return;
 
     if (change.status !== 'pending') {
       return reply.status(400).send({ error: 'Only pending changes can be cancelled' });
@@ -814,14 +839,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
       changeId: z.string(),
     }).parse(request.params);
 
-    const change = await prisma.change.findFirst({
-      where: { id: params.changeId, server: { orgId: user.orgId } },
-      include: { server: true },
-    });
-
-    if (!change) {
-      return reply.status(404).send({ error: 'Change not found' });
-    }
+    const change = await assertChangeAccess(request, reply, params.changeId);
+    if (!change) return;
 
     if (change.status !== 'pending') {
       return reply.status(400).send({ error: 'Change is not pending' });
@@ -867,7 +886,27 @@ export async function registerRoutes(fastify: FastifyInstance) {
     const touchedFiles = Array.isArray(changeWithFiles.filesTouched)
       ? (changeWithFiles.filesTouched as string[])
       : [];
-    const files = parseDiffToPatch(changeWithFiles.diff, touchedFiles);
+    const parsed = parseDiffToPatch(changeWithFiles.diff, touchedFiles);
+
+    // Guard every relayed file path against traversal before it reaches the agent.
+    const rejectedPaths: string[] = [];
+    const files: Array<{ path: string; newContent: string; expectedSha256?: string }> = [];
+    for (const f of parsed) {
+      const safe = sanitizeRelativePath(f.path);
+      if (safe) {
+        files.push({ ...f, path: safe });
+      } else {
+        rejectedPaths.push(f.path);
+      }
+    }
+
+    if (rejectedPaths.length > 0) {
+      await prisma.change.update({
+        where: { id: params.changeId },
+        data: { status: 'failed', applyResult: { error: `Unsafe paths rejected: ${rejectedPaths.join(', ')}` } },
+      });
+      return reply.status(400).send({ error: `Change contains unsafe file paths and was not applied` });
+    }
 
     if (files.length === 0) {
       return reply.status(400).send({ error: 'No files to apply in change' });
@@ -938,19 +977,12 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get resources for a server
   fastify.get('/api/servers/:serverId/resources', async (request, reply) => {
-    const user = requireAuth(request, reply);
+    requireAuth(request, reply);
     const params = z.object({
       serverId: z.string(),
     }).parse(request.params);
 
-    // Verify server belongs to user's org
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-
-    if (!server) {
-      return reply.status(404).send({ error: 'Server not found' });
-    }
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
 
     const resources = await prisma.resourceIndex.findMany({
       where: { serverId: params.serverId },
@@ -967,13 +999,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
       serverId: z.string(),
     }).parse(request.params);
 
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-
-    if (!server) {
-      return reply.status(404).send({ error: 'Server not found' });
-    }
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
 
     if (server.status !== 'online') {
       return reply.status(400).send({ error: 'Server agent is not online' });
@@ -1046,7 +1073,9 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Direct sync of scanned resources from desktop agent
   fastify.post('/api/servers/:serverId/resources/sync', async (request, reply) => {
+    requireAuth(request, reply);
     const params = z.object({ serverId: z.string() }).parse(request.params);
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
     const body = z.object({
       framework: z.string().optional(),
       resources: z.array(z.object({
@@ -1101,14 +1130,11 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Console tail endpoint
   fastify.get('/api/servers/:serverId/console', async (request, reply) => {
-    const user = requireAuth(request, reply);
+    requireAuth(request, reply);
     const params = z.object({ serverId: z.string() }).parse(request.params);
 
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-
-    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
     if (server.status !== 'online') return reply.status(400).send({ error: 'Agent not connected' });
 
     const agentGateway = (fastify as any).agentGateway as AgentGateway;
@@ -1136,13 +1162,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
       serverId: z.string(),
     }).parse(request.params);
 
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-
-    if (!server) {
-      return reply.status(404).send({ error: 'Server not found' });
-    }
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
 
     if (server.status !== 'online') {
       return reply.status(400).send({ error: 'Server agent is not online' });
@@ -1195,6 +1216,11 @@ export async function registerRoutes(fastify: FastifyInstance) {
       return reply.status(410).send({ error: 'Pairing code expired. Open the server in the dashboard to get a new one.' });
     }
 
+    // Issue a one-time session token; only its sha256 hash is persisted so a
+    // DB leak never exposes live agent credentials.
+    const sessionToken = crypto.randomBytes(32).toString('base64url');
+    const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
+
     await prisma.agentDevice.update({
       where: { id: device.id },
       data: {
@@ -1204,6 +1230,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
         lastHeartbeatAt: new Date(),
         pairingCode: null,
         pairingExpiresAt: null,
+        pairingTokenHash: sessionTokenHash,
       },
     });
 
@@ -1218,26 +1245,25 @@ export async function registerRoutes(fastify: FastifyInstance) {
     return {
       serverId: device.serverId,
       agentDeviceId: device.id,
+      sessionToken,
       wsUrl: process.env.ORCHESTRATOR_WS_URL || 'ws://localhost:3001/ws/agent',
     };
   });
 
   // Refresh pairing code for an unpaired server
   fastify.post('/api/servers/:serverId/pairing', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    requireAuth(request, reply);
     const params = z.object({ serverId: z.string() }).parse(request.params);
 
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId },
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
+
+    const server = await prisma.server.findUnique({
+      where: { id: params.serverId },
       include: {
         agentDevices: { orderBy: { createdAt: 'desc' } },
       },
     });
-
-    if (!server) {
-      return reply.status(404).send({ error: 'Server not found' });
-    }
+    if (!server) return reply.status(404).send({ error: 'Not found' });
 
     if (server.agentDevices.some((d: any) => d.status === 'paired')) {
       return reply.status(400).send({ error: 'Server is already paired' });
@@ -1250,27 +1276,24 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Revoke agent
   fastify.post('/api/servers/:serverId/revoke', async (request, reply) => {
-    const user = requireAuth(request, reply);
+    requireAuth(request, reply);
     const params = z.object({ serverId: z.string() }).parse(request.params);
 
-    // Verify server belongs to user's org
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-
-    if (!server) {
-      return reply.status(404).send({ error: 'Server not found' });
-    }
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
 
     await prisma.agentDevice.updateMany({
       where: { serverId: params.serverId, status: 'paired' },
-      data: { status: 'revoked' },
+      data: { status: 'revoked', pairingTokenHash: null },
     });
 
     await prisma.server.update({
       where: { id: params.serverId },
       data: { status: 'offline' },
     });
+
+    // Kill any live WS connection for this server immediately.
+    const gateway = (fastify as any).agentGateway as AgentGateway | undefined;
+    gateway?.forceDisconnect(params.serverId);
 
     return { success: true };
   });
@@ -1287,10 +1310,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }).parse(request.params);
     const body = z.object({ reason: z.string().optional() }).parse(request.body);
 
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
 
     const player = await prisma.player.findFirst({
       where: { id: params.playerId, serverId: params.serverId },
@@ -1321,10 +1341,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       playerId: z.string(),
     }).parse(request.params);
 
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId: user.orgId },
-    });
-    if (!server) return reply.status(404).send({ error: 'Server not found' });
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
 
     const updated = await prisma.player.update({
       where: { id: params.playerId },
@@ -1346,9 +1363,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // ============================================
 
   fastify.get('/api/changes', async (request, reply) => {
-    // In development, use default org if not authenticated
-    const user = request.authUser;
-    const orgId = user ? user.orgId : 'dev-org';
+    const user = requireAuth(request, reply);
+    const orgId = user.orgId;
     const query = z.object({
       serverId: z.string().optional(),
       status: z.enum(['pending', 'applied', 'failed', 'rolled_back']).optional(),
@@ -1526,8 +1542,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // ============================================
 
   fastify.get('/api/org', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    const user = requireAuth(request, reply);
+    const orgId = user.orgId;
     const org = await prisma.organization.findUnique({
       where: { id: orgId },
     });
@@ -1561,19 +1577,20 @@ export async function registerRoutes(fastify: FastifyInstance) {
   });
   // Delete a server
   fastify.delete('/api/servers/:serverId', async (request, reply) => {
-    const user = request.authUser;
-    const orgId = user?.orgId || 'dev-org';
+    requireAuth(request, reply);
     const params = z.object({ serverId: z.string() }).parse(request.params);
     const body = z.object({ confirmName: z.string() }).parse(request.body);
 
-    const server = await prisma.server.findFirst({
-      where: { id: params.serverId, orgId },
-    });
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
 
-    if (!server) return reply.status(404).send({ error: 'Server not found' });
     if (server.name !== body.confirmName) {
       return reply.status(400).send({ error: 'Server name does not match. Please enter the exact server name to confirm deletion.' });
     }
+
+    // Drop any live agent connection before cascading the delete.
+    const gateway = (fastify as any).agentGateway as AgentGateway | undefined;
+    gateway?.forceDisconnect(params.serverId);
 
     await prisma.server.delete({ where: { id: params.serverId } });
     return { ok: true };
@@ -1588,13 +1605,15 @@ export async function registerRoutes(fastify: FastifyInstance) {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     if (agentDeviceId) {
+      // NOTE: pairingTokenHash is intentionally NOT reset here. Re-pairing a
+      // device must not silently invalidate a live session token without the
+      // explicit revoke endpoint (which also force-disconnects).
       await prisma.agentDevice.update({
         where: { id: agentDeviceId },
         data: {
           status: 'pending',
           pairingCode: code,
           pairingExpiresAt: expiresAt,
-          pairingTokenHash: null,
           updatedAt: new Date(),
         },
       });

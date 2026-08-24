@@ -1,6 +1,7 @@
 import { prisma } from '@fivem-ai/db';
 import type { AgentGateway } from '../ws/agentGateway';
 import { streamChat, type ChatContext } from '../claude/session';
+import { sanitizeRelativePath } from '../http/pathGuard';
 
 export async function handleChatMessage(
   gateway: AgentGateway,
@@ -28,11 +29,13 @@ export async function handleChatMessage(
   });
 
   const isAgentConnected = gateway.isConnected(serverId);
+  // orgId always comes from the DB row for this server — callers must have
+  // already verified the caller's org owns it before invoking the chat flow.
   const context: ChatContext = {
     serverId,
     threadId,
     userId,
-    orgId: server.orgId || 'dev-org',
+    orgId: server.orgId,
     framework: server.framework,
     resources: server.resources,
     previousMessages,
@@ -63,7 +66,7 @@ export async function handleChatMessage(
             toolError = true;
             break;
           }
-          const result = await handleToolCall(gateway, serverId, threadId, userId, { orgId: server.orgId || 'dev-org' }, chunk.toolName!, chunk.toolArgs!);
+          const result = await handleToolCall(gateway, serverId, threadId, userId, { orgId: server.orgId }, chunk.toolName!, chunk.toolArgs!);
           toolCalls.push({ id: chunk.toolId || crypto.randomUUID(), name: chunk.toolName, arguments: chunk.toolArgs, result });
           onStream({ type: 'tool_result', content: JSON.stringify(result) });
         }
@@ -119,23 +122,33 @@ async function handleToolCall(gateway: AgentGateway, serverId: string, threadId:
   }
 
   switch (toolName) {
-    case 'read_remote_file':
-      return gateway.sendCommand(serverId, 'fs.read', { path: args.path }, 30000);
-    case 'list_remote_directory':
-      return gateway.sendCommand(serverId, 'fs.list', { path: args.path, recursive: false }, 30000);
+    case 'read_remote_file': {
+      const safe = sanitizeRelativePath(String(args.path ?? ''));
+      if (!safe) return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
+      return gateway.sendCommand(serverId, 'fs.read', { path: safe }, 30000);
+    }
+    case 'list_remote_directory': {
+      const safe = sanitizeRelativePath(String(args.path ?? ''));
+      if (!safe) return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
+      return gateway.sendCommand(serverId, 'fs.list', { path: safe, recursive: false }, 30000);
+    }
     case 'get_resource_index': {
       const resource = await prisma.resourceIndex.findFirst({ where: { serverId, resourceName: args.resourceName } });
       if (!resource) throw new Error(`Resource not found: ${args.resourceName}`);
       return { name: resource.resourceName, path: resource.relativePath, dependencies: resource.dependencies as string[], files: resource.files as string[] };
     }
     case 'propose_remote_write': {
-      const currentFile = await gateway.sendCommand(serverId, 'fs.read', { path: args.path }, 30000);
+      const safe = sanitizeRelativePath(String(args.path ?? ''));
+      if (!safe) {
+        return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
+      }
+      const currentFile = await gateway.sendCommand(serverId, 'fs.read', { path: safe }, 30000);
       const change = await prisma.change.create({
         data: {
           serverId,
           threadId,
           createdByUserId: userId,
-          filesTouched: [args.path],
+          filesTouched: [safe],
           diff: generateDiff(currentFile?.content ?? '', args.newContent),
           status: 'pending',
         },
@@ -147,10 +160,10 @@ async function handleToolCall(gateway: AgentGateway, serverId: string, threadId:
           serverId,
           userId,
           action: 'change.proposed',
-          metadata: { changeId: change.id, path: args.path, reason: args.reason },
+          metadata: { changeId: change.id, path: safe, reason: args.reason },
         },
       });
-      return { changeId: change.id, path: args.path, reason: args.reason, status: 'staged' };
+      return { changeId: change.id, path: safe, reason: args.reason, status: 'staged' };
     }
     default:
       throw new Error(`Unknown tool: ${toolName}`);
