@@ -92,6 +92,9 @@ pub fn load_config_from_disk() {
 
 /// Persist the current global config to disk (best-effort; failures are logged
 /// but never panic — losing a settings file must not take the app down).
+/// Writes go to a temp file renamed over the target so a crash mid-write can
+/// never leave a truncated config.json behind (a truncated file would make
+/// the loader reset to defaults, destroying the stored session token).
 pub fn save_config_to_disk() {
     let path = config_path();
     if let Some(parent) = path.parent() {
@@ -100,13 +103,22 @@ pub fn save_config_to_disk() {
             return;
         }
     }
-    match serde_json::to_string_pretty(&*CONFIG.lock().unwrap()) {
-        Ok(json) => {
-            if let Err(e) = std::fs::write(&path, json) {
-                eprintln!("[Config] Failed to write {}: {}", path.display(), e);
-            }
+    let json = match serde_json::to_string_pretty(&*CONFIG.lock().unwrap()) {
+        Ok(j) => j,
+        Err(e) => {
+            eprintln!("[Config] Failed to serialize config: {}", e);
+            return;
         }
-        Err(e) => eprintln!("[Config] Failed to serialize config: {}", e),
+    };
+    let tmp = path.with_extension("json.tmp");
+    if let Err(e) = std::fs::write(&tmp, json) {
+        eprintln!("[Config] Failed to write {}: {}", tmp.display(), e);
+        return;
+    }
+    // fs::rename is atomic on the same volume (Windows: MoveFileEx replace).
+    if let Err(e) = std::fs::rename(&tmp, &path) {
+        eprintln!("[Config] Failed to promote {} over {}: {}", tmp.display(), path.display(), e);
+        let _ = std::fs::remove_file(&tmp);
     }
 }
 

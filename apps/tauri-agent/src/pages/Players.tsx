@@ -97,7 +97,7 @@ export default function Players({ serverId }: { serverId?: string }) {
     } catch (e) {
       setActionResult({
         type: 'error',
-        message: e instanceof Error && e.message !== `HTTP ${e.message.slice(5)}`
+        message: e instanceof Error
           ? `Failed to ban ${selectedPlayer.name}: ${e.message}`
           : `Failed to ban ${selectedPlayer.name}`,
       })

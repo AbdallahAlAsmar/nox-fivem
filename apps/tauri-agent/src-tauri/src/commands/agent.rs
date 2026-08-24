@@ -161,6 +161,18 @@ fn cancel_reconnect() {
     RECONNECT_TOKEN.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 }
 
+/// Store a pairing-claim session token so the NEXT connect (and reconnects)
+/// authenticates with it. Called by the frontend immediately after a claim
+/// response arrives — D1's config persistence lands it in config.json.
+#[tauri::command]
+pub fn set_session_token_cmd(session_token: String) -> Result<(), String> {
+    mutate_config(|cfg| {
+        cfg.session_token = Some(session_token);
+    });
+    println!("[Agent] Session token stored for server {:?}", get_config().server_id);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn connect_agent_cmd(
     server_id: String,
@@ -168,14 +180,25 @@ pub async fn connect_agent_cmd(
     server_directory: String,
 ) -> Result<AgentState, String> {
     let config = get_config();
-    let session_token = config.session_token.clone();
+    // Only reuse the persisted token when it belongs to THIS server — a
+    // token minted for server A must never leak into server B's hello.
+    let session_token = if config.server_id.as_deref() == Some(server_id.as_str()) {
+        config.session_token.clone()
+    } else {
+        None
+    };
     let orchestrator_url = config.orchestrator_url.replace("http://", "ws://").replace("https://", "wss://");
     let ws_url = format!("{}/ws/agent", orchestrator_url);
 
-    println!("[Agent] Connecting to {} for server {} (device {})", ws_url, server_id, agent_device_id);
+    println!("[Agent] Connecting to {} for server {} (device {}, token: {})",
+        ws_url, server_id, agent_device_id,
+        if session_token.is_some() { "present" } else { "absent" });
 
-    // A fresh explicit connect supersedes any pending reconnect loop.
-    cancel_reconnect();
+    // NOTE: deliberately NOT cancelling the reconnect loop here — the loop
+    // itself calls this function, and an unconditional cancel would kill the
+    // loop on its second attempt. Deliberate disconnects cancel via
+    // disconnect_agent_cmd; a successful manual connect simply supersedes
+    // whatever the loop was doing (generation guards keep state coherent).
 
     update_agent_state(|state| {
         state.status = AgentConnectionStatus::Connecting;
@@ -1104,7 +1127,9 @@ pub fn scan_server_resources_cmd(server_directory: String) -> Result<ScanResult,
 
 #[tauri::command]
 pub async fn disconnect_agent_cmd() -> Result<AgentState, String> {
-    // Deliberate disconnect — cancel any pending auto-reconnect loop.
+    // Deliberate disconnect — cancel any pending auto-reconnect loop. (The
+    // cancellation lives HERE, not in connect_agent_cmd: the reconnect loop
+    // calls connect_agent_cmd itself and must not self-cancel.)
     cancel_reconnect();
 
     let mut conn = AGENT_CONNECTION.lock().unwrap();

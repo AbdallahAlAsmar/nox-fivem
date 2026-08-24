@@ -10,7 +10,7 @@ use commands::{
     server::{create_server_cmd, get_servers_cmd, remove_server_cmd, scan_resources_cmd, open_folder_cmd, inspect_server_dir},
     filesystem::{list_files_cmd, read_file_cmd, find_server_data_cmd},
     git::{git_init_cmd, git_add_all_cmd, git_commit_cmd, git_rollback_cmd, git_log_cmd},
-    agent::{connect_agent_cmd, disconnect_agent_cmd, send_chat_message_cmd, get_agent_state_cmd, scan_server_resources_cmd},
+    agent::{connect_agent_cmd, disconnect_agent_cmd, send_chat_message_cmd, get_agent_state_cmd, set_session_token_cmd, scan_server_resources_cmd},
 };
 use config::AgentState;
 
@@ -107,6 +107,7 @@ fn main() {
             git_log_cmd,
             connect_agent_cmd,
             disconnect_agent_cmd,
+            set_session_token_cmd,
             send_chat_message_cmd,
             get_agent_state_cmd,
         ])

@@ -218,11 +218,19 @@ export default function Chat({ serverId }: ChatProps) {
       }
 
       let agentDeviceId = localStorage.getItem(`agent_device_${currentServerId}`)
+      let freshSessionToken: string | undefined
       if (!agentDeviceId) {
         const claim = await connectExistingServer(currentServerId, directory)
         agentDeviceId = claim.agentDeviceId
+        freshSessionToken = claim.sessionToken
         localStorage.setItem(`agent_device_${currentServerId}`, agentDeviceId)
         localStorage.setItem(`server_dir_${currentServerId}`, directory)
+      }
+
+      // Persist a freshly-minted session token BEFORE connecting so the WS
+      // hello can present it (freshly-paired devices require it).
+      if (freshSessionToken) {
+        await invoke('set_session_token_cmd', { sessionToken: freshSessionToken })
       }
 
       await invoke('connect_agent_cmd', {

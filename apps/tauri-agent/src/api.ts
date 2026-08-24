@@ -114,7 +114,7 @@ export async function createServer(name: string, directory?: string): Promise<Cr
 export async function claimPairing(
   pairingCode: string,
   directory: string,
-): Promise<{ serverId: string; agentDeviceId: string; wsUrl: string }> {
+): Promise<{ serverId: string; agentDeviceId: string; sessionToken?: string; wsUrl: string }> {
   return apiFetch('/api/pairing/claim', {
     method: 'POST',
     body: JSON.stringify({
@@ -130,18 +130,28 @@ export async function claimPairing(
  * Create a server ready for the desktop agent to connect. The orchestrator
  * auto-pairs the device at creation time — no separate pairing-code claim is
  * involved (that flow only applies to servers paired from the web dashboard).
+ *
+ * NOTE on tokens: POST /api/servers' `connect` payload carries ONLY
+ * {serverId, agentDeviceId, wsUrl} — it does NOT issue a sessionToken (the
+ * orchestrator mints tokens exclusively in POST /api/pairing/claim). A server
+ * created through this path therefore has NO stored pairingTokenHash and its
+ * device connects tokenless (accepted while AGENT_LEGACY_OK=true and the
+ * stored hash is null). If the orchestrator later starts returning a token in
+ * `connect`, capture it here.
  */
 export async function createAndConnect(
   name: string,
   directory: string,
-): Promise<{ id: string; agentDeviceId: string }> {
+): Promise<{ id: string; agentDeviceId: string; sessionToken?: string }> {
   const result = await createServer(name, directory)
   const serverId = result.connect?.serverId || result.server?.id
   const agentDeviceId = result.connect?.agentDeviceId
   if (!serverId || !agentDeviceId) {
     throw new Error('Server created but no agent device was returned')
   }
-  return { id: serverId, agentDeviceId }
+  // Defensive: honor a token if the orchestrator ever adds one to `connect`.
+  const sessionToken = (result.connect as { sessionToken?: string } | undefined)?.sessionToken
+  return { id: serverId, agentDeviceId, sessionToken }
 }
 
 export async function startServer(serverId: string): Promise<any> {
@@ -164,27 +174,29 @@ export async function regeneratePairing(serverId: string): Promise<{ code: strin
 export async function connectExistingServer(
   serverId: string,
   directory: string,
-): Promise<{ serverId: string; agentDeviceId: string }> {
+): Promise<{ serverId: string; agentDeviceId: string; sessionToken?: string }> {
   // 1. Fetch server details from orchestrator
   const details = await apiFetch(`/api/servers/${serverId}`)
 
-  // 2. If already paired, use existing paired agent device ID directly
+  // 2. If already paired, use existing paired agent device ID directly.
+  //    No fresh token is minted here — reuse whatever is persisted (the
+  //    Rust side only sends it when it belongs to this server).
   if (details?.agent?.id) {
     return { serverId, agentDeviceId: details.agent.id }
   }
 
-  // 3. If there is an active pairing code, claim it
+  // 3. If there is an active pairing code, claim it (claim mints a token).
   if (details?.pairing?.code) {
     const claim = await claimPairing(details.pairing.code, directory)
-    return { serverId: claim.serverId, agentDeviceId: claim.agentDeviceId }
+    return { serverId: claim.serverId, agentDeviceId: claim.agentDeviceId, sessionToken: claim.sessionToken }
   }
 
-  // 4. Otherwise request a new pairing code and claim it
+  // 4. Otherwise request a new pairing code and claim it (token minted).
   try {
     const pairing = await getPairingCode(serverId)
     if (pairing?.code) {
       const claim = await claimPairing(pairing.code, directory)
-      return { serverId: claim.serverId, agentDeviceId: claim.agentDeviceId }
+      return { serverId: claim.serverId, agentDeviceId: claim.agentDeviceId, sessionToken: claim.sessionToken }
     }
   } catch (err) {
     console.warn('Pairing code request note:', err)

@@ -474,8 +474,14 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     setCreateError(null)
     try {
       // Create server — the orchestrator auto-pairs an agent device and
-      // returns its id under `connect`.
+      // returns its id under `connect`. (That payload carries no session
+      // token today; see createAndConnect's note in api.ts.)
       const result = await api.createAndConnect(newServerName, newServerDir)
+
+      // Persist a token if the orchestrator ever includes one in `connect`.
+      if (result.sessionToken) {
+        await invoke('set_session_token_cmd', { sessionToken: result.sessionToken })
+      }
 
       // Connect agent WebSocket via Tauri
       await invoke('connect_agent_cmd', {
@@ -599,13 +605,21 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
 
     try {
       let agentDeviceId = savedDeviceId
+      let freshSessionToken: string | undefined
 
       if (!agentDeviceId) {
-        // First time: go through pairing claim flow
+        // First time: go through pairing claim flow (mints a session token)
         const data = await api.connectExistingServer(server.id, directory)
         agentDeviceId = data.agentDeviceId
+        freshSessionToken = data.sessionToken
         localStorage.setItem(`agent_device_${server.id}`, agentDeviceId)
         localStorage.setItem(`server_dir_${server.id}`, directory)
+      }
+
+      // Persist a freshly-minted session token BEFORE connecting so the WS
+      // hello can present it (freshly-paired devices require it).
+      if (freshSessionToken) {
+        await invoke('set_session_token_cmd', { sessionToken: freshSessionToken })
       }
 
       // Connect WebSocket directly using the stored agentDeviceId
