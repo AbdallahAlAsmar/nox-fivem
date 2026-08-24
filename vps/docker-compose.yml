@@ -27,9 +27,17 @@ services:
       DIRECT_URL: postgresql://postgres:noxdev123@postgres:5432/fivem_dev
       ORCHESTRATOR_PORT: "3001"
       JWT_SECRET: nox-jwt-secret-change-this-to-random-32chars
-      CLERK_JWKS_DOMAIN: relevant-ram-9120.clerk.accounts.dev
-      CLERK_JWT_AUDIENCE: ""
+      # Required by the orchestrator to verify dashboard bearer tokens.
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      # Browser-facing origin added to the CORS allowlist.
+      DASHBOARD_ORIGIN: ${DASHBOARD_ORIGIN:-https://nox-fivem.vercel.app}
       CORS_ORIGINS: http://158.101.167.118:3000,http://localhost:3000,http://localhost:1420,tauri://localhost,https://tauri.localhost,https://nox-fivem.vercel.app
+      # TRANSITIONAL flags — flip to "false" after all clients send tokens /
+      # agents have re-paired with session tokens.
+      AUTH_ALLOW_ANON: "true"
+      AGENT_LEGACY_OK: "true"
+      # WebSocket URL handed to desktop agents at pairing time.
+      ORCHESTRATOR_WS_URL: ws://158.101.167.118:3001/ws/agent
       OMNIROUTE_BASE_URL: https://last-revelation-reporting-volt.trycloudflare.com/v1
       OMNI_KEY: omni-key
       NODE_ENV: production
