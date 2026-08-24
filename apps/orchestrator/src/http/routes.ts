@@ -101,8 +101,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Get server details (includes pairing codes — strictly org-scoped)
   fastify.get('/api/servers/:serverId', async (request, reply) => {
-    const requireAuthUser = requireAuth(request);
-    void requireAuthUser;
+    requireAuth(request);
     const params = z.object({
       serverId: z.string(),
     }).parse(request.params);
