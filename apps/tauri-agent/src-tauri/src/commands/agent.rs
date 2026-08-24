@@ -708,7 +708,7 @@ async fn handle_orchestrator_request(
                 send_error(
                     &tx, req_id, server_id, agent_device_id,
                     action, "NOT_IMPLEMENTED",
-                    "txAdmin not configured — ban/unban requires a txAdmin connection on the agent machine",
+                    "txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings",
                 );
                 return;
             }
@@ -751,7 +751,7 @@ async fn handle_orchestrator_request(
                 send_error(
                     &tx, req_id, server_id, agent_device_id,
                     action, "NOT_IMPLEMENTED",
-                    "txAdmin not configured — resource restart requires a txAdmin connection on the agent machine",
+                    "txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings",
                 );
                 return;
             }

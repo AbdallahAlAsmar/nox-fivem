@@ -17,6 +17,27 @@ import { registerResourceRoutes } from './resourceRoutes';
 
 export async function registerRoutes(fastify: FastifyInstance) {
   await fastify.register(registerResourceRoutes);
+
+  /**
+   * Extract optional txAdmin connection details from a Server's settings JSON
+   * so agent commands (listPlayers/ban/unban/restart*) can reach txAdmin.
+   * Storage contract: settings JSON keys useTxAdmin/txadminUrl/txadminApiKey —
+   * the same key names the Tauri agent's WS arms read from args. Absent or
+   * incomplete config yields {} and agents reply honestly that they cannot act.
+   */
+  function txAdminArgs(settings: unknown): {
+    useTxAdmin?: boolean;
+    txadminUrl?: string;
+    txadminApiKey?: string;
+  } {
+    const s = (settings && typeof settings === 'object' ? settings : {}) as Record<string, unknown>;
+    const url = typeof s.txadminUrl === 'string' ? s.txadminUrl.trim() : '';
+    const key = typeof s.txadminApiKey === 'string' ? s.txadminApiKey.trim() : '';
+    if (s.useTxAdmin === true && url && key) {
+      return { useTxAdmin: true, txadminUrl: url, txadminApiKey: key };
+    }
+    return {};
+  }
   // ============================================
   // Servers
   // ============================================
@@ -370,7 +391,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   fastify.get('/api/servers/:serverId/players', async (request, reply) => {
     const params = z.object({ serverId: z.string() }).parse(request.params);
-    if (!await assertServerAccess(request, reply, params.serverId)) return;
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
     const cached = cache.get(`players:${params.serverId}`);
     if (cached) return cached;
     const agentGateway = (fastify as any).agentGateway;
@@ -378,7 +400,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'Agent not connected' });
     }
     try {
-      const result = await agentGateway.sendCommand(params.serverId, 'fivem.listPlayers', {}, 10000);
+      const result = await agentGateway.sendCommand(params.serverId, 'fivem.listPlayers', txAdminArgs(server.settings), 10000);
       // Agent dialect: { players: [...], source: 'txadmin' | 'none' }.
       // Tolerate bare arrays from older agents.
       const livePlayers: any[] = Array.isArray(result)
@@ -1263,7 +1285,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       await agentGateway.sendCommand(
         params.serverId,
         'fivem.restartServer',
-        {},
+        txAdminArgs(server.settings),
         30000
       );
       return { status: 'restart_sent' };
@@ -1397,7 +1419,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }).parse(request.params);
     const body = z.object({ reason: z.string().optional() }).parse(request.body);
 
-    if (!await assertServerAccess(request, reply, params.serverId)) return;
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
 
     // Resolve by DB id first, then fall back to the raw identifier.
     let player = await prisma.player.findFirst({
@@ -1418,13 +1441,22 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }
     if (!player.isBanned) {
       try {
-        // Surface agent errors honestly — agents always reply now.
+        // Surface agent errors honestly — agents always reply now. txAdmin
+        // config is relayed from Server.settings; when it's absent the agent
+        // replies NOT_IMPLEMENTED naming exactly what is missing.
         await gateway.sendCommand(params.serverId, 'fivem.banPlayer', {
           identifier: player.playerId,
           reason: body.reason || 'Banned via NOX',
+          ...txAdminArgs(server.settings),
         }, 10000);
       } catch (e: any) {
-        return reply.status(502).send({ error: `Ban failed on agent: ${e?.message || JSON.stringify(e)}` });
+        const agentMsg = e?.message || (typeof e === 'string' ? e : JSON.stringify(e));
+        if (e?.code === 'NOT_IMPLEMENTED') {
+          return reply.status(502).send({
+            error: 'txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings to enable bans',
+          });
+        }
+        return reply.status(502).send({ error: `Ban failed on agent: ${agentMsg}` });
       }
     }
 
@@ -1446,7 +1478,8 @@ export async function registerRoutes(fastify: FastifyInstance) {
       playerId: z.string(),
     }).parse(request.params);
 
-    if (!await assertServerAccess(request, reply, params.serverId)) return;
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
 
     // Resolve by DB id first, then fall back to the raw identifier.
     let player = await prisma.player.findFirst({
@@ -1465,13 +1498,24 @@ export async function registerRoutes(fastify: FastifyInstance) {
     if (!gateway.isConnected(params.serverId)) {
       return reply.status(400).send({ error: 'Agent is not connected' });
     }
-    try {
-      // Surface agent errors honestly — agents always reply now.
-      await gateway.sendCommand(params.serverId, 'fivem.unbanPlayer', {
-        identifier: player.playerId,
-      }, 10000);
-    } catch (e: any) {
-      return reply.status(502).send({ error: `Unban failed on agent: ${e?.message || JSON.stringify(e)}` });
+    // Mirror the ban route's guard: don't ask the agent to lift a ban that
+    // isn't recorded as active.
+    if (player.isBanned) {
+      try {
+        // Surface agent errors honestly — agents always reply now. txAdmin
+        // config is relayed from Server.settings.
+        await gateway.sendCommand(params.serverId, 'fivem.unbanPlayer', {
+          identifier: player.playerId,
+          ...txAdminArgs(server.settings),
+        }, 10000);
+      } catch (e: any) {
+        if (e?.code === 'NOT_IMPLEMENTED') {
+          return reply.status(502).send({
+            error: 'txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings to enable unbans',
+          });
+        }
+        return reply.status(502).send({ error: `Unban failed on agent: ${e?.message || JSON.stringify(e)}` });
+      }
     }
 
     const updated = await prisma.player.update({
