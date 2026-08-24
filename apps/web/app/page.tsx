@@ -153,15 +153,17 @@ export default function Home() {
             </Link>
 
             <div className="flex items-center gap-3">
-              <Link href="/sign-in">
-                <button className="font-mono text-xs uppercase tracking-[1.4px] px-4 py-2 text-white border border-[rgba(255,255,255,0.2)] hover:border-[rgba(255,255,255,0.4)] transition-colors duration-100">
-                  Sign In
-                </button>
+              <Link
+                href="/sign-in"
+                className="font-mono text-xs uppercase tracking-[1.4px] px-4 py-2 text-white border border-[rgba(255,255,255,0.2)] hover:border-[rgba(255,255,255,0.4)] transition-colors duration-100"
+              >
+                Sign In
               </Link>
-              <Link href="/sign-up">
-                <button className="font-mono text-xs uppercase tracking-[1.4px] px-5 py-2 bg-white text-[#0F0F14] font-medium hover:opacity-85 transition-opacity duration-100">
-                  Get Started
-                </button>
+              <Link
+                href="/sign-up"
+                className="font-mono text-xs uppercase tracking-[1.4px] px-5 py-2 bg-white text-[#0F0F14] font-medium hover:opacity-85 transition-opacity duration-100"
+              >
+                Get Started
               </Link>
             </div>
           </div>

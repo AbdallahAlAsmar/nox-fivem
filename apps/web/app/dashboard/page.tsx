@@ -27,7 +27,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ORCHESTRATOR_URL } from '@/lib/config';
 import { scanResources, restartServer, createServer, deleteServer } from '@/lib/api';
-import { AuthError } from '@/lib/auth-fetch';
+import { authedFetch } from '@/lib/auth-fetch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
 import { useState, useCallback } from 'react';
@@ -75,7 +75,7 @@ interface ActivityItem {
 const ORCH_URL = ORCHESTRATOR_URL;
 
 async function fetchServers() {
-  const res = await fetch(`${ORCH_URL}/api/servers`);
+  const res = await authedFetch(`${ORCH_URL}/api/servers`);
   if (!res.ok) throw new Error(res.status.toString());
   return res.json();
 }
@@ -84,7 +84,7 @@ async function fetchAllChanges(servers: any[]) {
   const results = await Promise.all(
     servers.map(async (s) => {
       try {
-        const res = await fetch(`${ORCH_URL}/api/servers/${s.id}/changes`);
+        const res = await authedFetch(`${ORCH_URL}/api/servers/${s.id}/changes`);
         if (!res.ok) return [];
         return (await res.json()).map((c: any) => ({ ...c, serverId: s.id, serverName: s.name }));
       } catch { return []; }
@@ -288,30 +288,31 @@ function ServerCard({
         <span className="font-mono text-[10px] text-white/25">
           {server.lastSeenAt ? `Last seen ${timeAgo(new Date(server.lastSeenAt).getTime())}` : 'No recent activity'}
         </span>
+        {/* Card actions are mouse-only spans: nesting real <button>s inside the
+            card's <Link> is invalid HTML, and the ruling is that keyboard users
+            navigate with the link itself (full controls live on the server page). */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleScan(); }}
-            disabled={scanning}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors duration-100 disabled:opacity-50"
+          <span
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!scanning) handleScan(); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors duration-100 ${scanning ? 'opacity-50' : ''}`}
           >
             <RefreshCw className={`w-3 h-3 ${scanning ? 'animate-spin' : ''}`} />
             Scan
-          </button>
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRestart(); }}
-            disabled={restarting}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors duration-100 disabled:opacity-50"
+          </span>
+          <span
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!restarting) handleRestart(); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors duration-100 ${restarting ? 'opacity-50' : ''}`}
           >
             <Play className="w-3 h-3" />
             Restart
-          </button>
-          <button
+          </span>
+          <span
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(server); }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/30 hover:text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-colors duration-100"
           >
             <Trash2 className="w-3 h-3" />
             Delete
-          </button>
+          </span>
         </div>
       </div>
     </Link>
@@ -446,7 +447,6 @@ export default function DashboardPage() {
           mutate();
           router.refresh();
         } catch (e: any) {
-          if (e instanceof AuthError) throw e;
           toast.error(e?.message || 'Failed to delete server');
         }
       },

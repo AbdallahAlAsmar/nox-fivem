@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0F0F14] dark:bg-[#0F0F14] light:bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-[#0F0F14] dark:bg-[#0F0F14]">
       <SidebarNav />
       <main className="flex-1 flex flex-col overflow-hidden ml-[48px] transition-all duration-300">
         {children}
