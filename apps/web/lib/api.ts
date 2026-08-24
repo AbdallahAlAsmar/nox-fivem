@@ -1,5 +1,5 @@
 import { ORCHESTRATOR_URL } from './config';
-import { authedFetch, AuthError } from './auth-fetch';
+import { authedFetch } from './auth-fetch';
 
 // ─── SWR-based hooks ──────────────────────────────────────────────────────────
 
@@ -11,56 +11,31 @@ const swrFetcher = (url: string) =>
 
 /** Fetch all servers */
 export async function fetchServers(): Promise<any[]> {
-  try {
-    const data = await swrFetcher(`${ORCHESTRATOR_URL}/api/servers`);
-    return data;
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  const data = await swrFetcher(`${ORCHESTRATOR_URL}/api/servers`);
+  return data;
 }
 
 /** Fetch a single server */
 export async function fetchServer(serverId: string): Promise<any> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return null;
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}`);
 }
 
 /** Fetch chat messages for a thread */
 export async function fetchMessages(threadId: string): Promise<any[]> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`);
 }
 
 /** Fetch pending changes for a server */
 export async function fetchChanges(serverId: string): Promise<any[]> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/changes`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/changes`);
 }
 
 /** Fetch all changes across all servers */
 export async function fetchAllChangesGlobal(serverId?: string): Promise<any[]> {
-  try {
-    const url = serverId
-      ? `${ORCHESTRATOR_URL}/api/changes?serverId=${serverId}&limit=100`
-      : `${ORCHESTRATOR_URL}/api/changes?limit=100`;
-    return await swrFetcher(url);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  const url = serverId
+    ? `${ORCHESTRATOR_URL}/api/changes?serverId=${serverId}&limit=100`
+    : `${ORCHESTRATOR_URL}/api/changes?limit=100`;
+  return await swrFetcher(url);
 }
 
 /** Create a new server */
@@ -88,12 +63,7 @@ export async function createServer(
 
 /** Fetch threads for a server */
 export async function fetchThreads(serverId: string): Promise<any[]> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads?serverId=${serverId}`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads?serverId=${serverId}`);
 }
 
 /** Create a new thread for a server */
@@ -111,22 +81,12 @@ export async function createThread(serverId: string, title?: string): Promise<an
 
 /** Fetch messages for a thread */
 export async function fetchThreadMessages(threadId: string): Promise<any[]> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`);
 }
 
 /** Fetch one shared thread per server */
 export async function fetchServerThread(serverId: string): Promise<any> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/thread`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return null;
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/thread`);
 }
 
 /** Delete a thread */
@@ -147,12 +107,7 @@ export async function fetchResourceCatalog(params?: {
   if (params?.type) qs.set('type', params.type);
   if (params?.page) qs.set('page', params.page);
   if (params?.limit) qs.set('limit', params.limit);
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/catalog${qs.toString() ? '?' + qs.toString() : ''}`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return { items: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/catalog${qs.toString() ? '?' + qs.toString() : ''}`);
 }
 
 /** Install a resource */
@@ -167,12 +122,7 @@ export async function installResource(serverId: string, slug: string): Promise<a
 
 /** Fetch install history for a server */
 export async function fetchResourceInstalls(serverId: string): Promise<any[]> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/installs/${serverId}`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/installs/${serverId}`);
 }
 
 /** Rollback a resource install */
@@ -264,22 +214,12 @@ export async function refreshPairing(serverId: string): Promise<{ code: string; 
 
 /** Fetch all resources for a server */
 export async function fetchServerResources(serverId: string): Promise<any[]> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/resources`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/resources`);
 }
 
 /** Fetch players for a server */
 export async function fetchPlayers(serverId: string): Promise<any[]> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/players`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return [];
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/players`);
 }
 
 /** Ban a player */
@@ -311,22 +251,12 @@ export async function unbanPlayer(serverId: string, playerId: string): Promise<a
 
 /** Fetch org billing info */
 export async function fetchOrg(): Promise<any> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/org`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return null;
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/org`);
 }
 
 /** Fetch usage and cost data */
 export async function fetchUsage(): Promise<any> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/usage`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return null;
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/usage`);
 }
 
 /** Batch approve changes */
@@ -351,21 +281,18 @@ export async function batchCancelChanges(changeIds: string[], serverId?: string)
 
 /** Fetch agent connection status */
 export async function fetchAgentStatus(): Promise<{ connectedServers: string[]; total: number }> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/agent/status`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return { connectedServers: [], total: 0 };
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/agent/status`);
 }
 
 /** Check onboarding status */
 export async function fetchOnboardingStatus(): Promise<{ onboarded: boolean }> {
+  // Deliberate fallback: the dashboard layout redirects to /dashboard/onboarding
+  // when this returns onboarded:false, so a transient API failure must NOT
+  // block the user (it re-runs on every layout mount).
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/onboarding/status`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return { onboarded: true }; // default to onboarding complete
+  } catch {
+    return { onboarded: true };
   }
 }
 
@@ -380,12 +307,7 @@ export async function fetchResourceConfig(serverId: string, resourceName: string
   modifiedAt: string;
   error?: string;
 } | null> {
-  try {
-    return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/resources/${encodeURIComponent(resourceName)}/config`);
-  } catch (err) {
-    if (err instanceof AuthError) throw err;
-    return null as any;
-  }
+  return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/resources/${encodeURIComponent(resourceName)}/config`);
 }
 
 /** Save a resource config change */

@@ -15,15 +15,18 @@ export default function ChangesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchSuccess, setBatchSuccess] = useState<string | null>(null);
 
-  const { data: servers, isLoading: loadingServers } = useSWR('servers', fetchServers, {
+  const { data: servers, isLoading: loadingServers, error: serversError, mutate: mutateServers } = useSWR('servers', fetchServers, {
     fallbackData: [],
   });
 
-  const { data: changes, isLoading: loadingChanges, mutate } = useSWR(
+  const { data: changes, isLoading: loadingChanges, error: changesError, mutate } = useSWR(
     'changes-global',
     () => fetchAllChangesGlobal(selectedServer || undefined),
     { dedupingInterval: 10_000 },
   );
+
+  // Fetchers now propagate errors instead of swallowing to [] — surface them.
+  const loadError = serversError || changesError;
 
   const filtered = (changes ?? []).filter((c: any) => {
     const matchesServer = !selectedServer || c.serverId === selectedServer;
@@ -216,6 +219,18 @@ export default function ChangesPage() {
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] h-16 animate-pulse" />
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="text-center py-16 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
+            <AlertCircle className="w-10 h-10 text-white/20 mx-auto mb-4" />
+            <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white/60 mb-2">Failed to load changes</h3>
+            <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
+            <button
+              onClick={() => { mutateServers(); mutate(); }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+            >
+              Retry
+            </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
