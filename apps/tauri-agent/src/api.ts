@@ -265,8 +265,8 @@ export async function fetchChanges(serverId?: string): Promise<any[]> {
 /**
  * Apply every pending change for a server, one at a time, so each change gets
  * a real git-checkpointed apply on the agent (the orchestrator's batch/apply
- * endpoint only flips DB status without touching files — not used here).
- * Returns per-change outcomes; never throws.
+ * endpoint only flips DB status without applying files — not used here).
+ * List-fetch failures throw; individual applies are reported per-change.
  */
 export async function applyAllChanges(
   serverId: string,
