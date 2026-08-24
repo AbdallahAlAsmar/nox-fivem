@@ -1,5 +1,5 @@
-mod config;
-mod commands;
+pub mod config;
+pub mod commands;
 
 use tauri::Emitter;
 use tauri::Manager;
@@ -10,7 +10,7 @@ use commands::{
     server::{create_server_cmd, get_servers_cmd, remove_server_cmd, scan_resources_cmd, open_folder_cmd, inspect_server_dir},
     filesystem::{list_files_cmd, read_file_cmd, find_server_data_cmd},
     git::{git_init_cmd, git_add_all_cmd, git_commit_cmd, git_rollback_cmd, git_log_cmd},
-    agent::{connect_agent_cmd, disconnect_agent_cmd, send_chat_message_cmd, get_agent_state_cmd, scan_server_resources_cmd, start_heartbeat},
+    agent::{connect_agent_cmd, disconnect_agent_cmd, send_chat_message_cmd, get_agent_state_cmd, scan_server_resources_cmd},
 };
 use config::AgentState;
 
@@ -47,10 +47,24 @@ fn main() {
             std::fs::create_dir_all(&app_dir)?;
             println!("App data directory: {}", app_dir.display());
 
-            // Auto-connect agent on startup if a server is configured
+            // Persisted config lives next to the app data dir; load it before
+            // anything reads connection settings.
+            config::set_config_path(app_dir.join("config.json"));
+            config::load_config_from_disk();
+
+            // Global handle for event emissions from non-command code paths
+            // (WS reader tasks, reconnect loop).
+            commands::agent::set_app_handle(app.handle().clone());
+
+            // Auto-connect agent on startup if a server is configured.
+            // Honors the persisted auto_start preference (Settings toggle).
             {
                 let app_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
+                    if !config::get_config().auto_start {
+                        println!("[AutoConnect] Disabled in settings — skipping");
+                        return;
+                    }
                     // Small delay to let the app fully initialize
                     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                     match auto_connect_agent().await {

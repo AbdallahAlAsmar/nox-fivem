@@ -1,15 +1,16 @@
 use std::sync::{Arc, Mutex};
+use std::sync::OnceLock;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::fs;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::config::{AgentState, AgentConnectionStatus, update_agent_state, get_config, get_agent_state, update_config};
+use crate::config::{AgentState, AgentConnectionStatus, update_agent_state, get_config, get_agent_state, mutate_config};
 use crate::commands::scanner::{Scanner, ScanResult};
 use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use tokio::sync::mpsc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMessage {
@@ -17,6 +18,7 @@ pub struct ChatMessage {
     pub role: String,
     pub content: String,
     pub timestamp: i64,
+    #[serde(default)]
     pub tool_calls: Option<Vec<ToolCall>>,
 }
 
@@ -56,8 +58,19 @@ pub struct AgentConnection {
     sender: mpsc::UnboundedSender<Message>,
     server_id: String,
     agent_device_id: String,
+    /// Session token for agent.hello (sha256-compared against the device's
+    /// stored pairingTokenHash server-side). Freshly-paired devices REQUIRE
+    /// it — tokenless hellos are rejected. Held on the connection for
+    /// debugging/reconnect parity; the hello is built from config directly.
+    #[allow(dead_code)]
+    session_token: Option<String>,
     #[allow(dead_code)]
     server_directory: String,
+    /// When this connection was established — feeds honest heartbeat uptime.
+    connected_at: Instant,
+    /// Generation counter bumped on every new connection; heartbeat loops from
+    /// older generations exit instead of leaking forever (D3).
+    pub generation: u64,
     pub pending_requests: Arc<Mutex<HashMap<String, mpsc::UnboundedSender<ResponsePayload>>>>,
 }
 
@@ -66,13 +79,18 @@ impl AgentConnection {
         sender: mpsc::UnboundedSender<Message>,
         server_id: String,
         agent_device_id: String,
+        session_token: Option<String>,
         server_directory: String,
+        generation: u64,
     ) -> Self {
         Self {
             sender,
             server_id,
             agent_device_id,
+            session_token,
             server_directory,
+            connected_at: Instant::now(),
+            generation,
             pending_requests: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -82,11 +100,65 @@ lazy_static::lazy_static! {
     pub static ref AGENT_CONNECTION: Arc<Mutex<Option<AgentConnection>>> = Arc::new(Mutex::new(None));
 }
 
+/// Monotonic generation counter — bumped for every new WS connection so stale
+/// heartbeat loops can detect they've been superseded and exit.
+static CONNECTION_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// Check if the agent is currently connected to the orchestrator
 #[allow(dead_code)]
 pub fn is_connected() -> bool {
     let guard = AGENT_CONNECTION.lock().unwrap();
     guard.is_some()
+}
+
+/// Reconnect with exponential backoff after an unexpected disconnect:
+/// 2s → 4s → 8s … capped at 60s, max 10 attempts, then give up until a manual
+/// connect or the next auto-connect tick. A deliberate disconnect_agent_cmd
+/// cancels any pending loop via the reconnect token.
+static RECONNECT_TOKEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn spawn_reconnect_loop(mut server_id: String, mut agent_device_id: String, mut server_directory: String) {
+    let my_token = RECONNECT_TOKEN.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    tokio::spawn(async move {
+        let mut delay = Duration::from_secs(2);
+        for attempt in 1..=10 {
+            tokio::time::sleep(delay).await;
+            // Superseded by a newer connect/disconnect? Stop.
+            if RECONNECT_TOKEN.load(std::sync::atomic::Ordering::SeqCst) != my_token {
+                return;
+            }
+            println!("[Agent] Reconnect attempt {} for server {}", attempt, server_id);
+            match connect_agent_cmd(server_id.clone(), agent_device_id.clone(), server_directory.clone()).await {
+                Ok(_) => {
+                    println!("[Agent] Reconnected to server {}", server_id);
+                    return;
+                }
+                Err(e) => {
+                    println!("[Agent] Reconnect attempt {} failed: {}", attempt, e);
+                    // A rejection means credentials/state are bad — retrying
+                    // with backoff is still correct; the cap bounds it.
+                    delay = (delay * 2).min(Duration::from_secs(60));
+                    // Refresh config in case update_config changed stored ids.
+                    let cfg = get_config();
+                    if cfg.server_id.as_deref() == Some(server_id.as_str()) {
+                        if let Some(id) = &cfg.server_id { server_id = id.clone(); }
+                        if !cfg.agent_device_id.is_empty() { agent_device_id = cfg.agent_device_id.clone(); }
+                        if !cfg.server_directory.is_empty() { server_directory = cfg.server_directory.clone(); }
+                    }
+                }
+            }
+        }
+        println!("[Agent] Giving up reconnecting after 10 attempts");
+        update_agent_state(|state| {
+            state.connected = false;
+            state.status = AgentConnectionStatus::Error;
+        });
+    });
+}
+
+fn cancel_reconnect() {
+    // Invalidate any pending reconnect loop by advancing the token.
+    RECONNECT_TOKEN.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 }
 
 #[tauri::command]
@@ -96,10 +168,14 @@ pub async fn connect_agent_cmd(
     server_directory: String,
 ) -> Result<AgentState, String> {
     let config = get_config();
+    let session_token = config.session_token.clone();
     let orchestrator_url = config.orchestrator_url.replace("http://", "ws://").replace("https://", "wss://");
     let ws_url = format!("{}/ws/agent", orchestrator_url);
 
     println!("[Agent] Connecting to {} for server {} (device {})", ws_url, server_id, agent_device_id);
+
+    // A fresh explicit connect supersedes any pending reconnect loop.
+    cancel_reconnect();
 
     update_agent_state(|state| {
         state.status = AgentConnectionStatus::Connecting;
@@ -107,6 +183,8 @@ pub async fn connect_agent_cmd(
 
     let (ws_stream, _) = connect_async(&ws_url).await
         .map_err(|e| format!("Failed to connect to orchestrator WebSocket: {}", e))?;
+
+    let generation = CONNECTION_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
 
     let (mut write, mut read) = ws_stream.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
@@ -124,42 +202,49 @@ pub async fn connect_agent_cmd(
         tx.clone(),
         server_id.clone(),
         agent_device_id.clone(),
+        session_token.clone(),
         server_directory.clone(),
+        generation,
     );
 
     // Send hello message formatted as protocol envelope
+    let mut hello_payload = serde_json::json!({
+        "agentDeviceId": agent_device_id,
+        "serverId": server_id,
+        "agentVersion": "0.1.0",
+        "platform": if cfg!(target_os = "windows") { "windows" } else { "linux" },
+        "capabilities": [
+            "fs.read",
+            "fs.list",
+            "fs.write",
+            "fs.applyPatch",
+            "git.checkpoint",
+            "git.rollback",
+            "fivem.restartResource",
+            "fivem.restartServer",
+            "fivem.tailConsole",
+            "fivem.listPlayers",
+            "fivem.banPlayer",
+            "fivem.unbanPlayer",
+            "scan.resources",
+        ],
+    });
+    if let Some(token) = &session_token {
+        hello_payload["sessionToken"] = serde_json::json!(token);
+    }
     let hello_env = serde_json::json!({
         "protocolVersion": "2026-08-12.v1",
         "messageId": Uuid::new_v4().to_string(),
         "type": "agent.hello",
         "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-        "payload": {
-            "agentDeviceId": agent_device_id,
-            "serverId": server_id,
-            "agentVersion": "0.1.0",
-            "platform": if cfg!(target_os = "windows") { "windows" } else { "linux" },
-            "capabilities": [
-                "fs.read",
-                "fs.list",
-                "fs.write",
-                "fs.applyPatch",
-                "git.checkpoint",
-                "git.rollback",
-                "fivem.restartResource",
-                "fivem.restartServer",
-                "fivem.tailConsole",
-                "fivem.listPlayers",
-                "fivem.banPlayer",
-                "fivem.unbanPlayer",
-                "scan.resources",
-            ],
-        }
+        "payload": hello_payload
     });
 
     tx.send(Message::Text(hello_env.to_string())).map_err(|e| e.to_string())?;
 
     let (auth_tx, auth_rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
-    let mut auth_tx_opt = Arc::new(std::sync::Mutex::new(Some(auth_tx)));
+    let auth_tx_opt: Arc<std::sync::Mutex<Option<tokio::sync::oneshot::Sender<Result<(), String>>>>> =
+        Arc::new(std::sync::Mutex::new(Some(auth_tx)));
 
     let pending_requests = connection.pending_requests.clone();
     let srv_dir = server_directory.clone();
@@ -167,6 +252,13 @@ pub async fn connect_agent_cmd(
     let dev_id = agent_device_id.clone();
     let tx_reply = tx_clone.clone();
     let auth_tx_reader = auth_tx_opt.clone();
+
+    // Reader-task context for disconnect handling (D2/D3):
+    // - was_connected flips true once authenticated so a later close/error
+    //   knows it is an UNexpected drop worth reconnecting.
+    // - my_generation lets the loop stop if a newer connection superseded it.
+    let was_connected = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let my_generation = generation;
 
     tokio::spawn(async move {
         while let Some(msg) = read.next().await {
@@ -183,6 +275,8 @@ pub async fn connect_agent_cmd(
                                     state.status = AgentConnectionStatus::Connected;
                                     state.last_heartbeat = Some(chrono::Utc::now().timestamp());
                                 });
+                                was_connected.store(true, std::sync::atomic::Ordering::SeqCst);
+                                emit_connected();
                                 if let Ok(mut lock) = auth_tx_reader.lock() {
                                     if let Some(tx) = lock.take() {
                                         let _ = tx.send(Ok(()));
@@ -226,15 +320,33 @@ pub async fn connect_agent_cmd(
 
                                 println!("[Agent] Received request action: {} (requestId: {})", action, req_id);
 
-                                tokio::spawn(handle_orchestrator_request(
-                                    action,
-                                    args,
-                                    req_id,
-                                    srv_id.clone(),
-                                    dev_id.clone(),
-                                    srv_dir.clone(),
-                                    tx_reply.clone(),
-                                ));
+                                // D5: handler bodies do blocking fs I/O and full
+                                // directory scans. Run them on the blocking pool
+                                // so the WS reader keeps draining frames
+                                // (heartbeats/responses) while a scan runs.
+                                let req_srv_id = srv_id.clone();
+                                let req_dev_id = dev_id.clone();
+                                let req_srv_dir = srv_dir.clone();
+                                let req_tx = tx_reply.clone();
+                                tokio::task::spawn_blocking(move || {
+                                    // handle_orchestrator_request is async only
+                                    // for its txAdmin HTTP calls — a small
+                                    // nested runtime here is safe (we are NOT
+                                    // inside a tokio worker thread).
+                                    let rt = tokio::runtime::Builder::new_current_thread()
+                                        .enable_all()
+                                        .build()
+                                        .expect("failed to build request-handler runtime");
+                                    rt.block_on(handle_orchestrator_request(
+                                        action,
+                                        args,
+                                        req_id,
+                                        req_srv_id,
+                                        req_dev_id,
+                                        req_srv_dir,
+                                        req_tx,
+                                    ));
+                                });
                             }
                             _ => {}
                         }
@@ -242,18 +354,32 @@ pub async fn connect_agent_cmd(
                 }
                 Ok(Message::Close(_)) => {
                     println!("[Agent] WebSocket connection closed");
+                    let unexpected = was_connected.load(std::sync::atomic::Ordering::SeqCst);
                     update_agent_state(|state| {
                         state.connected = false;
-                        state.status = AgentConnectionStatus::Disconnected;
+                        if unexpected {
+                            state.status = AgentConnectionStatus::Disconnected;
+                        }
                     });
+                    if unexpected && my_generation == CONNECTION_GENERATION.load(std::sync::atomic::Ordering::SeqCst) {
+                        // D2/D3: only the newest connection reconnects and emits,
+                        // so a superseded socket can't fight its replacement.
+                        emit_disconnect(app_handle());
+                        spawn_reconnect_loop(srv_id.clone(), dev_id.clone(), srv_dir.clone());
+                    }
                     break;
                 }
                 Err(e) => {
                     println!("[Agent] WebSocket error: {}", e);
+                    let unexpected = was_connected.load(std::sync::atomic::Ordering::SeqCst);
                     update_agent_state(|state| {
                         state.connected = false;
                         state.status = AgentConnectionStatus::Error;
                     });
+                    if unexpected && my_generation == CONNECTION_GENERATION.load(std::sync::atomic::Ordering::SeqCst) {
+                        emit_disconnect(app_handle());
+                        spawn_reconnect_loop(srv_id.clone(), dev_id.clone(), srv_dir.clone());
+                    }
                     break;
                 }
                 _ => {}
@@ -263,6 +389,23 @@ pub async fn connect_agent_cmd(
 
     {
         let mut conn = AGENT_CONNECTION.lock().unwrap();
+        // Drop any superseded connection first so its pending requests fail fast.
+        if let Some(old) = conn.take() {
+            let mut pending = old.pending_requests.lock().unwrap();
+            for (_, sender) in pending.drain() {
+                let _ = sender.send(ResponsePayload {
+                    ok: false,
+                    action: "connection.superseded".to_string(),
+                    result: None,
+                    error: Some(ErrorDetail {
+                        code: "CONNECTION_LOST".to_string(),
+                        message: "Agent reconnected; request cancelled".to_string(),
+                        retryable: false,
+                        details: None,
+                    }),
+                });
+            }
+        }
         *conn = Some(connection);
     }
 
@@ -291,14 +434,48 @@ pub async fn connect_agent_cmd(
         state.last_heartbeat = Some(chrono::Utc::now().timestamp());
     });
 
-    // Save connection info to config for auto-connect on next launch
-    let mut config = get_config();
-    config.server_id = Some(server_id.clone());
-    config.agent_device_id = agent_device_id.clone();
-    config.server_directory = server_directory.clone();
-    update_config(config);
+    emit_connected();
+
+    // Save connection info to config for auto-connect on next launch.
+    // mutate_config persists to disk (D1) — session_token is stored alongside.
+    mutate_config(|cfg| {
+        cfg.server_id = Some(server_id.clone());
+        cfg.agent_device_id = agent_device_id.clone();
+        cfg.server_directory = server_directory.clone();
+        if !session_token.is_some() && cfg.session_token.is_none() {
+            // Nothing new to store; keep whatever is persisted.
+        }
+    });
 
     Ok(get_agent_state())
+}
+
+/// Emit the frontend-facing connect event so UI badges update live (B6).
+fn emit_connected() {
+    if let Some(app) = app_handle() {
+        use tauri::Emitter;
+        let _ = app.emit("agent:connected", true);
+    }
+}
+
+/// Emit the disconnect event after an unexpected drop.
+fn emit_disconnect(app: Option<&tauri::AppHandle>) {
+    if let Some(app) = app {
+        use tauri::Emitter;
+        let _ = app.emit("agent:connected", false);
+    }
+}
+
+/// Process-wide handle set once in main.rs setup, so non-command code paths
+/// (reader tasks, reconnect loops) can emit events without a Window param.
+static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
+
+pub fn set_app_handle(handle: tauri::AppHandle) {
+    let _ = APP_HANDLE.set(handle);
+}
+
+fn app_handle() -> Option<&'static tauri::AppHandle> {
+    APP_HANDLE.get()
 }
 
 async fn handle_orchestrator_request(
@@ -927,9 +1104,28 @@ pub fn scan_server_resources_cmd(server_directory: String) -> Result<ScanResult,
 
 #[tauri::command]
 pub async fn disconnect_agent_cmd() -> Result<AgentState, String> {
+    // Deliberate disconnect — cancel any pending auto-reconnect loop.
+    cancel_reconnect();
+
     let mut conn = AGENT_CONNECTION.lock().unwrap();
     if let Some(connection) = conn.take() {
         let _ = connection.sender.send(Message::Close(None));
+        // Fail any in-flight pending requests immediately.
+        if let Ok(mut pending) = connection.pending_requests.lock() {
+            for (_, sender) in pending.drain() {
+                let _ = sender.send(ResponsePayload {
+                    ok: false,
+                    action: "connection.closed".to_string(),
+                    result: None,
+                    error: Some(ErrorDetail {
+                        code: "CONNECTION_LOST".to_string(),
+                        message: "Agent disconnected; request cancelled".to_string(),
+                        retryable: false,
+                        details: None,
+                    }),
+                });
+            }
+        }
     }
 
     update_agent_state(|state| {
@@ -937,6 +1133,8 @@ pub async fn disconnect_agent_cmd() -> Result<AgentState, String> {
         state.server_id = None;
         state.status = AgentConnectionStatus::Disconnected;
     });
+
+    emit_disconnect(app_handle());
 
     Ok(get_agent_state())
 }
@@ -982,9 +1180,18 @@ pub async fn send_chat_message_cmd(
 
     connection.sender.send(Message::Text(chat_env.to_string())).map_err(|e| e.to_string())?;
 
-    let response = tokio::time::timeout(Duration::from_secs(60), rx.recv()).await
-        .map_err(|_| "Request timed out")?
-        .ok_or("Connection closed")?;
+    let response = match tokio::time::timeout(Duration::from_secs(60), rx.recv()).await {
+        Ok(res) => res,
+        Err(_) => {
+            // D4: the timeout path MUST drop the pending entry, otherwise it
+            // leaks forever and the map grows with every timed-out request.
+            if let Ok(mut pending) = connection.pending_requests.lock() {
+                pending.remove(&request_id);
+            }
+            return Err("Request timed out".to_string());
+        }
+    }
+    .ok_or("Connection closed")?;
 
     if !response.ok {
         return Err(response.error.map(|e| e.message).unwrap_or_else(|| "Unknown error".to_string()));
@@ -1020,32 +1227,62 @@ pub fn get_agent_state_cmd() -> AgentState {
     get_agent_state()
 }
 
+/// Spawn the heartbeat loop for the CURRENT connection. Each loop is bound to
+/// a connection generation: when a newer connection replaces this one (or the
+/// socket drops), the loop exits instead of leaking an immortal thread per
+/// connect (D3).
 pub fn start_heartbeat() {
-    std::thread::spawn(|| {
+    // Read generation + start time under the same lock so they always match.
+    let (generation, connected_at) = {
+        let guard = AGENT_CONNECTION.lock().unwrap();
+        match guard.as_ref() {
+            Some(conn) => (conn.generation, conn.connected_at),
+            None => return,
+        }
+    };
+
+    std::thread::spawn(move || {
         loop {
             std::thread::sleep(Duration::from_secs(30));
+
+            // A newer connection exists → this loop is obsolete. Exit.
+            if CONNECTION_GENERATION.load(std::sync::atomic::Ordering::SeqCst) != generation {
+                println!("[Heartbeat] Generation {} superseded — stopping", generation);
+                return;
+            }
 
             let conn = {
                 let guard = AGENT_CONNECTION.lock().unwrap();
                 guard.clone()
             };
 
-            if let Some(connection) = conn {
-                let heartbeat_env = serde_json::json!({
-                    "protocolVersion": "2026-08-12.v1",
-                    "messageId": Uuid::new_v4().to_string(),
-                    "type": "agent.heartbeat",
-                    "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                    "serverId": connection.server_id,
-                    "agentDeviceId": connection.agent_device_id,
-                    "payload": {
-                        "uptimeSeconds": 30,
-                        "currentRootHash": null,
-                        "activeFxServer": true
-                    }
-                });
+            match conn {
+                Some(connection) if connection.generation == generation => {
+                    // REAL uptime since this connection was established.
+                    let uptime = connected_at.elapsed().as_secs();
+                    let heartbeat_env = serde_json::json!({
+                        "protocolVersion": "2026-08-12.v1",
+                        "messageId": Uuid::new_v4().to_string(),
+                        "type": "agent.heartbeat",
+                        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                        "serverId": connection.server_id,
+                        "agentDeviceId": connection.agent_device_id,
+                        "payload": {
+                            "uptimeSeconds": uptime,
+                            "currentRootHash": null,
+                            "activeFxServer": false
+                        }
+                    });
 
-                let _ = connection.sender.send(Message::Text(heartbeat_env.to_string()));
+                    if connection.sender.send(Message::Text(heartbeat_env.to_string())).is_err() {
+                        println!("[Heartbeat] Send failed — connection gone, stopping");
+                        return;
+                    }
+                }
+                _ => {
+                    // Connection cleared or replaced — stop this loop.
+                    return;
+                }
             }
         }
     });
