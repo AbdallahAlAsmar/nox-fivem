@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clerk/backend": "^3",
     "@fastify/cors": "^9.0.0",
     "@fastify/websocket": "^10.0.0",
     "@fivem-ai/db": "workspace:*",
@@ -20,6 +21,7 @@
     "@types/ws": "^8.5.12",
     "bcrypt": "^5.1.1",
     "fastify": "^4.28.0",
+    "fastify-plugin": "^4",
     "jose": "^5.6.0",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.1.0",

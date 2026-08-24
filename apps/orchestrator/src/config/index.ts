@@ -7,7 +7,12 @@ const configSchema = z.object({
   directUrl: z.string().url().optional(),
   jwtSecret: z.string().min(32),
   anthropicApiKey: z.string().optional().default(''),
-  corsOrigins: z.array(z.string()).default(['http://localhost:3000']),
+  corsOrigins: z.array(z.string()).default([
+    'http://localhost:3000',
+    'http://localhost:1420',
+    'tauri://localhost',
+    'http://tauri.localhost',
+  ]),
 });
 
 export const config = {
@@ -17,7 +22,10 @@ export const config = {
   directUrl: process.env.DIRECT_URL || process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production-min-32-chars',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
-  corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:1420').split(','),
+  corsOrigins: (
+    process.env.CORS_ORIGINS ||
+    'http://localhost:3000,http://localhost:1420,tauri://localhost,http://tauri.localhost'
+  ).split(',').map((s) => s.trim()).filter(Boolean),
 };
 
 // Validate in production
