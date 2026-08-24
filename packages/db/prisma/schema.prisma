@@ -210,9 +210,25 @@ model AppUser {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  apiKeys        ApiKey[]
 
   @@index([organizationId])
   @@map("app_users")
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  prefix     String?
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
 }
 
 model ResourceIndex {

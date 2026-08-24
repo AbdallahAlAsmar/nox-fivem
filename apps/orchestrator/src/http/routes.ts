@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as crypto from 'crypto';
 import { z } from 'zod';
 import { prisma } from '@fivem-ai/db';
@@ -189,6 +189,35 @@ export async function registerRoutes(fastify: FastifyInstance) {
         dependencies: r.dependencies as string[],
       })),
     };
+  });
+
+  // Rename a server (org-scoped)
+  fastify.patch('/api/servers/:serverId', async (request, reply) => {
+    requireAuth(request, reply);
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+    const body = z.object({
+      name: z.string().trim().min(1).max(100),
+    }).parse(request.body);
+
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
+
+    const updated = await prisma.server.update({
+      where: { id: params.serverId },
+      data: { name: body.name },
+      select: { id: true, name: true },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        orgId: server.orgId,
+        serverId: params.serverId,
+        action: 'server.renamed',
+        metadata: { from: server.name, to: body.name },
+      },
+    });
+
+    return updated;
   });
 
   // ============================================
@@ -1359,26 +1388,13 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
   // Refresh pairing code for an unpaired server
   fastify.post('/api/servers/:serverId/pairing', async (request, reply) => {
-    requireAuth(request, reply);
-    const params = z.object({ serverId: z.string() }).parse(request.params);
+    return refreshPairingHandler(request, reply);
+  });
 
-    if (!await assertServerAccess(request, reply, params.serverId)) return;
-
-    const server = await prisma.server.findUnique({
-      where: { id: params.serverId },
-      include: {
-        agentDevices: { orderBy: { createdAt: 'desc' } },
-      },
-    });
-    if (!server) return reply.status(404).send({ error: 'Not found' });
-
-    if (server.agentDevices.some((d: any) => d.status === 'paired')) {
-      return reply.status(400).send({ error: 'Server is already paired' });
-    }
-
-    const pending = server.agentDevices.find((d: any) => d.status === 'pending');
-    const pairing = await issuePairing(server.id, pending?.id);
-    return { pairing };
+  // Alias for the same operation — the dashboard calls this path
+  // (servers/[serverId]/page.tsx) and reads code/expiresAt at the top level.
+  fastify.post('/api/servers/:serverId/regenerate-pairing', async (request, reply) => {
+    return refreshPairingHandler(request, reply, { flatResponse: true });
   });
 
   // Revoke agent
@@ -1769,6 +1785,39 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // ============================================
   // Pairing helpers
   // ============================================
+
+  /**
+   * Shared implementation for POST /api/servers/:serverId/pairing and its
+   * /regenerate-pairing alias. flatResponse=true returns { code, expiresAt }
+   * at the top level (what the dashboard's regenerate handler expects);
+   * the default wraps them as { pairing: { code, expiresAt } }.
+   */
+  async function refreshPairingHandler(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    opts: { flatResponse?: boolean } = {},
+  ) {
+    requireAuth(request, reply);
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+
+    if (!await assertServerAccess(request, reply, params.serverId)) return;
+
+    const server = await prisma.server.findUnique({
+      where: { id: params.serverId },
+      include: {
+        agentDevices: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+    if (!server) return reply.status(404).send({ error: 'Not found' });
+
+    if (server.agentDevices.some((d: any) => d.status === 'paired')) {
+      return reply.status(400).send({ error: 'Server is already paired' });
+    }
+
+    const pending = server.agentDevices.find((d: any) => d.status === 'pending');
+    const pairing = await issuePairing(server.id, pending?.id);
+    return opts.flatResponse ? pairing : { pairing };
+  }
 
   async function issuePairing(serverId: string, agentDeviceId?: string) {
     const code = generatePairingCode();
