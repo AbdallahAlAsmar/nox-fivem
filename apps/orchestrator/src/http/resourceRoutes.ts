@@ -2,10 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '@fivem-ai/db';
 import { requireAuth } from '../auth';
-import {
-  assertServerAccess,
-  assertInstallAccess,
-} from '../auth/access';
+import { assertServerAccess } from '../auth/access';
 
 const PUBLIC_RESOURCE_CATALOG: Array<{
   slug: string;
@@ -123,91 +120,21 @@ export async function registerResourceRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // Install a resource (requires auth + server)
+  // Install a resource (requires auth + server).
+  //
+  // HONESTLY NOT IMPLEMENTED YET: a real installer needs agent-side plumbing
+  // (orchestrator downloads the resource bundle → relays files to the agent's
+  // scoped filesystem via fs.write). The previous implementation faked the
+  // whole thing — a setTimeout walked progress 25→100% and marked rows
+  // 'installed' without touching a single file on the customer's server.
+  // Until the agent gains an install command, refuse instead of lying.
   fastify.post('/api/resources/install', async (request, reply) => {
-    const { serverId, slug } = z.object({
-      serverId: z.string(),
-      slug: z.string(),
-    }).parse(request.body);
-
     requireAuth(request, reply);
-
-    const server = await assertServerAccess(request, reply, serverId);
-    if (!server) return;
-
-    const resource = PUBLIC_RESOURCE_CATALOG.find((r) => r.slug === slug);
-    if (!resource) return reply.code(404).send({ error: 'Resource not found' });
-
-    // Check if already installed or installing
-    const existing = await prisma.resourceInstall.findFirst({
-      where: { serverId, slug, status: { in: ['installing', 'installed'] } },
+    return reply.code(501).send({
+      error: 'not_implemented',
+      message:
+        'Resource installation requires agent support (planned). Install resources manually for now.',
     });
-    if (existing) {
-      return reply.code(409).send({
-        error: 'Resource is already being installed or is installed',
-        install: existing,
-      });
-    }
-
-    const install = await prisma.resourceInstall.create({
-      data: {
-        serverId,
-        slug: resource.slug,
-        name: resource.name,
-        status: 'installing',
-        progress: 0,
-        startedAt: new Date(),
-      },
-    });
-
-    // Simulate async install progress
-    fastify.log.info(`Starting resource install: ${resource.name} for server ${serverId}`);
-
-    // Use a timer to simulate the install process
-    setTimeout(async () => {
-      try {
-        // Simulate progress steps
-        const steps = [
-          { progress: 25, message: 'Downloading...' },
-          { progress: 50, message: 'Extracting files...' },
-          { progress: 75, message: 'Writing files...' },
-          { progress: 90, message: 'Verifying install...' },
-        ];
-
-        for (const step of steps) {
-          await new Promise((r) => setTimeout(r, 800));
-          await prisma.resourceInstall.update({
-            where: { id: install.id },
-            data: { progress: step.progress },
-          });
-        }
-
-        // Mark as installed
-        await prisma.resourceInstall.update({
-          where: { id: install.id },
-          data: {
-            status: 'installed',
-            progress: 100,
-            completedAt: new Date(),
-          },
-        });
-
-        fastify.log.info(`Resource installed successfully: ${resource.name} for server ${serverId}`);
-      } catch (err) {
-        // Mark as failed
-        await prisma.resourceInstall.update({
-          where: { id: install.id },
-          data: {
-            status: 'failed',
-            error: err instanceof Error ? err.message : 'Unknown error',
-            failedAt: new Date(),
-          },
-        });
-        fastify.log.error(`Resource install failed: ${resource.name} - ${err}`);
-      }
-    }, 100);
-
-    return reply.code(200).send({ install });
   });
 
   // Get install history for a server
@@ -229,43 +156,14 @@ export async function registerResourceRoutes(fastify: FastifyInstance) {
     return installs;
   });
 
-  // Rollback a resource install
+  // Rollback a resource install — same honest refusal as /install. No real
+  // installer has ever run, so there is nothing on any server to roll back.
   fastify.post('/api/resources/installs/:installId/rollback', async (request, reply) => {
-    const { installId } = z.object({
-      installId: z.string(),
-    }).parse(request.params);
-
     requireAuth(request, reply);
-
-    const install = await assertInstallAccess(request, reply, installId);
-    if (!install) return;
-
-    if (install.status !== 'installed') {
-      return reply.code(400).send({ error: 'Resource is not in installed state' });
-    }
-
-    // Mark rollback requested
-    await prisma.resourceInstall.update({
-      where: { id: installId },
-      data: { status: 'rollback_requested' },
+    return reply.code(501).send({
+      error: 'not_implemented',
+      message:
+        'Resource installation requires agent support (planned). Install resources manually for now.',
     });
-
-    // Simulate rollback
-    setTimeout(async () => {
-      try {
-        await prisma.resourceInstall.update({
-          where: { id: installId },
-          data: {
-            status: 'rollbacked',
-            rolledBackAt: new Date(),
-          },
-        });
-        fastify.log.info(`Resource rolled back: ${install.name} for server ${install.serverId}`);
-      } catch (err) {
-        fastify.log.error(`Rollback failed: ${install.name} - ${err}`);
-      }
-    }, 500);
-
-    return reply.code(200).send({ message: 'Rollback initiated' });
   });
 }

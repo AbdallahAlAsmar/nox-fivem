@@ -110,13 +110,22 @@ export async function fetchResourceCatalog(params?: {
   return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/catalog${qs.toString() ? '?' + qs.toString() : ''}`);
 }
 
-/** Install a resource */
+/** Install a resource. Surfaces the server's honest error (e.g. 501 not_implemented). */
 export async function installResource(serverId: string, slug: string): Promise<any> {
   const res = await authedFetch(`${ORCHESTRATOR_URL}/api/resources/install`, {
     method: 'POST',
     body: JSON.stringify({ serverId, slug }),
   });
-  if (!res.ok) throw new Error(`Failed to install resource: ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const body = await res.json();
+      if (body?.message) detail = ` — ${body.message}`;
+    } catch {
+      // non-JSON error body; fall back to status-only message
+    }
+    throw new Error(`Failed to install resource (${res.status})${detail}`);
+  }
   return res.json();
 }
 
@@ -125,12 +134,21 @@ export async function fetchResourceInstalls(serverId: string): Promise<any[]> {
   return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/installs/${serverId}`);
 }
 
-/** Rollback a resource install */
+/** Rollback a resource install. Surfaces the server's honest error (e.g. 501). */
 export async function rollbackResourceInstall(installId: string): Promise<void> {
   const res = await authedFetch(`${ORCHESTRATOR_URL}/api/resources/installs/${installId}/rollback`, {
     method: 'POST',
   });
-  if (!res.ok) throw new Error(`Failed to rollback: ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const body = await res.json();
+      if (body?.message) detail = ` — ${body.message}`;
+    } catch {
+      // non-JSON error body; fall back to status-only message
+    }
+    throw new Error(`Failed to rollback (${res.status})${detail}`);
+  }
 }
 
 /** Delete a server */

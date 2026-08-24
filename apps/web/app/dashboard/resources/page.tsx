@@ -134,12 +134,13 @@ export default function ResourceHubPage() {
         message: 'Resource installation in progress...',
       });
       await refreshInstalls();
-    } catch {
-      toast.error('Install failed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Failed to install ${slug}`;
+      toast.error(message);
       addNotification({
         type: 'failure',
-        title: 'Install Failed',
-        message: `Failed to install ${slug}`,
+        title: 'Installation Unavailable',
+        message,
       });
     } finally {
       setInstalling(null);
@@ -157,12 +158,13 @@ export default function ResourceHubPage() {
         message: 'Resource rollback in progress...',
       });
       await refreshInstalls();
-    } catch {
-      toast.error('Rollback failed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Failed to rollback ${resourceName}`;
+      toast.error(message);
       addNotification({
         type: 'failure',
         title: 'Rollback Failed',
-        message: `Failed to rollback ${resourceName}`,
+        message,
       });
     } finally {
       setRollbacking(null);
