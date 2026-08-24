@@ -4,12 +4,26 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { fetchOnboardingStatus } from '@/lib/api';
+import { configureAuthFetch } from '@/lib/auth-fetch';
 import SidebarNav from '@/components/dashboard/SidebarNav';
 import { OnboardingTour } from '@/components/landing/OnboardingTour';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded, getToken } = useAuth();
+
+  // Attach the Clerk session token to every orchestrator call made through
+  // lib/api. getToken() refreshes near-expiry tokens automatically.
+  useEffect(() => {
+    configureAuthFetch(async () => {
+      try {
+        return await getToken();
+      } catch {
+        return null;
+      }
+    });
+    return () => configureAuthFetch(null);
+  }, [getToken]);
 
   useEffect(() => {
     if (!isLoaded) return;

@@ -1,11 +1,10 @@
 import { ORCHESTRATOR_URL } from './config';
+import { authedFetch, AuthError } from './auth-fetch';
 
 // ─── SWR-based hooks ──────────────────────────────────────────────────────────
 
 const swrFetcher = (url: string) =>
-  fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-  }).then((r) => {
+  authedFetch(url).then((r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   });
@@ -15,7 +14,8 @@ export async function fetchServers(): Promise<any[]> {
   try {
     const data = await swrFetcher(`${ORCHESTRATOR_URL}/api/servers`);
     return data;
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
@@ -24,7 +24,8 @@ export async function fetchServers(): Promise<any[]> {
 export async function fetchServer(serverId: string): Promise<any> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return null;
   }
 }
@@ -33,7 +34,8 @@ export async function fetchServer(serverId: string): Promise<any> {
 export async function fetchMessages(threadId: string): Promise<any[]> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
@@ -42,7 +44,8 @@ export async function fetchMessages(threadId: string): Promise<any[]> {
 export async function fetchChanges(serverId: string): Promise<any[]> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/changes`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
@@ -54,7 +57,8 @@ export async function fetchAllChangesGlobal(serverId?: string): Promise<any[]> {
       ? `${ORCHESTRATOR_URL}/api/changes?serverId=${serverId}&limit=100`
       : `${ORCHESTRATOR_URL}/api/changes?limit=100`;
     return await swrFetcher(url);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
@@ -68,9 +72,8 @@ export async function createServer(
   pairing: { code: string; expiresAt: Date };
   connect?: { serverId: string; agentDeviceId: string; wsUrl: string };
 }> {
-  const res = await fetch(`${ORCHESTRATOR_URL}/api/servers`, {
+  const res = await authedFetch(`${ORCHESTRATOR_URL}/api/servers`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
   });
   if (!res.ok) throw new Error(`Failed to create server: ${res.status}`);
@@ -87,18 +90,18 @@ export async function createServer(
 export async function fetchThreads(serverId: string): Promise<any[]> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads?serverId=${serverId}`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
 
 /** Create a new thread for a server */
 export async function createThread(serverId: string, title?: string): Promise<any> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/servers/${serverId}/threads`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: title || 'Chat' }),
     },
   );
@@ -110,7 +113,8 @@ export async function createThread(serverId: string, title?: string): Promise<an
 export async function fetchThreadMessages(threadId: string): Promise<any[]> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/threads/${threadId}/messages`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
@@ -119,16 +123,16 @@ export async function fetchThreadMessages(threadId: string): Promise<any[]> {
 export async function fetchServerThread(serverId: string): Promise<any> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/thread`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return null;
   }
 }
 
 /** Delete a thread */
 export async function deleteThread(serverId: string, threadId: string): Promise<void> {
-  const res = await fetch(`${ORCHESTRATOR_URL}/api/threads/${threadId}`, {
+  const res = await authedFetch(`${ORCHESTRATOR_URL}/api/threads/${threadId}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Failed to delete thread: ${res.status}`);
 }
@@ -145,16 +149,16 @@ export async function fetchResourceCatalog(params?: {
   if (params?.limit) qs.set('limit', params.limit);
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/catalog${qs.toString() ? '?' + qs.toString() : ''}`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return { items: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   }
 }
 
 /** Install a resource */
 export async function installResource(serverId: string, slug: string): Promise<any> {
-  const res = await fetch(`${ORCHESTRATOR_URL}/api/resources/install`, {
+  const res = await authedFetch(`${ORCHESTRATOR_URL}/api/resources/install`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ serverId, slug }),
   });
   if (!res.ok) throw new Error(`Failed to install resource: ${res.status}`);
@@ -165,25 +169,24 @@ export async function installResource(serverId: string, slug: string): Promise<a
 export async function fetchResourceInstalls(serverId: string): Promise<any[]> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/resources/installs/${serverId}`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
 
 /** Rollback a resource install */
 export async function rollbackResourceInstall(installId: string): Promise<void> {
-  const res = await fetch(`${ORCHESTRATOR_URL}/api/resources/installs/${installId}/rollback`, {
+  const res = await authedFetch(`${ORCHESTRATOR_URL}/api/resources/installs/${installId}/rollback`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Failed to rollback: ${res.status}`);
 }
 
 /** Delete a server */
 export async function deleteServer(serverId: string, confirmName: string): Promise<void> {
-  const res = await fetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}`, {
+  const res = await authedFetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ confirmName }),
   });
   if (!res.ok) throw new Error(`Failed to delete server: ${res.status}`);
@@ -193,11 +196,10 @@ export async function sendChatMessage(
   message: string,
   userId?: string,
 ): Promise<any> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/threads/${threadId}/chat`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, userId: userId || 'anonymous' }),
     },
   );
@@ -207,9 +209,9 @@ export async function sendChatMessage(
 
 /** Apply a staged change */
 export async function applyChange(changeId: string): Promise<any> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/changes/${changeId}/apply`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+    { method: 'POST' },
   );
   if (!res.ok) throw new Error(`Failed to apply change: ${res.status}`);
   return res.json();
@@ -217,9 +219,9 @@ export async function applyChange(changeId: string): Promise<any> {
 
 /** Cancel a pending change */
 export async function cancelChange(changeId: string): Promise<any> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/changes/${changeId}/cancel`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+    { method: 'POST' },
   );
   if (!res.ok) throw new Error(`Failed to cancel change: ${res.status}`);
   return res.json();
@@ -227,9 +229,9 @@ export async function cancelChange(changeId: string): Promise<any> {
 
 /** Scan resources for a server */
 export async function scanResources(serverId: string): Promise<any> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/servers/${serverId}/scan`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+    { method: 'POST' },
   );
   if (!res.ok) throw new Error(`Failed to scan resources: ${res.status}`);
   return res.json();
@@ -237,19 +239,34 @@ export async function scanResources(serverId: string): Promise<any> {
 
 /** Restart a server via the agent */
 export async function restartServer(serverId: string): Promise<any> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/servers/${serverId}/restart`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+    { method: 'POST' },
   );
   if (!res.ok) throw new Error(`Failed to restart server: ${res.status}`);
   return res.json();
+}
+
+/** Mint or refresh the pairing code for a server */
+export async function refreshPairing(serverId: string): Promise<{ code: string; expiresAt: Date }> {
+  const res = await authedFetch(
+    `${ORCHESTRATOR_URL}/api/servers/${serverId}/pairing`,
+    { method: 'POST' },
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error || `Failed to refresh pairing: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.pairing;
 }
 
 /** Fetch all resources for a server */
 export async function fetchServerResources(serverId: string): Promise<any[]> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/resources`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
@@ -258,7 +275,8 @@ export async function fetchServerResources(serverId: string): Promise<any[]> {
 export async function fetchPlayers(serverId: string): Promise<any[]> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/players`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return [];
   }
 }
@@ -269,11 +287,10 @@ export async function banPlayer(
   playerId: string,
   reason?: string,
 ): Promise<any> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/servers/${serverId}/players/${playerId}/ban`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason }),
     },
   );
@@ -283,9 +300,9 @@ export async function banPlayer(
 
 /** Unban a player */
 export async function unbanPlayer(serverId: string, playerId: string): Promise<any> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/servers/${serverId}/players/${playerId}/unban`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+    { method: 'POST' },
   );
   if (!res.ok) throw new Error(`Failed to unban player: ${res.status}`);
   return res.json();
@@ -295,7 +312,8 @@ export async function unbanPlayer(serverId: string, playerId: string): Promise<a
 export async function fetchOrg(): Promise<any> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/org`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return null;
   }
 }
@@ -304,16 +322,16 @@ export async function fetchOrg(): Promise<any> {
 export async function fetchUsage(): Promise<any> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/usage`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return null;
   }
 }
 
 /** Batch approve changes */
 export async function batchApproveChanges(changeIds: string[], serverId?: string): Promise<{ approved: string[]; skipped: Array<{ id: string; reason: string }> }> {
-  const res = await fetch(`${ORCHESTRATOR_URL}/api/changes/batch/apply`, {
+  const res = await authedFetch(`${ORCHESTRATOR_URL}/api/changes/batch/apply`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ changeIds, serverId }),
   });
   if (!res.ok) throw new Error(`Failed to batch approve: ${res.status}`);
@@ -322,9 +340,8 @@ export async function batchApproveChanges(changeIds: string[], serverId?: string
 
 /** Batch cancel changes */
 export async function batchCancelChanges(changeIds: string[], serverId?: string): Promise<{ cancelled: string[]; skipped: Array<{ id: string; reason: string }> }> {
-  const res = await fetch(`${ORCHESTRATOR_URL}/api/changes/batch/cancel`, {
+  const res = await authedFetch(`${ORCHESTRATOR_URL}/api/changes/batch/cancel`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ changeIds, serverId }),
   });
   if (!res.ok) throw new Error(`Failed to batch cancel: ${res.status}`);
@@ -335,7 +352,8 @@ export async function batchCancelChanges(changeIds: string[], serverId?: string)
 export async function fetchAgentStatus(): Promise<{ connectedServers: string[]; total: number }> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/agent/status`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return { connectedServers: [], total: 0 };
   }
 }
@@ -344,7 +362,8 @@ export async function fetchAgentStatus(): Promise<{ connectedServers: string[]; 
 export async function fetchOnboardingStatus(): Promise<{ onboarded: boolean }> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/onboarding/status`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return { onboarded: true }; // default to onboarding complete
   }
 }
@@ -362,7 +381,8 @@ export async function fetchResourceConfig(serverId: string, resourceName: string
 } | null> {
   try {
     return await swrFetcher(`${ORCHESTRATOR_URL}/api/servers/${serverId}/resources/${encodeURIComponent(resourceName)}/config`);
-  } catch {
+  } catch (err) {
+    if (err instanceof AuthError) throw err;
     return null as any;
   }
 }
@@ -374,11 +394,10 @@ export async function saveResourceConfig(
   content: string,
   expectedSha256?: string,
 ): Promise<{ success: boolean; sha256: string }> {
-  const res = await fetch(
+  const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/servers/${serverId}/resources/${encodeURIComponent(resourceName)}/config`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content, expectedSha256 }),
     },
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { authedFetch, AuthError } from '@/lib/auth-fetch';
 
 interface AgentStatus {
   connected: boolean;
@@ -38,6 +39,13 @@ export function AgentStatusProvider({ children }: { children: ReactNode }) {
     let reconnectTimeout: NodeJS.Timeout | null = null;
 
     const connect = () => {
+      // Guard against malformed derivation (e.g. proxy-relative base URL) —
+      // skip connecting rather than throwing inside the effect.
+      if (!/^wss?:\/\//.test(wsUrl)) {
+        console.warn('[AgentStatus] Invalid WS URL, skipping connection:', wsUrl);
+        setIsChecking(false);
+        return;
+      }
       wsInstance = new WebSocket(`${wsUrl}/ws/status`);
 
       wsInstance.onopen = () => {
@@ -77,7 +85,12 @@ export function AgentStatusProvider({ children }: { children: ReactNode }) {
     // Also poll REST API as fallback
     const pollStatus = async () => {
       try {
-        const res = await fetch(`${orchestratorUrl}/api/agent/status`);
+        const res = await authedFetch(`${orchestratorUrl}/api/agent/status`);
+        if (res.status === 401) {
+          // Auth loss — stop polling; the layout handles re-auth.
+          setIsChecking(false);
+          return;
+        }
         const data = await res.json();
         setStatus({
           connected: data.total > 0,
@@ -86,6 +99,10 @@ export function AgentStatusProvider({ children }: { children: ReactNode }) {
         });
         setIsChecking(false);
       } catch (e) {
+        if (e instanceof AuthError) {
+          setIsChecking(false);
+          return;
+        }
         console.error('[AgentStatus] Poll failed:', e);
       }
     };

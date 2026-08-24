@@ -13,8 +13,7 @@ import {
   Pause,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { scanResources } from '@/lib/api';
-import { ORCHESTRATOR_URL } from '@/lib/config';
+import { fetchServer, scanResources, refreshPairing } from '@/lib/api';
 import { PairingSetupView } from '@/components/dashboard/PairingSetupView';
 
 export default function ServerConnectPage() {
@@ -36,9 +35,8 @@ export default function ServerConnectPage() {
 
     const load = async () => {
       try {
-        const res = await fetch(`${ORCHESTRATOR_URL}/api/servers/${serverId}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await fetchServer(serverId);
+        if (!data) throw new Error('Failed to load server');
 
         if (cancelled) return;
         setServer(data);
@@ -76,16 +74,8 @@ export default function ServerConnectPage() {
     setRegenerating(true);
     setPairingError(null);
     try {
-      const res = await fetch(
-        `${ORCHESTRATOR_URL}/api/servers/${serverId}/pairing`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } },
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      setPairing(data.pairing);
+      const pairing = await refreshPairing(serverId);
+      setPairing(pairing);
     } catch (err) {
       setPairingError(
         err instanceof Error ? err.message : 'Failed to regenerate pairing code',
