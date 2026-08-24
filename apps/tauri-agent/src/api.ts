@@ -204,8 +204,37 @@ export async function fetchChanges(serverId?: string): Promise<any[]> {
   }
 }
 
+/**
+ * Apply every pending change for a server, one at a time, so each change gets
+ * a real git-checkpointed apply on the agent (the orchestrator's batch/apply
+ * endpoint only flips DB status without touching files — not used here).
+ * Returns per-change outcomes; never throws.
+ */
+export async function applyAllChanges(
+  serverId: string,
+): Promise<{ applied: string[]; failed: Array<{ id: string; error: string }> }> {
+  const pending = await fetchChanges(serverId)
+  const applied: string[] = []
+  const failed: Array<{ id: string; error: string }> = []
+  for (const change of pending) {
+    if (change.status !== 'pending') continue
+    try {
+      await applyChange(change.id)
+      applied.push(change.id)
+    } catch (e) {
+      failed.push({ id: change.id, error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  return { applied, failed }
+}
+
 export async function applyChange(changeId: string): Promise<any> {
   return apiFetch(`/api/changes/${changeId}/apply`, { method: 'POST' })
+}
+
+/** Cancel (discard) a pending change — orchestrator marks it rolled_back. */
+export async function cancelChange(changeId: string): Promise<any> {
+  return apiFetch(`/api/changes/${changeId}/cancel`, { method: 'POST' })
 }
 
 // ─── Chat ────────────────────────────────────────────────────────────────────
