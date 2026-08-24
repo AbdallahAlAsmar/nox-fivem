@@ -822,6 +822,7 @@ name = "fivem-ai-agent"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dunce",
  "futures-util",
  "lazy_static",
  "once_cell",

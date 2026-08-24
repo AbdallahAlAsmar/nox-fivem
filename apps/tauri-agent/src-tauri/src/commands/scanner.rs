@@ -107,7 +107,7 @@ impl Scanner {
             let line = line.trim();
             
             // Skip comments
-            if line.starts_with('--') {
+            if line.starts_with("--") {
                 continue;
             }
 
@@ -175,7 +175,7 @@ impl Scanner {
         if combined.contains("qb-core") || combined.contains("qbcourse") {
             return "QBCore".to_string();
         }
-        if combined.contains("esx") {
+        if combined.contains("esx") || combined.contains("es_extended") {
             return "ESX".to_string();
         }
         if combined.contains("vrp") || combined.contains("vrp-") {

@@ -217,20 +217,20 @@ pub async fn connect_agent_cmd(
                             "agent.request" => {
                                 let req_id = raw.get("requestId").and_then(|v| v.as_str()).unwrap_or("").to_string();
                                 let payload = raw.get("payload").cloned().unwrap_or(serde_json::json!({}));
-                                let action = payload.get("action").and_then(|v| v.as_str()).unwrap_or("");
+                                let action = payload.get("action").and_then(|v| v.as_str()).unwrap_or("").to_string();
                                 let args = payload.get("args").cloned().unwrap_or(serde_json::json!({}));
 
                                 println!("[Agent] Received request action: {} (requestId: {})", action, req_id);
 
-                                handle_orchestrator_request(
-                                    &action,
-                                    &args,
-                                    &req_id,
-                                    &srv_id,
-                                    &dev_id,
-                                    &srv_dir,
-                                    &tx_reply,
-                                );
+                                tokio::spawn(handle_orchestrator_request(
+                                    action,
+                                    args,
+                                    req_id,
+                                    srv_id.clone(),
+                                    dev_id.clone(),
+                                    srv_dir.clone(),
+                                    tx_reply.clone(),
+                                ));
                             }
                             _ => {}
                         }
@@ -297,16 +297,21 @@ pub async fn connect_agent_cmd(
     Ok(get_agent_state())
 }
 
-fn handle_orchestrator_request(
-    action: &str,
-    args: &serde_json::Value,
-    req_id: &str,
-    server_id: &str,
-    agent_device_id: &str,
-    server_directory: &str,
-    tx: &mpsc::UnboundedSender<Message>,
+async fn handle_orchestrator_request(
+    action: String,
+    args: serde_json::Value,
+    req_id: String,
+    server_id: String,
+    agent_device_id: String,
+    server_directory: String,
+    tx: mpsc::UnboundedSender<Message>,
 ) {
-    let srv_path = PathBuf::from(server_directory);
+    let action = action.as_str();
+    let req_id = req_id.as_str();
+    let server_id = server_id.as_str();
+    let agent_device_id = agent_device_id.as_str();
+
+    let srv_path = PathBuf::from(&server_directory);
 
     match action {
         "scan.resources" => {
@@ -350,7 +355,28 @@ fn handle_orchestrator_request(
         }
         "fs.read" => {
             let rel_path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
-            let full_path = srv_path.join(rel_path);
+
+            let full_path = match crate::commands::filesystem::ensure_scoped(&srv_path, rel_path) {
+                Ok(p) => p,
+                Err(err) => {
+                    let env = serde_json::json!({
+                        "protocolVersion": "2026-08-12.v1",
+                        "messageId": Uuid::new_v4().to_string(),
+                        "type": "agent.response",
+                        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                        "requestId": req_id,
+                        "serverId": server_id,
+                        "agentDeviceId": agent_device_id,
+                        "payload": {
+                            "ok": false,
+                            "action": "fs.read",
+                            "error": { "code": "PATH_OUTSIDE_ROOT", "message": err, "retryable": false }
+                        }
+                    });
+                    let _ = tx.send(Message::Text(env.to_string()));
+                    return;
+                }
+            };
 
             match fs::read_to_string(&full_path) {
                 Ok(content) => {
@@ -397,9 +423,32 @@ fn handle_orchestrator_request(
         "fs.list" => {
             let rel_path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
             let full_path = if rel_path.is_empty() {
-                srv_path.clone()
+                match dunce::canonicalize(&srv_path) {
+                    Ok(p) => p,
+                    Err(_) => srv_path.clone(),
+                }
             } else {
-                srv_path.join(rel_path)
+                match crate::commands::filesystem::ensure_scoped(&srv_path, rel_path) {
+                    Ok(p) => p,
+                    Err(err) => {
+                        let env = serde_json::json!({
+                            "protocolVersion": "2026-08-12.v1",
+                            "messageId": Uuid::new_v4().to_string(),
+                            "type": "agent.response",
+                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                            "requestId": req_id,
+                            "serverId": server_id,
+                            "agentDeviceId": agent_device_id,
+                            "payload": {
+                                "ok": false,
+                                "action": "fs.list",
+                                "error": { "code": "PATH_OUTSIDE_ROOT", "message": err, "retryable": false }
+                            }
+                        });
+                        let _ = tx.send(Message::Text(env.to_string()));
+                        return;
+                    }
+                }
             };
 
             let mut entries = Vec::new();
@@ -448,7 +497,30 @@ fn handle_orchestrator_request(
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
 
-            let full_path = srv_path.join(rel_path);
+            // Writes are the highest-risk operation: validate scope before
+            // creating parent directories or touching disk.
+            let full_path = match crate::commands::filesystem::ensure_scoped(&srv_path, rel_path) {
+                Ok(p) => p,
+                Err(err) => {
+                    let env = serde_json::json!({
+                        "protocolVersion": "2026-08-12.v1",
+                        "messageId": Uuid::new_v4().to_string(),
+                        "type": "agent.response",
+                        "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                        "requestId": req_id,
+                        "serverId": server_id,
+                        "agentDeviceId": agent_device_id,
+                        "payload": {
+                            "ok": false,
+                            "action": "fs.applyPatch",
+                            "error": { "code": "PATH_OUTSIDE_ROOT", "message": err, "retryable": false }
+                        }
+                    });
+                    let _ = tx.send(Message::Text(env.to_string()));
+                    return;
+                }
+            };
+
             if let Some(parent) = full_path.parent() {
                 let _ = fs::create_dir_all(parent);
             }
@@ -618,6 +690,25 @@ fn handle_orchestrator_request(
                 "serverId": server_id,
                 "agentDeviceId": agent_device_id,
                 "payload": { "ok": true, "action": "fivem.restartServer", "result": { "status": "restart_sent" } }
+            });
+            let _ = tx.send(Message::Text(env.to_string()));
+        }
+        _ => {
+            // Unknown action — reply with an error result so the orchestrator's
+            // pending request does not wait for its full timeout.
+            let env = serde_json::json!({
+                "protocolVersion": "2026-08-12.v1",
+                "messageId": Uuid::new_v4().to_string(),
+                "type": "agent.response",
+                "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                "requestId": req_id,
+                "serverId": server_id,
+                "agentDeviceId": agent_device_id,
+                "payload": {
+                    "ok": false,
+                    "action": action,
+                    "error": { "code": "ACTION_UNKNOWN", "message": format!("Unknown action: {}", action), "retryable": false }
+                }
             });
             let _ = tx.send(Message::Text(env.to_string()));
         }
