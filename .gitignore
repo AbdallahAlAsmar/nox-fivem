@@ -61,3 +61,7 @@ coverage/
 
 .vercel
 .env*
+
+# Installers / build artifacts (never commit binaries)
+NOX-FiveM-Desktop.exe
+apps/web/public/dist/
