@@ -185,7 +185,7 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
     setIsLoading(true);
 
     try {
-      await sendChatMessage(activeThreadId, captured);
+      await sendChatMessage(activeThreadId, captured, sharedUserId, selectedSkills.length > 0 ? selectedSkills : undefined);
       // Reload messages for this thread
       await loadThreadMessages(activeThreadId);
     } catch (error) {

@@ -376,7 +376,13 @@ export async function registerRoutes(fastify: FastifyInstance) {
   fastify.post('/api/threads/:threadId/chat', async (request, reply) => {
     const user = requireAuth(request, reply);
     const params = z.object({ threadId: z.string() }).parse(request.params);
-    const body = z.object({ message: z.string().min(1).max(10000), userId: z.string().optional() }).parse(request.body);
+    const body = z.object({
+      message: z.string().min(1).max(10000),
+      userId: z.string().optional(),
+      // Skill chips from the dashboard — forwarded into the chat context so
+      // the model sees which skills the user enabled for this message.
+      selectedSkills: z.array(z.string()).optional(),
+    }).parse(request.body);
     // Client-sent userId values are ignored — identity comes from the token.
     void body.userId;
     const userId = user.userId;
@@ -399,10 +405,18 @@ export async function registerRoutes(fastify: FastifyInstance) {
     if (!gateway) return reply.status(500).send({ error: 'Agent gateway not initialized' });
     const chunks: string[] = [];
     let lastError: string | undefined;
-    await handleChatMessage(gateway, thread!.serverId, params.threadId, userId, body.message, (chunk: any) => {
-      if (chunk.type === 'text') chunks.push(chunk.content);
-      if (chunk.type === 'error') lastError = chunk.content;
-    });
+    await handleChatMessage(
+      gateway,
+      thread!.serverId,
+      params.threadId,
+      userId,
+      body.message,
+      (chunk: any) => {
+        if (chunk.type === 'text') chunks.push(chunk.content);
+        if (chunk.type === 'error') lastError = chunk.content;
+      },
+      body.selectedSkills,
+    );
     cache.invalidate(`threads:${thread!.serverId}:${userId}`);
     cache.invalidate(`thread:${thread!.serverId}:${userId}`);
     if (!chunks.length) {

@@ -9,8 +9,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
-  Play,
-  Pause,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchServer, scanResources, refreshPairing } from '@/lib/api';
@@ -291,14 +289,6 @@ function ConnectedView({
               className={`w-3.5 h-3.5 ${scanning ? 'animate-spin' : ''}`}
             />
             {scanning ? 'Scanning…' : 'Scan Resources'}
-          </button>
-          <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-white border border-[rgba(255,255,255,0.15)] hover:border-[rgba(255,255,255,0.3)] hover:bg-[rgba(255,255,255,0.04)] transition-colors">
-            <Play className="w-3.5 h-3.5" />
-            Start Server
-          </button>
-          <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-white border border-[rgba(255,255,255,0.15)] hover:border-[rgba(255,255,255,0.3)] hover:bg-[rgba(255,255,255,0.04)] transition-colors">
-            <Pause className="w-3.5 h-3.5" />
-            Stop Server
           </button>
         </div>
 

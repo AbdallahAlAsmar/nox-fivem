@@ -17,7 +17,6 @@ import {
   Settings,
   Terminal,
   Play,
-  Pause,
   Users,
   Activity,
   Clock,
@@ -36,6 +35,7 @@ import ChatPanel from '@/components/chat/ChatPanel';
 import { ORCHESTRATOR_URL } from '@/lib/config';
 import { scanResources, restartServer, deleteServer } from '@/lib/api';
 import { fetchPlayers, banPlayer, unbanPlayer } from '@/lib/api';
+import { authedFetch } from '@/lib/auth-fetch';
 import { motion, AnimatePresence } from 'framer-motion';
 import useSWR from 'swr';
 
@@ -60,9 +60,11 @@ export default function ServerDetailPage() {
   const [resourceScanning, setResourceScanning] = useState(false);
   const [resourceError, setResourceError] = useState<string | null>(null);
   const [serverName, setServerName] = useState('');
+  // While the user edits the name field, the settings poll must not clobber
+  // what they're typing. Cleared after a successful save.
+  const serverNameDirtyRef = useRef(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [resourceActions, setResourceActions] = useState<Record<string, 'stopping' | 'starting' | null>>({});
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ORCH_URL = ORCHESTRATOR_URL;
@@ -87,7 +89,7 @@ export default function ServerDetailPage() {
 
     try {
       setError(null);
-      const res = await fetch(`${ORCH_URL}/api/servers/${serverId}`);
+      const res = await authedFetch(`${ORCH_URL}/api/servers/${serverId}`);
       if (!res.ok) {
         if (res.status === 404) {
           setServer(null);
@@ -97,7 +99,9 @@ export default function ServerDetailPage() {
       }
       const data = await res.json();
       setServer(data);
-      setServerName(data.name ?? '');
+      if (!serverNameDirtyRef.current) {
+        setServerName(data.name ?? '');
+      }
 
       if (data.pairing) setPairing(data.pairing);
       else setPairing(null);
@@ -112,6 +116,7 @@ export default function ServerDetailPage() {
     loadServer();
     startPolling();
     return stopPolling;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId]);
 
   const handleDeleteServer = async (name: string) => {
@@ -131,9 +136,8 @@ export default function ServerDetailPage() {
     setRegenerating(true);
     setPairingError(null);
     try {
-      const res = await fetch(`${ORCH_URL}/api/servers/${serverId}/regenerate-pairing`, {
+      const res = await authedFetch(`${ORCH_URL}/api/servers/${serverId}/regenerate-pairing`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -172,24 +176,17 @@ export default function ServerDetailPage() {
     }
   };
 
-  const handleCopyCode = () => {
-    if (!pairing?.code) return;
-    navigator.clipboard.writeText(pairing.code);
-    setHeaderMessage('Pairing code copied');
-    setTimeout(() => setHeaderMessage(null), 2000);
-  };
-
   const handleSaveName = async () => {
     if (!serverName.trim() || isSavingName) return;
     setIsSavingName(true);
     setSaveMsg(null);
     try {
-      const res = await fetch(`${ORCH_URL}/api/servers/${serverId}`, {
+      const res = await authedFetch(`${ORCH_URL}/api/servers/${serverId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: serverName.trim() }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      serverNameDirtyRef.current = false;
       setSaveMsg('Server name updated');
       loadServer(false);
     } catch {
@@ -204,9 +201,8 @@ export default function ServerDetailPage() {
     setResourceScanning(true);
     setResourceError(null);
     try {
-      const res = await fetch(`${ORCH_URL}/api/servers/${serverId}/scan`, {
+      const res = await authedFetch(`${ORCH_URL}/api/servers/${serverId}/scan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -215,24 +211,6 @@ export default function ServerDetailPage() {
       setResourceError(err.message || 'Scan failed');
     } finally {
       setResourceScanning(false);
-    }
-  };
-
-  const toggleResource = async (resName: string, action: 'stop' | 'start') => {
-    setResourceActions((prev) => ({ ...prev, [resName]: action === 'stop' ? 'stopping' : 'starting' }));
-    try {
-      const res = await fetch(`${ORCH_URL}/api/servers/${serverId}/resources/${resName}/${action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setResourceList((prev) =>
-        prev.map((r) => r.name === resName ? { ...r, enabled: action === 'start' } : r)
-      );
-    } catch {
-      // ignore
-    } finally {
-      setResourceActions((prev) => ({ ...prev, [resName]: null }));
     }
   };
 
@@ -390,13 +368,11 @@ export default function ServerDetailPage() {
             onScan={handleResourceScan}
             scanning={resourceScanning}
             error={resourceError}
-            onToggleResource={toggleResource}
-            resourceActions={resourceActions}
           />
         )}
 
         {activeTab === 'console' && server && (
-          <ServerConsoleView server={server} onRestart={handleRestart} />
+          <ServerConsoleView serverId={serverId} orchUrl={ORCH_URL} hasAgent={!!server.hasAgent} />
         )}
 
         {activeTab === 'settings' && server && (
@@ -409,7 +385,12 @@ export default function ServerDetailPage() {
             regenerating={regenerating}
             pairingError={pairingError}
             serverName={serverName}
-            onNameChange={setServerName}
+            onNameChange={(v) => {
+              // Mark dirty BEFORE updating state so the settings poll skips
+              // overwriting while the user edits.
+              serverNameDirtyRef.current = true;
+              setServerName(v);
+            }}
             onSaveName={handleSaveName}
             isSavingName={isSavingName}
             saveMsg={saveMsg}
@@ -454,24 +435,33 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
   const [unbanning, setUnbanning] = useState<Record<string, boolean>>({});
   const [banModal, setBanModal] = useState<{ player: any; reason: string } | null>(null);
   const [banMsg, setBanMsg] = useState<string | null>(null);
+  // Spinner belongs to the FIRST load only — background poll refreshes must
+  // not flash it every 5 seconds.
+  const firstLoadRef = useRef(true);
 
   const loadPlayers = useCallback(async () => {
     try {
-      setLoading(true);
+      if (firstLoadRef.current) setLoading(true);
       setError(null);
       const data = await fetchPlayers(serverId);
       setPlayers(data || []);
-    } catch {
-      setError('Failed to fetch players — ensure the agent is connected');
+    } catch (e: any) {
+      if (firstLoadRef.current || players.length === 0) {
+        setError(e?.message || 'Failed to fetch players — ensure the agent is connected');
+      }
     } finally {
-      setLoading(false);
+      if (firstLoadRef.current) {
+        firstLoadRef.current = false;
+        setLoading(false);
+      }
     }
-  }, [serverId]);
+  }, [serverId, players.length]);
 
   useEffect(() => {
     loadPlayers();
     const interval = setInterval(loadPlayers, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId]);
 
   const handleBan = async (player: any) => {
@@ -727,19 +717,15 @@ function ServerResourcesView({
   onScan,
   scanning,
   error,
-  onToggleResource,
-  resourceActions,
 }: {
   serverId: string;
   orchUrl: string;
-  resources: Array<{ name: string; path: string; dependencies?: string[]; enabled?: boolean }>;
+  resources: Array<{ name: string; path: string; dependencies?: string[] }>;
   search: string;
   onSearch: (v: string) => void;
   onScan: () => void;
   scanning: boolean;
   error: string | null;
-  onToggleResource: (name: string, action: 'stop' | 'start') => void;
-  resourceActions: Record<string, 'stopping' | 'starting' | null>;
 }) {
   const filtered = resources.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -791,30 +777,17 @@ function ServerResourcesView({
       ) : (
         <div className="space-y-2">
           {filtered.map((res, i) => {
-            const isRunning = res.enabled !== false;
-            const actionState = resourceActions[res.name];
             return (
               <div
                 key={i}
                 className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-3 flex items-center gap-3 hover:border-[rgba(255,255,255,0.16)] transition-colors"
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  isRunning
-                    ? 'bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.3)]'
-                    : 'bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)]'
-                }`}>
-                  <Package className={`w-4 h-4 ${isRunning ? 'text-[#22c55e]' : 'text-[rgba(255,255,255,0.4)]'}`} />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)]">
+                  <Package className="w-4 h-4 text-[#5E6AD2]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm text-white font-medium truncate">{res.name}</span>
-                    <span className={`font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                      isRunning
-                        ? 'bg-[rgba(34,197,94,0.1)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]'
-                        : 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] border border-[rgba(239,68,68,0.3)]'
-                    }`}>
-                      {isRunning ? 'Running' : 'Stopped'}
-                    </span>
                   </div>
                   {res.path && (
                     <p className="font-mono text-[10px] text-[rgba(255,255,255,0.35)] truncate mt-0.5">
@@ -834,28 +807,6 @@ function ServerResourcesView({
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => onToggleResource(res.name, isRunning ? 'stop' : 'start')}
-                    disabled={actionState !== null}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider border transition-colors disabled:opacity-50 ${
-                      isRunning
-                        ? 'text-[#f59e0b] border-[rgba(245,158,11,0.3)] hover:bg-[rgba(245,158,11,0.1)]'
-                        : 'text-[#22c55e] border-[rgba(34,197,94,0.3)] hover:bg-[rgba(34,197,94,0.1)]'
-                    }`}
-                  >
-                    {actionState === 'stopping' ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : actionState === 'starting' ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : isRunning ? (
-                      <Pause className="w-3 h-3" />
-                    ) : (
-                      <Play className="w-3 h-3" />
-                    )}
-                    {actionState === 'stopping' ? 'Stopping...' : actionState === 'starting' ? 'Starting...' : isRunning ? 'Stop' : 'Start'}
-                  </button>
-                </div>
               </div>
             );
           })}
@@ -865,47 +816,82 @@ function ServerResourcesView({
   );
 }
 
-function ServerConsoleView({ server, onRestart }: { server: any; onRestart: () => void }) {
-  const [command, setCommand] = useState('');
-  const [logs, setLogs] = useState<string[]>([
-    `[NOX] Connected to server: ${server.name}`,
-    `[NOX] Framework: ${server.framework || 'unknown'}`,
-    `[NOX] Agent status: ${server.hasAgent ? 'Active' : 'Unpaired'}`,
-    `[NOX] Ready for commands.`,
-  ]);
+function ServerConsoleView({ serverId, orchUrl, hasAgent }: { serverId: string; orchUrl: string; hasAgent: boolean }) {
+  const [lines, setLines] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  // Load-once per mount; the agent's tailConsole returns a static snapshot,
+  // not a stream — no polling interval is wired up yet.
+  const loadedRef = useRef(false);
 
-  const handleSendCommand = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!command.trim()) return;
-    setLogs((prev) => [...prev, `> ${command}`, `[NOX] Command "${command}" queued.`]);
-    setCommand('');
-  };
+  useEffect(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+
+    (async () => {
+      try {
+        setError(null);
+        const res = await authedFetch(`${orchUrl}/api/servers/${serverId}/console`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        const fetched: string[] = Array.isArray(data?.lines)
+          ? data.lines
+          : Array.isArray(data?.output)
+          ? data.output
+          : typeof data?.content === 'string'
+          ? data.content.split('\n')
+          : [];
+        setLines(fetched);
+      } catch (e: any) {
+        setError(e?.message || 'Failed to load console output');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [serverId, orchUrl]);
 
   return (
     <div className="flex-1 flex flex-col p-4 bg-[#0A0A0F] font-mono text-xs overflow-hidden">
-      <div className="flex-1 overflow-y-auto space-y-1 text-[rgba(255,255,255,0.7)] p-2">
-        {logs.map((log, index) => (
-          <div key={index} className="leading-relaxed">
-            {log}
-          </div>
-        ))}
+      {/* Static viewer — the platform has no console exec action, so command
+          input would be dishonest. This is a read-only tail of the log. */}
+      <div className="flex items-center justify-between mb-2 px-2">
+        <span className="text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.35)]">
+          Server Console (last 200 lines)
+        </span>
+        <button
+          onClick={() => { loadedRef.current = false; setLoading(true); setLines([]); loadedRef.current = true; }}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors border border-[rgba(255,255,255,0.08)] disabled:opacity-40"
+        >
+          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
-      <form onSubmit={handleSendCommand} className="mt-2 flex gap-2">
-        <input
-          type="text"
-          placeholder="Execute server command..."
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          className="flex-1 bg-[#16161E] border border-[rgba(255,255,255,0.1)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#5E6AD2]"
-        />
-        <button
-          type="submit"
-          className="px-4 py-2 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white uppercase text-xs tracking-wider transition-colors"
-        >
-          Send
-        </button>
-      </form>
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[rgba(255,255,255,0.3)]" />
+        </div>
+      ) : error ? (
+        <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] rounded text-[#ef4444]">
+          {error}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto space-y-0.5 text-[rgba(255,255,255,0.7)] p-2 whitespace-pre-wrap break-all">
+          {lines.length === 0 ? (
+            <p className="text-[rgba(255,255,255,0.3)]">No console output available.</p>
+          ) : (
+            lines.map((line, index) => (
+              <div key={index} className="leading-relaxed">
+                {line}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -957,9 +943,8 @@ function ServerSettingsView({
   const handleSaveDir = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`${orchUrl}/api/servers/${serverId}/settings`, {
+      const res = await authedFetch(`${orchUrl}/api/servers/${serverId}/settings`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings: { serverDir } }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -977,9 +962,8 @@ function ServerSettingsView({
     if (!confirm('Are you sure you want to disconnect and revoke the agent on this server?')) return;
     setRevoking(true);
     try {
-      const res = await fetch(`${orchUrl}/api/servers/${serverId}/revoke`, {
+      const res = await authedFetch(`${orchUrl}/api/servers/${serverId}/revoke`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setRevokeMsg('Agent revoked successfully');

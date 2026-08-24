@@ -5,7 +5,7 @@ import { useNotifications } from './NotificationContext';
 import { Bell, CheckCircle2, XCircle, Clock, AlertCircle, Info } from 'lucide-react';
 
 export function NotificationBell() {
-  const { unreadCount, notifications, toggleDropdown, isDropdownOpen, closeDropdown, markAsRead, dismissNotification } = useNotifications();
+  const { unreadCount, notifications, toggleDropdown, isDropdownOpen, closeDropdown, markAsRead, dismissNotification, clearAll } = useNotifications();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -82,10 +82,7 @@ export function NotificationBell() {
             <span className="font-mono text-xs uppercase tracking-wider text-white">Notifications</span>
             {notifications.length > 0 && (
               <button
-                onClick={() => {
-                  // Clear handled by context
-                  notifications.filter(n => !n.read).forEach(n => {});
-                }}
+                onClick={clearAll}
                 className="text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
               >
                 Clear all

@@ -195,12 +195,13 @@ export async function sendChatMessage(
   threadId: string,
   message: string,
   userId?: string,
+  selectedSkills?: string[],
 ): Promise<any> {
   const res = await authedFetch(
     `${ORCHESTRATOR_URL}/api/threads/${threadId}/chat`,
     {
       method: 'POST',
-      body: JSON.stringify({ message, userId: userId || 'anonymous' }),
+      body: JSON.stringify({ message, userId: userId || 'anonymous', selectedSkills }),
     },
   );
   if (!res.ok) throw new Error(`Failed to send message: ${res.status}`);
