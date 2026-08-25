@@ -19,6 +19,31 @@ export const PairingClaimResponseSchema = z.object({
 });
 
 // ============================================
+// Server Create / Auto-Pair
+// ============================================
+
+/**
+ * Response of POST /api/servers. Auto-pairs an agent device at creation time;
+ * `connect.sessionToken` carries the same one-time session token shape that
+ * pairing claim mints, so auto-paired devices can present a token at hello and
+ * AGENT_LEGACY_OK can be flipped off. Optional so older clients that predate
+ * token minting keep validating.
+ */
+export const ServerCreateResponseSchema = z.object({
+  server: z.object({
+    id: z.string(),
+    name: z.string(),
+    status: z.string(),
+  }),
+  connect: z.object({
+    serverId: z.string(),
+    agentDeviceId: z.string(),
+    wsUrl: z.string().url(),
+    sessionToken: z.string().optional(),
+  }),
+});
+
+// ============================================
 // Agent Hello/Auth
 // ============================================
 
@@ -249,6 +274,7 @@ export const AgentResponseSchema = z.discriminatedUnion('ok', [
 // Type exports
 export type PairingClaim = z.infer<typeof PairingClaimSchema>;
 export type PairingClaimResponse = z.infer<typeof PairingClaimResponseSchema>;
+export type ServerCreateResponse = z.infer<typeof ServerCreateResponseSchema>;
 export type AgentHello = z.infer<typeof AgentHelloSchema>;
 export type AgentAuthenticated = z.infer<typeof AgentAuthenticatedSchema>;
 export type TxAdminConfig = z.infer<typeof TxAdminConfigSchema>;

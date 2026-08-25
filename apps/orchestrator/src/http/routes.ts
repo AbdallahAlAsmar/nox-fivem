@@ -139,13 +139,20 @@ export async function registerRoutes(fastify: FastifyInstance) {
       },
     });
 
-    // Auto-create paired agent device
+    // Auto-create paired agent device. Mint a one-time session token exactly
+    // like pairing claim does (only its sha256 hash is persisted) so the
+    // auto-paired device can present a token at hello — this is what makes
+    // AGENT_LEGACY_OK flippable for servers created through this path.
+    const sessionToken = crypto.randomBytes(32).toString('base64url');
+    const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
+
     const device = await prisma.agentDevice.create({
       data: {
         serverId: server.id,
         status: 'paired',
         platform: 'unknown',
         lastHeartbeatAt: new Date(),
+        pairingTokenHash: sessionTokenHash,
       },
     });
 
@@ -159,6 +166,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
         serverId: server.id,
         agentDeviceId: device.id,
         wsUrl: process.env.ORCHESTRATOR_WS_URL || 'ws://localhost:3001/ws/agent',
+        sessionToken,
       },
     };
   });
@@ -678,7 +686,10 @@ export async function registerRoutes(fastify: FastifyInstance) {
 
       const sendStatus = () => {
         const all = gateway.getConnectedServers() as string[];
-        const servers = scopedServerIds ? all.filter((id) => scopedServerIds!.has(id)) : all;
+        // Authenticated callers get their org-scoped slice. Anonymous legacy
+        // mode degrades to LESS data, not more: an empty list instead of the
+        // global connection set (which would leak other orgs' server ids).
+        const servers = scopedServerIds ? all.filter((id) => scopedServerIds!.has(id)) : [];
         try {
           connection.send(JSON.stringify({
             type: 'agent.status',

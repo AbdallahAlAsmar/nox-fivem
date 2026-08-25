@@ -118,7 +118,9 @@ function makeStatusHarness(
 
     const sendStatus = () => {
       const all = gatewayLike.getConnectedServers();
-      const servers = scopedServerIds ? all.filter((id) => scopedServerIds!.has(id)) : all;
+      // Mirrors routes.ts: authenticated callers get their org slice;
+      // anonymous legacy mode degrades to an EMPTY list (no global leak).
+      const servers = scopedServerIds ? all.filter((id) => scopedServerIds!.has(id)) : [];
       try {
         connection.send(JSON.stringify({
           type: 'agent.status',
@@ -197,15 +199,17 @@ describe('/ws/status scoping', () => {
     expect(ws.sent.length).toBe(0); // no data leaked to an unauthenticated peer
   });
 
-  it('preserves legacy global broadcast when no token + flag on', async () => {
+  it('sends an EMPTY server list when no token + flag on (anon degrades to less data)', async () => {
     const handler = makeStatusHarness(gatewayLike);
     const ws = new FakeWebSocket();
     await handler(ws, { url: '/ws/status' });
 
     const msg = ws.lastMessage();
     expect(msg.type).toBe('agent.status');
-    expect(msg.connectedServers).toEqual(connectedAll);
-    expect(msg.total).toBe(3);
+    // Transitional anon mode must not leak the global connection list —
+    // it degrades to an empty payload instead.
+    expect(msg.connectedServers).toEqual([]);
+    expect(msg.total).toBe(0);
     expect(mockVerifyToken).not.toHaveBeenCalled();
   });
 
