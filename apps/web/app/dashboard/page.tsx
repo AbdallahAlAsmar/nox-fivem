@@ -239,11 +239,11 @@ function ServerCard({
             </span>
           ) : server.status === 'paired' ? (
             <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.1)] text-[#5E6AD2]">
-              Ready
+              Ready to connect
             </span>
           ) : (
-            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(255,255,255,0.05)] text-white/30">
-              Standalone
+            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(245,158,11,0.12)] text-[#f59e0b]">
+              Connect desktop app →
             </span>
           )}
           {pendingChanges > 0 && (
@@ -286,7 +286,11 @@ function ServerCard({
       {/* Footer */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-white/5">
         <span className="font-mono text-[10px] text-white/25">
-          {server.lastSeenAt ? `Last seen ${timeAgo(new Date(server.lastSeenAt).getTime())}` : 'No recent activity'}
+          {server.hasAgent
+            ? server.lastSeenAt
+              ? `Last seen ${timeAgo(new Date(server.lastSeenAt).getTime())}`
+              : 'No recent activity'
+            : 'Not connected — open to set up the desktop app'}
         </span>
         {/* Card actions are mouse-only spans: nesting real <button>s inside the
             card's <Link> is invalid HTML, and the ruling is that keyboard users

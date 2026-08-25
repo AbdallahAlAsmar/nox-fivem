@@ -17,14 +17,20 @@ export interface PairingSetupResult {
 
 interface PairingSetupViewProps {
   pairing: PairingSetupResult;
-  onDone: () => void;
+  onDone?: () => void;
   onRegenerate?: () => void;
+  /** Server name shown in the header (optional — connect page passes its own header). */
+  serverName?: string;
+  /** Hide the "I'll do this later" escape hatch when embedded inline. */
+  hideDismiss?: boolean;
 }
 
 export function PairingSetupView({
   pairing,
   onDone,
   onRegenerate,
+  serverName,
+  hideDismiss = false,
 }: PairingSetupViewProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -68,7 +74,9 @@ export function PairingSetupView({
             Connect Desktop App
           </h1>
           <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-0.5">
-            Pair this server with the NOX desktop agent
+            {serverName
+              ? `Pair ${serverName} with the NOX desktop agent`
+              : 'Pair this server with the NOX desktop agent'}
           </p>
         </div>
       </div>
@@ -142,12 +150,14 @@ export function PairingSetupView({
         </div>
       </div>
 
-      <button
-        onClick={onDone}
-        className="w-full font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white py-3 border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.15)] transition-colors duration-100"
-      >
-        I&apos;ll do this later — back to dashboard
-      </button>
+      {!hideDismiss && (
+        <button
+          onClick={onDone}
+          className="w-full font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white py-3 border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.15)] transition-colors duration-100"
+        >
+          I&apos;ll do this later — back to dashboard
+        </button>
+      )}
 
       {onRegenerate && (
         <div className="pt-1">

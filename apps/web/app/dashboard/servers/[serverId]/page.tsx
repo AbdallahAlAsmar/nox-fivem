@@ -32,6 +32,7 @@ import {
   Ban,
 } from 'lucide-react';
 import ChatPanel from '@/components/chat/ChatPanel';
+import { PairingSetupView } from '@/components/dashboard/PairingSetupView';
 import { ORCHESTRATOR_URL } from '@/lib/config';
 import { scanResources, restartServer, deleteServer } from '@/lib/api';
 import { fetchPlayers, banPlayer, unbanPlayer } from '@/lib/api';
@@ -343,7 +344,62 @@ export default function ServerDetailPage() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'chat' && server && (
+        {activeTab === 'chat' && !loading && server && !server.hasAgent && (
+          <div className="p-6 overflow-y-auto">
+            <div className="max-w-lg mx-auto">
+              <div className="flex items-start gap-3 p-4 border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)] mb-5">
+                <AlertCircle className="w-4 h-4 text-[#f59e0b] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-wider text-[#f59e0b]">
+                    Server not connected
+                  </p>
+                  <p className="font-sans text-xs text-[rgba(255,255,255,0.6)] mt-1 leading-[1.6]">
+                    The NOX desktop app isn't linked to this server yet, so chat, players, and file
+                    tools are unavailable. Follow the steps below to connect it — takes about a
+                    minute.
+                  </p>
+                </div>
+              </div>
+
+              {pairingError && (
+                <div className="border border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.05)] p-3 font-mono text-xs text-[#ef4444] flex items-center gap-2 mb-4">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {pairingError}
+                </div>
+              )}
+
+              {regenerating ? (
+                <div className="py-12 flex flex-col items-center gap-3">
+                  <Loader2 className="w-7 h-7 text-[rgba(255,255,255,0.3)] animate-spin" />
+                  <p className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
+                    Generating pairing code…
+                  </p>
+                </div>
+              ) : pairing ? (
+                <PairingSetupView
+                  pairing={{
+                    id: serverId,
+                    pairingCode: pairing.code,
+                    expiresAt: pairing.expiresAt,
+                  }}
+                  onRegenerate={regeneratePairingCode}
+                  serverName={server.name}
+                  hideDismiss
+                />
+              ) : (
+                <button
+                  onClick={regeneratePairingCode}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Generate Pairing Code
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'chat' && server?.hasAgent && (
           <ChatPanel
             serverId={serverId}
             framework={server?.framework || 'Unknown'}
