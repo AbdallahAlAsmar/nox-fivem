@@ -344,7 +344,7 @@ export default function ServerDetailPage() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'chat' && !loading && server && !server.hasAgent && (
+        {activeTab === 'chat' && !loading && server && server.status !== 'online' && (
           <div className="p-6 overflow-y-auto">
             <div className="max-w-lg mx-auto">
               <div className="flex items-start gap-3 p-4 border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)] mb-5">
@@ -399,7 +399,7 @@ export default function ServerDetailPage() {
           </div>
         )}
 
-        {activeTab === 'chat' && server?.hasAgent && (
+        {activeTab === 'chat' && server?.status === 'online' && (
           <ChatPanel
             serverId={serverId}
             framework={server?.framework || 'Unknown'}

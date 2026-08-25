@@ -67,5 +67,9 @@ coverage/
 .env*
 
 # Installers / build artifacts (never commit binaries)
+# NOTE: apps/web/public/dist/ installers ARE tracked intentionally — see the
+# negations below. Everything else in dist stays ignored.
 NOX-FiveM-Desktop.exe
-apps/web/public/dist/
+apps/web/public/dist/*
+!apps/web/public/dist/NOX-Setup.exe
+!apps/web/public/dist/NOX-Setup.msi

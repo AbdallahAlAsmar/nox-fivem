@@ -233,11 +233,11 @@ function ServerCard({
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
-          {server.hasAgent ? (
+          {server.status === 'online' && server.hasAgent ? (
             <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(34,197,94,0.1)] text-[#22c55e]">
               Connected
             </span>
-          ) : server.status === 'paired' ? (
+          ) : server.hasAgent || server.status === 'paired' ? (
             <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.1)] text-[#5E6AD2]">
               Ready to connect
             </span>
@@ -286,7 +286,7 @@ function ServerCard({
       {/* Footer */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-white/5">
         <span className="font-mono text-[10px] text-white/25">
-          {server.hasAgent
+          {server.status === 'online' && server.hasAgent
             ? server.lastSeenAt
               ? `Last seen ${timeAgo(new Date(server.lastSeenAt).getTime())}`
               : 'No recent activity'
