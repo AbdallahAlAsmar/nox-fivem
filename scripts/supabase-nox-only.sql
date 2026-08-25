@@ -25,26 +25,19 @@ CREATE TABLE "announcements" (
     CONSTRAINT "announcements_pkey" PRIMARY KEY ("id")
 );
 
-    CONSTRAINT "checkout_sessions_pkey" PRIMARY KEY ("id")
-);
+-- CreateTable
 
-    CONSTRAINT "coupons_pkey" PRIMARY KEY ("id")
-);
+-- CreateTable
 
-    CONSTRAINT "licenses_pkey" PRIMARY KEY ("id")
-);
+-- CreateTable
 
-    CONSTRAINT "order_lines_pkey" PRIMARY KEY ("id")
-);
+-- CreateTable
 
-    CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
-);
+-- CreateTable
 
-    CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
-);
+-- CreateTable
 
-    CONSTRAINT "products_pkey" PRIMARY KEY ("id")
-);
+-- CreateTable
 
 -- CreateTable
 CREATE TABLE "servers" (
@@ -255,6 +248,22 @@ CREATE TABLE "resource_installs" (
 CREATE UNIQUE INDEX "organizations_stripe_customer_id_key" ON "organizations"("stripe_customer_id");
 
 -- CreateIndex
+
+-- CreateIndex
+
+-- CreateIndex
+
+-- CreateIndex
+
+-- CreateIndex
+
+-- CreateIndex
+
+-- CreateIndex
+
+-- CreateIndex
+
+-- CreateIndex
 CREATE UNIQUE INDEX "agent_devices_pairingCode_key" ON "agent_devices"("pairingCode");
 
 -- CreateIndex
@@ -309,6 +318,12 @@ CREATE INDEX "resource_installs_serverId_status_idx" ON "resource_installs"("ser
 CREATE INDEX "resource_installs_serverId_createdAt_idx" ON "resource_installs"("serverId", "createdAt");
 
 -- AddForeignKey
+
+-- AddForeignKey
+
+-- AddForeignKey
+
+-- AddForeignKey
 ALTER TABLE "agent_devices" ADD CONSTRAINT "agent_devices_serverId_fkey" FOREIGN KEY ("serverId") REFERENCES "servers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -337,5 +352,4 @@ ALTER TABLE "players" ADD CONSTRAINT "players_serverId_fkey" FOREIGN KEY ("serve
 
 -- AddForeignKey
 ALTER TABLE "resource_installs" ADD CONSTRAINT "resource_installs_serverId_fkey" FOREIGN KEY ("serverId") REFERENCES "servers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
 
