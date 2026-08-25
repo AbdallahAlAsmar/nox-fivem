@@ -49,7 +49,8 @@ export default function RootLayout({
             className={`${inter.variable} font-sans min-h-screen bg-[#0a0a0f] text-white`}
           >
             <AgentStatusProvider>
-              {children}
+              <NotificationProvider>
+                {children}
               <KeyboardShortcuts />
               <Toaster
                 position="bottom-right"
@@ -63,6 +64,7 @@ export default function RootLayout({
                   },
                 }}
               />
+              </NotificationProvider>
             </AgentStatusProvider>
           </body>
         </html>
