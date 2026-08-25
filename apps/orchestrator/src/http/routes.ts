@@ -2047,8 +2047,12 @@ export async function registerRoutes(fastify: FastifyInstance) {
     });
     if (!server) return reply.status(404).send({ error: 'Not found' });
 
-    if (server.agentDevices.some((d: any) => d.status === 'paired')) {
-      return reply.status(400).send({ error: 'Server is already paired' });
+    // A stale 'paired' device row is NOT a live pairing — only block when the
+    // agent is actually dialed into the gateway right now. Otherwise the row
+    // predates tokens/revocation and re-pairing must be allowed.
+    const gateway = (fastify as any).agentGateway as AgentGateway | undefined;
+    if (gateway?.isConnected(params.serverId)) {
+      return reply.status(400).send({ error: 'Server is already paired and connected — revoke the agent first if you want to re-pair.' });
     }
 
     const pending = server.agentDevices.find((d: any) => d.status === 'pending');

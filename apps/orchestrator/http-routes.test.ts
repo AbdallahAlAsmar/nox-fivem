@@ -244,7 +244,9 @@ describe('POST /api/servers/:serverId/regenerate-pairing (alias)', () => {
     expect(body.pairing?.code).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
   });
 
-  it('400s when the server is already paired (both paths)', async () => {
+  it('re-pairs when only a stale paired device row exists (both paths)', async () => {
+    // A 'paired' device row without a live gateway connection is stale
+    // (pre-token era or revoked device) — re-pairing must succeed.
     const pairedServer = {
       id: 'srv1',
       orgId: 'org-123',
@@ -260,8 +262,7 @@ describe('POST /api/servers/:serverId/regenerate-pairing (alias)', () => {
         url: path,
         headers: { authorization: 'Bearer good' },
       });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe('Server is already paired');
+      expect(res.statusCode).toBe(200);
     }
   });
 
