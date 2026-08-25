@@ -4,16 +4,6 @@ import { useState, useEffect } from 'react';
 import { Joyride, Step } from 'react-joyride';
 import { usePathname } from 'next/navigation';
 
-interface CallbackData {
-  action: string;
-  type: string;
-  index: number;
-  size: number;
-  steppedIndex: number;
-  skippedIndex: number;
-  lastStep: boolean;
-}
-
 export function OnboardingTour() {
   const [run, setRun] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -32,7 +22,6 @@ export function OnboardingTour() {
       target: '[data-tour="dashboard-header"]',
       content: 'Welcome to NOX! This is your command center. Let us show you around.',
       placement: 'bottom',
-      disableBeacon: true,
     },
     {
       target: '[data-tour="server-cards"]',
@@ -66,9 +55,8 @@ export function OnboardingTour() {
     },
   ];
 
-  const handleCallback = (data: CallbackData) => {
-    const { action, type } = data;
-    if (type === 'tour:finished' || action === 'close') {
+  const handleEvent = (data: { type: string; action: string; index: number }) => {
+    if (data.type === 'tour:finished' || data.action === 'close') {
       setFinished(true);
       localStorage.setItem('nox-tour-last-run', Date.now().toString());
     }
@@ -82,19 +70,45 @@ export function OnboardingTour() {
       steps={steps}
       run={run}
       continuous
-      showProgress
-      showSkipButton
-      hideCloseButton
+      onEvent={handleEvent}
       styles={{
-        options: {
-          arrowColor: '#16161E',
-          backgroundColor: '#16161E',
-          beaconSize: 36,
-          overlayColor: 'rgba(0, 0, 0, 0.5)',
-          primaryColor: '#5E6AD2',
-          textColor: 'rgba(255, 255, 255, 0.9)',
-          width: 380,
-          zIndex: 1000,
+        beacon: {
+          background: '#5E6AD2',
+          border: '2px solid #16161E',
+          borderRadius: '50%',
+          height: 36,
+          width: 36,
+        },
+        overlay: {
+          background: 'rgba(0, 0, 0, 0.5)',
+        },
+        tooltip: {
+          background: '#16161E',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 8,
+          color: 'rgba(255, 255, 255, 0.9)',
+          maxWidth: 380,
+          padding: 16,
+        },
+        tooltipContainer: {
+          textAlign: 'left',
+        },
+        buttonPrimary: {
+          background: '#5E6AD2',
+          borderRadius: 4,
+          color: '#fff',
+          fontSize: 13,
+          fontWeight: 500,
+          padding: '6px 12px',
+        },
+        buttonBack: {
+          color: 'rgba(255, 255, 255, 0.6)',
+          fontSize: 13,
+          marginRight: 8,
+        },
+        buttonSkip: {
+          color: 'rgba(255, 255, 255, 0.4)',
+          fontSize: 13,
         },
       }}
       locale={{
@@ -104,7 +118,6 @@ export function OnboardingTour() {
         next: 'Next',
         skip: 'Skip',
       }}
-      callback={handleCallback}
     />
   );
 }
