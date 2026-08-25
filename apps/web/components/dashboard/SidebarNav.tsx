@@ -99,7 +99,7 @@ export default function SidebarNav() {
                   : 'bg-white border-gray-200'
               }`}
             >
-              <div className={`flex items-center justify-between px-5 h-14 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+              <div className={`flex items-center justify-between px-5 h-14 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`} data-tour="dashboard-header">
                 <div className="flex items-center gap-2 font-mono">
                   <img src="/nox-logo.svg" alt="NOX" className="w-8 h-8 text-white" />
                   <span className="text-white font-mono text-sm font-bold tracking-[0.2em]">NOX</span>
@@ -117,7 +117,7 @@ export default function SidebarNav() {
                   </button>
                 </div>
               </div>
-              <nav className="flex-1 px-3 py-4 space-y-1">
+              <nav className="flex-1 px-3 py-4 space-y-1" data-tour="nav-chat">
                 {navItems.map((item) => {
                   const active = isActive(item.href);
                   const Icon = item.icon;
@@ -126,6 +126,7 @@ export default function SidebarNav() {
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
+                      data-tour={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
                       className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                         active
                           ? isDark
@@ -197,7 +198,7 @@ export default function SidebarNav() {
         >
           {/* Logo */}
           <div className="h-14 flex items-center border-b border-white/10 flex-shrink-0">
-            <div className="flex items-center justify-between w-full px-5">
+            <div className="flex items-center justify-between w-full px-5" data-tour="dashboard-header">
               <div className="flex items-center gap-3">
                 <img src="/nox-logo.svg" alt="NOX" className="w-8 h-8 text-white flex-shrink-0" />
                 <motion.span
@@ -225,7 +226,7 @@ export default function SidebarNav() {
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" data-tour="nav-chat">
             {navItems.map((item) => {
               const active = isActive(item.href);
               const Icon = item.icon;
@@ -233,6 +234,7 @@ export default function SidebarNav() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-tour={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                     active
                       ? isDark
@@ -265,7 +267,7 @@ export default function SidebarNav() {
             </div>
             <SignedIn>
               <Link href="/dashboard/account">
-                <div className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-100 rounded ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}>
+                <div className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-100 rounded ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`} data-tour="user-menu">
                   {userAvatar ? (
                     <img src={userAvatar} alt="avatar" className="w-7 h-7 rounded flex-shrink-0 opacity-90" />
                   ) : (
