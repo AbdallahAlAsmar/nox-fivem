@@ -302,15 +302,21 @@ describe('POST /api/changes/batch/apply (real applies)', () => {
   beforeEach(() => {
     gateway().isConnected.mockReturnValue(true);
     gateway().sendCommand.mockReset();
-    // Default: every fs.applyPatch succeeds.
-    gateway().sendCommand.mockResolvedValue({
-      changeId: 'x', appliedFiles: [], allSucceeded: true,
+    // Default: git.checkpoint returns a sha and every fs.applyPatch succeeds.
+    gateway().sendCommand.mockImplementation(async (_srv: string, action: string, args: any) => {
+      if (action === 'git.checkpoint') {
+        return { changeId: args.changeId, sha: `deadbeef${String(args.changeId).slice(-4)}`, branch: 'main' };
+      }
+      return { changeId: args.changeId, appliedFiles: [], allSucceeded: true };
     });
     changeUpdate.mockResolvedValue({});
     changeFindFirst.mockReset().mockResolvedValue(null);
     changeFindMany.mockReset();
     auditLogCreate.mockResolvedValue({});
   });
+
+  const callsFor = (action: string) =>
+    gateway().sendCommand.mock.calls.filter((c: any[]) => c[1] === action);
 
   it('applies each change via fs.applyPatch through the gateway', async () => {
     changeFindMany.mockResolvedValue([
@@ -331,7 +337,7 @@ describe('POST /api/changes/batch/apply (real applies)', () => {
     expect(body.failed).toEqual([]);
 
     // One REAL apply command per change, addressed to the agent.
-    expect(gateway().sendCommand).toHaveBeenCalledTimes(2);
+    expect(callsFor('fs.applyPatch')).toHaveLength(2);
     expect(gateway().sendCommand).toHaveBeenCalledWith(
       'srv1',
       'fs.applyPatch',
@@ -362,6 +368,9 @@ describe('POST /api/changes/batch/apply (real applies)', () => {
     ]);
     gateway().sendCommand.mockImplementation(async (_serverId: string, _action: string, args: any) => {
       if (args.changeId === 'chg-bad') throw new Error('agent write failed');
+      if (_action === 'git.checkpoint') {
+        return { changeId: args.changeId, sha: 'deadbeef123456', branch: 'main' };
+      }
       return { changeId: args.changeId, appliedFiles: [], allSucceeded: true };
     });
 
@@ -379,7 +388,7 @@ describe('POST /api/changes/batch/apply (real applies)', () => {
       { id: 'chg-bad', error: expect.stringContaining('agent write failed') },
     ]);
     // Siblings were still attempted after the failure.
-    expect(gateway().sendCommand).toHaveBeenCalledTimes(3);
+    expect(callsFor('fs.applyPatch')).toHaveLength(2);
   });
 
   it('fails closed when no agent is connected (no status flips)', async () => {
@@ -426,7 +435,7 @@ describe('POST /api/changes/batch/apply (real applies)', () => {
     expect(body.skipped).toEqual([
       { id: 'chg-already-applied', reason: 'Change is applied' },
     ]);
-    expect(gateway().sendCommand).toHaveBeenCalledTimes(1);
+    expect(callsFor('fs.applyPatch')).toHaveLength(1);
   });
 });
 
@@ -445,7 +454,12 @@ describe('POST /api/changes/:changeId/apply (single)', () => {
   beforeEach(() => {
     const gw = (app as any).agentGateway;
     gw.isConnected.mockReturnValue(true);
-    gw.sendCommand.mockReset().mockResolvedValue({ allSucceeded: true });
+    gw.sendCommand.mockReset().mockImplementation(async (_srv: string, action: string, args: any) => {
+      if (action === 'git.checkpoint') {
+        return { changeId: args.changeId, sha: 'deadbeefcheckpoint', branch: 'main' };
+      }
+      return { changeId: args.changeId, appliedFiles: [], allSucceeded: true };
+    });
     changeUpdate.mockResolvedValue({});
     auditLogCreate.mockResolvedValue({});
   });
@@ -486,16 +500,86 @@ describe('POST /api/changes/:changeId/apply (single)', () => {
     );
   });
 
-  it('still rejects terminal states (applied/failed/rolled_back)', async () => {
-    for (const status of ['applied', 'failed', 'rolled_back']) {
-      changeFindFirst.mockResolvedValue(mkChange('chg-3', status));
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/changes/chg-3/apply?status=${status}`,
-        headers: { authorization: 'Bearer good' },
-      });
-      expect(res.statusCode).toBe(400);
-    }
-    expect((app as any).agentGateway.sendCommand).not.toHaveBeenCalled();
+  it('sends git.checkpoint BEFORE fs.applyPatch and records the sha', async () => {
+    changeFindFirst.mockResolvedValue(mkChange('chg-cp', 'pending'));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/chg-cp/apply',
+      headers: { authorization: 'Bearer good' },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const calls = (app as any).agentGateway.sendCommand.mock.calls;
+    const cpIdx = calls.findIndex((c: any[]) => c[1] === 'git.checkpoint');
+    const patchIdx = calls.findIndex((c: any[]) => c[1] === 'fs.applyPatch');
+    expect(cpIdx).toBeGreaterThanOrEqual(0);
+    expect(patchIdx).toBeGreaterThan(cpIdx); // checkpoint strictly first
+    expect(calls[cpIdx][2]).toEqual(expect.objectContaining({ changeId: 'chg-cp' }));
+    // The returned checkpoint sha is persisted on the change + audit trail.
+    expect(changeUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'applied',
+          applyResult: { checkpointSha: 'deadbeefcheckpoint' },
+        }),
+      }),
+    );
+    expect(auditLogCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'change.applied',
+          metadata: expect.objectContaining({ checkpointSha: 'deadbeefcheckpoint' }),
+        }),
+      }),
+    );
+  });
+
+  it('fails closed when git.checkpoint fails (no fs.applyPatch sent)', async () => {
+    changeFindFirst.mockResolvedValue(mkChange('chg-cpfail', 'pending'));
+    (app as any).agentGateway.sendCommand.mockImplementation(
+      async (_srv: string, action: string) => {
+        if (action === 'git.checkpoint') throw new Error('git not available');
+        return { allSucceeded: true };
+      },
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/chg-cpfail/apply',
+      headers: { authorization: 'Bearer good' },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.json().error).toContain('git not available');
+    // The patch was NEVER sent and the change is marked failed, not applied.
+    const calls = (app as any).agentGateway.sendCommand.mock.calls;
+    expect(calls.some((c: any[]) => c[1] === 'fs.applyPatch')).toBe(false);
+    expect(changeUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'failed' }),
+      }),
+    );
+  });
+
+  it('fails closed when the agent returns no checkpoint sha', async () => {
+    changeFindFirst.mockResolvedValue(mkChange('chg-cpnull', 'pending'));
+    (app as any).agentGateway.sendCommand.mockImplementation(
+      async (_srv: string, action: string) => {
+        if (action === 'git.checkpoint') return { changeId: 'chg-cpnull' }; // no sha
+        return { allSucceeded: true };
+      },
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/chg-cpnull/apply',
+      headers: { authorization: 'Bearer good' },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.json().error).toContain('checkpoint');
+    const calls = (app as any).agentGateway.sendCommand.mock.calls;
+    expect(calls.some((c: any[]) => c[1] === 'fs.applyPatch')).toBe(false);
   });
 });

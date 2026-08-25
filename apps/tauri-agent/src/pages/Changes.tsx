@@ -97,7 +97,9 @@ export default function Changes({ serverId }: { serverId?: string }) {
     setApplyingAll(true)
     setError(null)
     try {
-      // Sequential real applies (git checkpoint + fs.applyPatch per change).
+      // Sequential applies; the ORCHESTRATOR drives the git checkpoint
+      // (git.checkpoint) before each fs.applyPatch — the desktop just calls
+      // the single-apply endpoint per change.
       const result = await api.applyAllChanges(serverId || '')
       if (result.applied.length > 0) {
         setChanges(prev =>

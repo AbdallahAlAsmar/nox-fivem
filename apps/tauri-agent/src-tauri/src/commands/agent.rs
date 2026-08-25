@@ -722,6 +722,38 @@ async fn handle_orchestrator_request(
             });
             let _ = tx.send(Message::Text(env.to_string()));
         }
+        "git.checkpoint" => {
+            // GitCheckpointArgsSchema: { changeId, message? } — the orchestrator
+            // sends this BEFORE fs.applyPatch so every write lands on a
+            // restorable commit (rollback support). Reuses git.rs's
+            // scope-validated checkpoint (git add . + commit, HEAD sha on
+            // 'nothing to commit'), mirroring the frozen Node CLI dialect:
+            // GitCheckpointResultSchema { changeId, sha, branch }.
+            let change_id = args.get("changeId").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let message = args.get("message").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+            if change_id.is_empty() {
+                send_error(&tx, req_id, server_id, agent_device_id, action, "INVALID_REQUEST", "Missing changeId");
+                return;
+            }
+
+            let dir = srv_path.to_string_lossy().to_string();
+            match crate::commands::git::create_checkpoint(&dir, &change_id, message.as_deref()) {
+                Ok(result) => {
+                    send_result(&tx, req_id, server_id, agent_device_id, action, serde_json::json!({
+                        "changeId": change_id,
+                        "sha": result.sha,
+                        "branch": result.branch
+                    }));
+                }
+                Err(e) => {
+                    send_error(
+                        &tx, req_id, server_id, agent_device_id,
+                        action, "GIT_CHECKPOINT_FAILED", &e,
+                    );
+                }
+            }
+        }
         "fs.applyPatch" => {
             // FsApplyPatchArgsSchema: { changeId, files: [{ path, expectedSha256?, newContent }] }
             let change_id = args.get("changeId").and_then(|v| v.as_str()).unwrap_or("").to_string();

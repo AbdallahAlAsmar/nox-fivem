@@ -138,12 +138,18 @@ export const GitStatusResultSchema = z.object({
 });
 
 export const GitCheckpointArgsSchema = z.object({
-  changeId: z.string().uuid(),
+  // Change.id is minted by Prisma as a cuid (@default(cuid()) on the Change
+  // model), while some clients/fixtures mint UUIDs. changeId is an opaque
+  // correlation token the agent merely echoes back — it carries no security
+  // property — so accept ANY non-empty string rather than pinning a single
+  // id format that real production payloads would fail validation on.
+  // (Same rationale as FsApplyPatchArgsSchema/FsApplyPatchResultSchema.)
+  changeId: z.string().min(1),
   message: z.string().optional(),
 });
 
 export const GitCheckpointResultSchema = z.object({
-  changeId: z.string().uuid(),
+  changeId: z.string().min(1),
   sha: z.string(),
   branch: z.string(),
 });

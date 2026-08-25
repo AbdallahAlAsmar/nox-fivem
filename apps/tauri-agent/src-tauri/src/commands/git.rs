@@ -119,8 +119,95 @@ pub fn git_commit_cmd(server_directory: String, message: String) -> Result<Strin
     Ok(sha)
 }
 
-/// A valid git object name: full 40-char SHA or 7-40 char abbreviated form,
-/// hex only. Anything else passed to `reset --hard` could be an option
+/// Internal result of a checkpoint commit — mirrors GitCheckpointResultSchema
+/// minus changeId (the WS arm echoes its own args.changeId back).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckpointCommit {
+    pub sha: String,
+    pub branch: String,
+}
+
+/// Create a pre-apply checkpoint commit in the scoped server directory.
+/// Shared by the tauri command surface and the orchestrator-facing
+/// `git.checkpoint` WS action: scope-validates the directory, stages
+/// everything, commits, and resolves HEAD. A clean tree is NOT an error —
+/// it returns the current HEAD so the checkpoint sha is always usable as a
+/// rollback target (mirrors the frozen Node CLI agent's dialect).
+pub fn create_checkpoint(
+    server_directory: &str,
+    change_id: &str,
+    message: Option<&str>,
+) -> Result<CheckpointCommit, String> {
+    let dir = ensure_git_scope(server_directory)?;
+
+    let add_output = Command::new("git")
+        .arg("add")
+        .arg(".")
+        .current_dir(&dir)
+        .output()
+        .map_err(|e| format!("Failed to add files: {}", e))?;
+    if !add_output.status.success() {
+        return Err(format!(
+            "Failed to stage files: {}",
+            String::from_utf8_lossy(&add_output.stderr)
+        ));
+    }
+
+    let commit_message = message
+        .map(|m| m.to_string())
+        .unwrap_or_else(|| format!("Checkpoint: Change {}", change_id));
+    let output = Command::new("git")
+        .arg("commit")
+        .arg("-m")
+        .arg(&commit_message)
+        .current_dir(&dir)
+        .output()
+        .map_err(|e| format!("Failed to commit: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if !stderr.contains("nothing to commit") {
+            return Err(format!("Checkpoint commit failed: {}", stderr));
+        }
+        // Clean tree — fall through and report current HEAD.
+    }
+
+    let sha_output = Command::new("git")
+        .arg("rev-parse")
+        .arg("HEAD")
+        .current_dir(&dir)
+        .output()
+        .map_err(|e| format!("Failed to get commit SHA: {}", e))?;
+    if !sha_output.status.success() {
+        return Err(format!(
+            "Failed to resolve HEAD after checkpoint: {}",
+            String::from_utf8_lossy(&sha_output.stderr)
+        ));
+    }
+    let sha = String::from_utf8_lossy(&sha_output.stdout).trim().to_string();
+
+    let branch_output = Command::new("git")
+        .arg("rev-parse")
+        .arg("--abbrev-ref")
+        .arg("HEAD")
+        .current_dir(&dir)
+        .output()
+        .map_err(|e| format!("Failed to resolve branch: {}", e))?;
+    let branch = if branch_output.status.success() {
+        String::from_utf8_lossy(&branch_output.stdout).trim().to_string()
+    } else {
+        "HEAD".to_string()
+    };
+
+    Ok(CheckpointCommit { sha, branch })
+}
+
+#[tauri::command]
+pub fn git_checkpoint_cmd(server_directory: String, change_id: String, message: Option<String>) -> Result<CheckpointCommit, String> {
+    create_checkpoint(&server_directory, &change_id, message.as_deref())
+}
+
+/// A valid git object name: full 40-char SHA or 7-40 char abbreviated form,/// hex only. Anything else passed to `reset --hard` could be an option
 /// injection (`--hard <flag>`) or a refname we never intended to accept.
 fn is_valid_sha(sha: &str) -> bool {
     let s = sha.trim();

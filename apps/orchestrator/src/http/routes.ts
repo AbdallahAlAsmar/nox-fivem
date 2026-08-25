@@ -1205,6 +1205,22 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // Checkpoint chain invariant: the agent commits a git checkpoint BEFORE
+      // any file write so every apply is restorable via git.rollback. Fail
+      // closed — without a checkpoint sha the patch must not be applied.
+      const checkpoint = await agentGateway.sendCommand(
+        change.serverId,
+        'git.checkpoint',
+        { changeId: change.id, message: `Checkpoint before applying change ${change.id}` },
+        60000
+      );
+      const checkpointSha =
+        checkpoint && typeof checkpoint.sha === 'string' ? checkpoint.sha : null;
+      console.log(`[apply] git.checkpoint for change ${change.id}: sha=${checkpointSha ?? '<missing>'}`);
+      if (!checkpointSha) {
+        throw new Error('Agent did not return a checkpoint sha; refusing to apply');
+      }
+
       await agentGateway.sendCommand(
         change.serverId,
         'fs.applyPatch',
@@ -1220,6 +1236,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
         data: {
           status: 'applied',
           appliedAt: new Date(),
+          applyResult: { checkpointSha },
         },
       });
 
@@ -1229,7 +1246,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
           serverId: change.serverId,
           userId: actor.userId,
           action: 'change.applied',
-          metadata: { changeId: change.id, filesApplied: touchedFiles, ...auditExtra },
+          metadata: { changeId: change.id, filesApplied: touchedFiles, checkpointSha, ...auditExtra },
         },
       });
 

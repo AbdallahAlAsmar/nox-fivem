@@ -275,9 +275,11 @@ export async function fetchChanges(serverId?: string): Promise<any[]> {
 }
 
 /**
- * Apply every pending change for a server, one at a time, so each change gets
- * a real git-checkpointed apply on the agent (the orchestrator's batch/apply
- * endpoint only flips DB status without applying files — not used here).
+ * Apply every pending change for a server, one at a time, calling the
+ * single-change apply endpoint per id. The orchestrator's batch/apply endpoint
+ * NOW also performs real applies (checkpoint + fs.applyPatch per change), so
+ * either path is safe; the desktop keeps sequential single-applies for
+ * granular per-change progress and error reporting.
  * List-fetch failures throw; individual applies are reported per-change.
  */
 export async function applyAllChanges(
