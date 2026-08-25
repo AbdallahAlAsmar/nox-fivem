@@ -33,20 +33,40 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    // Mirror the orchestrator's MAX_PAGE_SIZE so this twin behaves like the
+    // upstream contract instead of silently serving unbounded pages.
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 200);
 
     const where = filter ? {
       orgId: ctx.orgId,
       action: { contains: filter }
     } : { orgId: ctx.orgId };
 
-    const logs = await prisma.auditLog.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    });
+    // Stat cards must reflect TRUE totals, not just the fetched page: count
+    // every matching row grouped by action alongside the page of logs.
+    const [logs, total, grouped] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      }),
+      prisma.auditLog.count({ where }),
+      prisma.auditLog.groupBy({
+        by: ['action'],
+        _count: { _all: true },
+        where,
+      }),
+    ]);
 
-    return NextResponse.json({ logs });
+    const actionCounts: Record<string, number> = {};
+    for (const g of grouped) {
+      actionCounts[g.action] = g._count._all;
+    }
+
+    return NextResponse.json(
+      { logs, total, actionCounts },
+      { headers: { 'X-Total-Count': String(total) } },
+    );
   } catch (error) {
     console.error('Failed to fetch audit logs:', error);
     return NextResponse.json({ error: 'Failed to fetch audit logs' }, { status: 500 });

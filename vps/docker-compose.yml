@@ -39,7 +39,7 @@ services:
       # WebSocket URL handed to desktop agents at pairing time.
       ORCHESTRATOR_WS_URL: ws://158.101.167.118:3001/ws/agent
       OMNIROUTE_BASE_URL: https://last-revelation-reporting-volt.trycloudflare.com/v1
-      OMNI_KEY: omni-key
+      OMNIROUTE_API_KEY: omni-key
       NODE_ENV: production
     depends_on:
       - postgres

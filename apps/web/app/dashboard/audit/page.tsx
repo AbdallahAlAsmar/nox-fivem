@@ -45,6 +45,9 @@ const ACTION_LABELS: Record<string, string> = {
 
 export default function AuditLogPage() {
   const [logs, setLogs] = useState<AuditEntry[]>([]);
+  // True per-action totals across the whole org (server-side groupBy), so stat
+  // cards stay correct even when the log list is a single clamped page.
+  const [actionCounts, setActionCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
@@ -58,18 +61,21 @@ export default function AuditLogPage() {
     try {
       setLoading(true);
       setError(null);
-      // Filter server-side via the /api/audit proxy route; request a large
-      // limit so stat cards reflect real totals, not just the first page.
-      const qs = new URLSearchParams({ limit: '500' });
+      // The API clamps to MAX_PAGE_SIZE=200 (same bound as the orchestrator)
+      // and returns grouped totals for the stat cards — requesting more than
+      // that would be dishonest about what the list actually shows.
+      const qs = new URLSearchParams({ limit: '200' });
       if (filter !== 'all') qs.set('filter', filter);
       const res = await fetch(`/api/audit?${qs.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setLogs(data.logs || []);
+      setActionCounts(data.actionCounts || {});
     } catch (err: any) {
       console.error('Failed to fetch audit logs:', err);
       setError(err?.message || 'Failed to load audit log');
       setLogs([]);
+      setActionCounts({});
     } finally {
       setLoading(false);
     }
@@ -114,7 +120,9 @@ export default function AuditLogPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {(['change.proposed', 'change.applied', 'server.scanned', 'agent.connected'] as const).map((action) => {
             const Icon = ACTION_ICONS[action] || AlertCircle;
-            const count = logs.filter(l => l.action === action).length;
+            // Server-side total for this action across the org; falls back to
+            // counting the loaded page if the grouped payload is absent.
+            const count = actionCounts[action] ?? logs.filter(l => l.action === action).length;
             return (
               <div key={action} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
                 <div className="flex items-center gap-2 mb-1">

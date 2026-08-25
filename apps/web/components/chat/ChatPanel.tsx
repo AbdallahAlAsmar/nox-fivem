@@ -213,11 +213,18 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
 
     try {
       await sendChatMessage(activeThreadId, captured, sharedUserId, selectedSkills.length > 0 ? selectedSkills : undefined);
+      setLoadError(null);
       // Reload messages for this thread
       await loadThreadMessages(activeThreadId);
     } catch (error) {
+      // Surface the failure (incl. typed cost-cap 402s) in the loadError banner.
+      setLoadError(error instanceof Error ? error.message : 'Failed to send message');
       // Reload to get actual persisted state
-      await loadThreadMessages(activeThreadId);
+      try {
+        await loadThreadMessages(activeThreadId);
+      } catch {
+        // secondary failure — the banner above already reports the primary error
+      }
     } finally {
       setIsLoading(false);
     }

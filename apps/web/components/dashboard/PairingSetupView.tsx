@@ -6,7 +6,7 @@ import {
   Loader2,
   CheckCircle2,
   Rocket,
-  MousePointerClick,
+  AlertCircle,
 } from 'lucide-react';
 
 export interface PairingSetupResult {
@@ -28,6 +28,9 @@ export function PairingSetupView({
 }: PairingSetupViewProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  // Honest availability state: the /dist/ binaries are NOT tracked in git, so
+  // fresh builds/deployments 404 on this link. Probe before offering it.
+  const [installerMissing, setInstallerMissing] = useState(false);
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(pairing.pairingCode);
@@ -35,15 +38,23 @@ export function PairingSetupView({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     setDownloading(true);
-    const a = document.createElement('a');
-    a.href = '/dist/NOX-Setup.exe';
-    a.download = 'NOX-Setup.exe';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => setDownloading(false), 1500);
+    try {
+      const res = await fetch('/dist/NOX-Setup.exe', { method: 'HEAD' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const a = document.createElement('a');
+      a.href = '/dist/NOX-Setup.exe';
+      a.download = 'NOX-Setup.exe';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      // Installer not present (fresh build without tracked binaries).
+      setInstallerMissing(true);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -76,18 +87,32 @@ export function PairingSetupView({
           Install the NOX desktop app on your Windows PC. It manages your servers, validates paths,
           and runs the AI agent.
         </p>
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
-        >
-          {downloading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Download className="w-3.5 h-3.5" />
-          )}
-          {downloading ? 'Downloading…' : 'Download NOX-Setup.exe'}
-        </button>
+        {installerMissing ? (
+          <div className="flex items-start gap-2 p-3 border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)]">
+            <AlertCircle className="w-4 h-4 text-[#ef4444] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-mono text-xs uppercase tracking-wider text-[#ef4444]">
+                Installer not available
+              </p>
+              <p className="font-sans text-xs text-[rgba(255,255,255,0.5)] mt-1 leading-[1.6]">
+                Contact support or download the desktop app from GitHub releases.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+          >
+            {downloading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            {downloading ? 'Checking…' : 'Download NOX-Setup.exe'}
+          </button>
+        )}
       </div>
 
       <div className="border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)] p-4">

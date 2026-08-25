@@ -172,7 +172,26 @@ export async function sendChatMessage(
       body: JSON.stringify({ message, userId: userId || 'anonymous', selectedSkills }),
     },
   );
-  if (!res.ok) throw new Error(`Failed to send message: ${res.status}`);
+  if (!res.ok) {
+    // Surface the server's own message when present — e.g. the typed 402
+    // cost-cap body ("Monthly cost cap reached…") instead of a bare status.
+    let detail = '';
+    try {
+      const body = await res.json();
+      const msg = body?.message || body?.error;
+      // The typed 402 body carries error codes, not prose — prefer message.
+      detail = typeof msg === 'string' && !/^[a-z_]+$/.test(msg) ? `: ${msg}` : '';
+      if (res.status === 402 && !detail && body?.scope === 'monthly') {
+        detail = ': Monthly cost cap reached. Raises available in billing settings.';
+      }
+      if (res.status === 402 && !detail && body?.scope === 'conversation') {
+        detail = ': Conversation cost cap reached for this thread. Start a new chat or raise the cap in billing settings.';
+      }
+    } catch {
+      // non-JSON body; fall back to status-only
+    }
+    throw new Error(`Failed to send message (${res.status})${detail}`);
+  }
   return res.json();
 }
 
