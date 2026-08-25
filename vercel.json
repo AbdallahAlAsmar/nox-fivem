@@ -1,5 +1,6 @@
 {
   "buildCommand": "pnpm --filter @fivem-ai/db generate && pnpm --filter @fivem-ai/web build",
+  "installCommand": "pnpm install",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
   "devCommand": "pnpm --filter @fivem-ai/web dev",
