@@ -1,6 +1,120 @@
 import { prisma } from '@fivem-ai/db';
 import type { AgentGateway } from '../ws/agentGateway';
 import { streamChat, type ChatContext } from '../claude/session';
+import { estimateCostUsd } from '../claude/pricing';
+import { sanitizeRelativePath } from '../http/pathGuard';
+
+export const MAX_TOOL_ITERATIONS = 10;
+const HISTORY_WINDOW = 30;
+
+/**
+ * Slice history to at most HISTORY_WINDOW messages WITHOUT splitting an
+ * assistant-tool_calls message from its trailing tool-result messages: the
+ * provider rejects a window that opens (or contains) a dangling assistant
+ * tool_calls sequence with a 400. Walk back from the naive window edge to the
+ * oldest role:'user' message at-or-before it — every turn starts with a user
+ * message, so cutting there keeps each assistant→tool group intact.
+ */
+function windowHistoryAtTurnBoundary<T extends { role: string }>(messages: T[]): T[] {
+  if (messages.length <= HISTORY_WINDOW) return messages;
+  let start = messages.length - HISTORY_WINDOW;
+  while (start > 0 && messages[start].role !== 'user') {
+    start--;
+  }
+  // Degenerate case (no user message inside the window at all): fall back to
+  // the hard edge rather than growing the prompt unboundedly.
+  return start > 0 ? messages.slice(start) : messages.slice(-HISTORY_WINDOW);
+}
+
+/** Thrown when an org's conversation or monthly cost cap blocks a chat turn. */
+export class ChatCapError extends Error {
+  readonly scope: 'conversation' | 'monthly';
+  readonly limit: number;
+
+  constructor(scope: 'conversation' | 'monthly', limit: number) {
+    super(
+      scope === 'monthly'
+        ? `Monthly cost cap of $${limit.toFixed(2)} reached for this organization.`
+        : `Conversation cost cap of $${limit.toFixed(2)} reached for this thread.`
+    );
+    this.name = 'ChatCapError';
+    this.scope = scope;
+    this.limit = limit;
+  }
+}
+
+/** First instant of the current calendar month (local time). */
+export function startOfMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+/**
+ * Sum estimated costs of the current thread's usage rows (conversation cap)
+ * plus the org's calendar-month total (monthly cap), and throw ChatCapError
+ * when either is at/over its configured Organization cap.
+ */
+export async function assertWithinCostCaps(orgId: string, threadId: string): Promise<void> {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: {
+      conversation_cost_cap_usd: true,
+      monthly_cost_cap_usd: true,
+    },
+  });
+  if (!org) return; // No org row — nothing to enforce against.
+
+  const conversationCap =
+    org.conversation_cost_cap_usd != null ? Number(org.conversation_cost_cap_usd) : null;
+  if (conversationCap !== null && conversationCap >= 0) {
+    const agg = await prisma.usage.aggregate({
+      where: { threadId },
+      _sum: { costUsd: true },
+    });
+    const spent = Number(agg._sum.costUsd ?? 0);
+    if (spent >= conversationCap) {
+      throw new ChatCapError('conversation', conversationCap);
+    }
+  }
+
+  const monthlyCap = org.monthly_cost_cap_usd != null ? Number(org.monthly_cost_cap_usd) : null;
+  if (monthlyCap !== null && monthlyCap >= 0) {
+    const agg = await prisma.usage.aggregate({
+      where: { orgId, createdAt: { gte: startOfMonth() } },
+      _sum: { costUsd: true },
+    });
+    const spent = Number(agg._sum.costUsd ?? 0);
+    if (spent >= monthlyCap) {
+      throw new ChatCapError('monthly', monthlyCap);
+    }
+  }
+}
+
+/**
+ * Mid-turn re-check used between tool-loop iterations. Each completed LLM call
+ * persists its Usage row (see claude/session.ts), so aggregating by threadId
+ * here sees the running cost of THIS turn plus everything before it — no
+ * caller-side accumulation needed.
+ */
+async function recheckConversationCap(context: ChatContext): Promise<void> {
+  if (!context.orgId) return;
+  const org = await prisma.organization.findUnique({
+    where: { id: context.orgId },
+    select: { conversation_cost_cap_usd: true },
+  });
+  const conversationCap =
+    org?.conversation_cost_cap_usd != null ? Number(org.conversation_cost_cap_usd) : null;
+  if (conversationCap === null || conversationCap < 0) return;
+
+  const agg = await prisma.usage.aggregate({
+    where: { threadId: context.threadId },
+    _sum: { costUsd: true },
+  });
+  const spent = Number(agg._sum.costUsd ?? 0);
+  if (spent >= conversationCap) {
+    throw new ChatCapError('conversation', conversationCap);
+  }
+}
 
 export async function handleChatMessage(
   gateway: AgentGateway,
@@ -18,21 +132,31 @@ export async function handleChatMessage(
 
   if (!server) throw new Error('Server not found');
 
-  const previousMessages = await prisma.chatMessage.findMany({
+  const allPreviousMessages = await prisma.chatMessage.findMany({
     where: { threadId },
     orderBy: { createdAt: 'asc' },
   });
+  // Window history to the last N messages so long threads don't grow the
+  // prompt (and its token cost) without bound — cut at a turn boundary so a
+  // window never opens on a dangling assistant-tool_calls sequence.
+  const previousMessages = windowHistoryAtTurnBoundary(allPreviousMessages);
+
+  // Enforce org cost caps BEFORE the first LLM call of the turn. Thrown
+  // ChatCapError propagates to the HTTP layer, which maps it to a typed 402.
+  await assertWithinCostCaps(server.orgId, threadId);
 
   await prisma.chatMessage.create({
     data: { threadId, role: 'user', content: userMessage },
   });
 
   const isAgentConnected = gateway.isConnected(serverId);
+  // orgId always comes from the DB row for this server — callers must have
+  // already verified the caller's org owns it before invoking the chat flow.
   const context: ChatContext = {
     serverId,
     threadId,
     userId,
-    orgId: server.orgId || 'dev-org',
+    orgId: server.orgId,
     framework: server.framework,
     resources: server.resources,
     previousMessages,
@@ -40,13 +164,22 @@ export async function handleChatMessage(
     isAgentConnected,
   };
 
-  let assistantContent = '';
-  const toolCalls: any[] = [];
-
   try {
     let currentTurnMessages: any[] = [{ role: 'user', content: userMessage }];
+    let iterations = 0;
 
     while (true) {
+      // Hard stop for runaway tool loops — without it a model that keeps
+      // requesting tools would loop (and spend) indefinitely.
+      if (++iterations > MAX_TOOL_ITERATIONS) {
+        const limitMsg = 'Reached tool-call limit for this turn.';
+        onStream({ type: 'text', content: `\n\n${limitMsg}` });
+        await prisma.chatMessage.create({
+          data: { threadId, role: 'assistant', content: limitMsg, model: 'Noxes AI' },
+        });
+        break;
+      }
+
       let assistantContent = '';
       const toolCalls: any[] = [];
       let hasToolCalls = false;
@@ -63,7 +196,7 @@ export async function handleChatMessage(
             toolError = true;
             break;
           }
-          const result = await handleToolCall(gateway, serverId, threadId, userId, { orgId: server.orgId || 'dev-org' }, chunk.toolName!, chunk.toolArgs!);
+          const result = await handleToolCall(gateway, serverId, threadId, userId, { orgId: server.orgId }, chunk.toolName!, chunk.toolArgs!);
           toolCalls.push({ id: chunk.toolId || crypto.randomUUID(), name: chunk.toolName, arguments: chunk.toolArgs, result });
           onStream({ type: 'tool_result', content: JSON.stringify(result) });
         }
@@ -96,12 +229,18 @@ export async function handleChatMessage(
           });
         }
 
-        // Update context to include the new messages from DB
-        context.previousMessages = await prisma.chatMessage.findMany({
+        // Update context to include the new messages from DB, windowed to the
+        // same HISTORY_WINDOW bound as the initial load (turn-boundary safe).
+        const allMessages = await prisma.chatMessage.findMany({
           where: { threadId },
           orderBy: { createdAt: 'asc' },
         });
-        
+        context.previousMessages = windowHistoryAtTurnBoundary(allMessages);
+
+        // Each completed LLM call above persisted its Usage row — re-check the
+        // conversation cap before paying for another tool-loop iteration.
+        await recheckConversationCap(context);
+
         // Reset turn messages, streamChat will use context.previousMessages
         currentTurnMessages = [];
       } else {
@@ -109,6 +248,9 @@ export async function handleChatMessage(
       }
     }
   } catch (error: any) {
+    // Cost-cap rejections are typed control flow, not stream errors — let them
+    // propagate so the HTTP layer can answer with the typed 402 shape.
+    if (error instanceof ChatCapError) throw error;
     onStream({ type: 'error', content: error.message });
   }
 }
@@ -119,23 +261,33 @@ async function handleToolCall(gateway: AgentGateway, serverId: string, threadId:
   }
 
   switch (toolName) {
-    case 'read_remote_file':
-      return gateway.sendCommand(serverId, 'fs.read', { path: args.path }, 30000);
-    case 'list_remote_directory':
-      return gateway.sendCommand(serverId, 'fs.list', { path: args.path, recursive: false }, 30000);
+    case 'read_remote_file': {
+      const safe = sanitizeRelativePath(String(args.path ?? ''));
+      if (!safe) return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
+      return gateway.sendCommand(serverId, 'fs.read', { path: safe }, 30000);
+    }
+    case 'list_remote_directory': {
+      const safe = sanitizeRelativePath(String(args.path ?? ''));
+      if (!safe) return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
+      return gateway.sendCommand(serverId, 'fs.list', { path: safe, recursive: false }, 30000);
+    }
     case 'get_resource_index': {
       const resource = await prisma.resourceIndex.findFirst({ where: { serverId, resourceName: args.resourceName } });
       if (!resource) throw new Error(`Resource not found: ${args.resourceName}`);
       return { name: resource.resourceName, path: resource.relativePath, dependencies: resource.dependencies as string[], files: resource.files as string[] };
     }
     case 'propose_remote_write': {
-      const currentFile = await gateway.sendCommand(serverId, 'fs.read', { path: args.path }, 30000);
+      const safe = sanitizeRelativePath(String(args.path ?? ''));
+      if (!safe) {
+        return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
+      }
+      const currentFile = await gateway.sendCommand(serverId, 'fs.read', { path: safe }, 30000);
       const change = await prisma.change.create({
         data: {
           serverId,
           threadId,
           createdByUserId: userId,
-          filesTouched: [args.path],
+          filesTouched: [safe],
           diff: generateDiff(currentFile?.content ?? '', args.newContent),
           status: 'pending',
         },
@@ -147,10 +299,10 @@ async function handleToolCall(gateway: AgentGateway, serverId: string, threadId:
           serverId,
           userId,
           action: 'change.proposed',
-          metadata: { changeId: change.id, path: args.path, reason: args.reason },
+          metadata: { changeId: change.id, path: safe, reason: args.reason },
         },
       });
-      return { changeId: change.id, path: args.path, reason: args.reason, status: 'staged' };
+      return { changeId: change.id, path: safe, reason: args.reason, status: 'staged' };
     }
     default:
       throw new Error(`Unknown tool: ${toolName}`);

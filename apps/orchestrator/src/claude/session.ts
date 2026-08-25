@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { prisma } from '@fivem-ai/db';
+import { estimateCostUsd } from './pricing';
 import type { ChatMessage, ResourceIndex } from '@prisma/client';
 
 const openai = new OpenAI({
@@ -433,6 +434,9 @@ export async function* streamChat(
       model: 'Noxes AI',
       messages,
       stream: true,
+      // Ask the OpenAI-compatible backend to append a final usage-only chunk.
+      // Providers that ignore it just omit that chunk — harmless.
+      stream_options: { include_usage: true },
       ...(tools ? { tools } : {}),
     });
 
@@ -443,10 +447,8 @@ export async function* streamChat(
     const toolCallsMap = new Map<number, any>();
 
     for await (const chunk of stream) {
-      const choice = chunk.choices[0];
-      if (!choice) continue;
-
-      // Track usage if available (typically in the last chunk)
+      // Usage rides a FINAL chunk with an empty choices array — read it
+      // BEFORE the choice guard below, which would otherwise skip it.
       if (chunk.usage) {
         promptTokens = chunk.usage.prompt_tokens || 0;
         completionTokens = chunk.usage.completion_tokens || 0;
@@ -457,6 +459,9 @@ export async function* streamChat(
       if (chunk.model) {
         modelUsed = chunk.model;
       }
+
+      const choice = chunk.choices[0];
+      if (!choice) continue;
 
       const delta = choice.delta;
       if (delta?.content) {
@@ -477,20 +482,26 @@ export async function* streamChat(
       }
     }
 
-    // Log usage stats (informational only — included in subscription)
+    // Persist real usage + estimated cost for this LLM call. The cost-cap
+    // enforcement in chatService reads these rows, so a call without usage
+    // data would silently escape metering — log loudly when that happens.
     if (totalTokens > 0) {
       console.log(`[streamChat] Usage: ${modelUsed} | Input: ${promptTokens} | Output: ${completionTokens} | Total: ${totalTokens}`);
-      
+
       await prisma.usage.create({
         data: {
-          orgId: context.orgId || 'dev-org',
+          orgId: context.orgId,
           threadId: context.threadId,
           tokensIn: promptTokens,
           tokensOut: completionTokens,
-          costUsd: 0,
+          costUsd: estimateCostUsd(modelUsed, promptTokens, completionTokens),
           model: modelUsed,
         },
       });
+    } else {
+      console.warn(
+        `[streamChat] no usage chunk received from provider — turn not metered (thread ${context.threadId})`,
+      );
     }
 
     for (const tc of toolCallsMap.values()) {

@@ -18,6 +18,7 @@ import {
   Play,
   Pause,
   Terminal,
+  Trash2,
   TrendingUp,
   ChevronRight,
   Plus as PlusIcon,
@@ -25,7 +26,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ORCHESTRATOR_URL } from '@/lib/config';
-import { scanResources, restartServer, createServer } from '@/lib/api';
+import { scanResources, restartServer, createServer, deleteServer } from '@/lib/api';
+import { authedFetch } from '@/lib/auth-fetch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
 import { useState, useCallback } from 'react';
@@ -73,7 +75,7 @@ interface ActivityItem {
 const ORCH_URL = ORCHESTRATOR_URL;
 
 async function fetchServers() {
-  const res = await fetch(`${ORCH_URL}/api/servers`);
+  const res = await authedFetch(`${ORCH_URL}/api/servers`);
   if (!res.ok) throw new Error(res.status.toString());
   return res.json();
 }
@@ -82,7 +84,7 @@ async function fetchAllChanges(servers: any[]) {
   const results = await Promise.all(
     servers.map(async (s) => {
       try {
-        const res = await fetch(`${ORCH_URL}/api/servers/${s.id}/changes`);
+        const res = await authedFetch(`${ORCH_URL}/api/servers/${s.id}/changes`);
         if (!res.ok) return [];
         return (await res.json()).map((c: any) => ({ ...c, serverId: s.id, serverName: s.name }));
       } catch { return []; }
@@ -169,12 +171,14 @@ function ServerCard({
   pendingChanges,
   onScan,
   onRestart,
+  onDelete,
   isDark,
 }: {
   server: ServerData;
   pendingChanges: number;
   onScan: (id: string) => void;
   onRestart: (id: string) => void;
+  onDelete: (server: ServerData) => void;
   isDark: boolean;
 }) {
   const [scanning, setScanning] = useState(false);
@@ -284,23 +288,31 @@ function ServerCard({
         <span className="font-mono text-[10px] text-white/25">
           {server.lastSeenAt ? `Last seen ${timeAgo(new Date(server.lastSeenAt).getTime())}` : 'No recent activity'}
         </span>
+        {/* Card actions are mouse-only spans: nesting real <button>s inside the
+            card's <Link> is invalid HTML, and the ruling is that keyboard users
+            navigate with the link itself (full controls live on the server page). */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleScan(); }}
-            disabled={scanning}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors duration-100 disabled:opacity-50"
+          <span
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!scanning) handleScan(); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors duration-100 ${scanning ? 'opacity-50' : ''}`}
           >
             <RefreshCw className={`w-3 h-3 ${scanning ? 'animate-spin' : ''}`} />
             Scan
-          </button>
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRestart(); }}
-            disabled={restarting}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors duration-100 disabled:opacity-50"
+          </span>
+          <span
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!restarting) handleRestart(); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 transition-colors duration-100 ${restarting ? 'opacity-50' : ''}`}
           >
             <Play className="w-3 h-3" />
             Restart
-          </button>
+          </span>
+          <span
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(server); }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-white/30 hover:text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-colors duration-100"
+          >
+            <Trash2 className="w-3 h-3" />
+            Delete
+          </span>
         </div>
       </div>
     </Link>
@@ -326,7 +338,6 @@ export default function DashboardPage() {
     { dedupingInterval: 15_000 },
   );
 
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newServerName, setNewServerName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -424,36 +435,26 @@ export default function DashboardPage() {
   const handleDeleteServer = (server: ServerData) => {
     confirm({
       title: 'Delete Server',
-      message: `Are you sure you want to delete "${server.name}"? This action cannot be undone.`,
+      message: `Type-to-confirm deletion is available on the server's Settings page. Delete "${server.name}" now? This action cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       variant: 'danger',
       onConfirm: async () => {
-        // Delete implementation would go here
-        toast.success('Server deleted');
-        mutate();
+        try {
+          // Orchestrator requires the exact server name as confirmation.
+          await deleteServer(server.id, server.name);
+          toast.success('Server deleted');
+          mutate();
+          router.refresh();
+        } catch (e: any) {
+          toast.error(e?.message || 'Failed to delete server');
+        }
       },
     });
   };
 
   return (
     <div className={`flex-1 overflow-y-auto transition-colors duration-150 ${isDark ? 'bg-[#0a0a0f]' : 'bg-[#f3f4f6]'}`}>
-      {/* Toast notifications */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        <AnimatePresence>
-          {toastMsg && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className={`font-mono text-xs uppercase tracking-wider px-4 py-2.5 border text-white ${isDark ? 'bg-[#16161E] border-[rgba(94,106,210,0.4)]' : 'bg-white border-[rgba(94,106,210,0.3)]'}`}
-            >
-              {toastMsg}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
       {/* Create server modal / pairing result */}
       <AnimatePresence>
         {showCreateModal && (
@@ -583,7 +584,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-          <div className={`p-6 space-y-6 ${isDark ? '' : 'bg-[#f3f4f6]'}`}>
+          <div className={`p-6 space-y-6 ${isDark ? '' : 'bg-[#f3f4f6]'}`} data-tour="server-cards">
         {/* ─── Stats Row ──────────────────────────────────────────────── */}
         {totalServers > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -683,6 +684,7 @@ export default function DashboardPage() {
                   pendingChanges={allChanges?.filter((c: Change) => c.serverId === server.id && c.status === 'pending').length ?? 0}
                   onScan={handleScan}
                   onRestart={handleRestart}
+                  onDelete={handleDeleteServer}
                   isDark={isDark}
                 />
               ))}

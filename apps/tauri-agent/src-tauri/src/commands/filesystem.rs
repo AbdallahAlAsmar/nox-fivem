@@ -29,15 +29,119 @@ pub struct Diff {
 }
 
 // Path validation - prevent directory traversal
+//
+// `target` may legitimately not exist yet (e.g. a file about to be created by
+// an applyPatch). Canonicalizing only the target would fail in that case, so we
+// instead canonicalize the deepest EXISTING ancestor of the target and prefix-
+// check that against the canonicalized base. Any symlink/junction component
+// that already exists is resolved by the OS, and non-existent trailing
+// segments cannot introduce traversal on their own once the existing part is
+// confirmed inside the base.
 fn is_path_safe(base: &PathBuf, target: &PathBuf) -> Result<(), String> {
-    let canonical_base = base.canonicalize().map_err(|e| format!("Invalid base path: {}", e))?;
-    let canonical_target = target.canonicalize().map_err(|e| format!("Invalid target path: {}", e))?;
-    
-    if !canonical_target.starts_with(&canonical_base) {
+    let canonical_base = dunce::canonicalize(base)
+        .map_err(|e| format!("Invalid base path: {}", e))?;
+
+    // Walk up from the full target to the deepest ancestor that exists.
+    let mut probe = target.clone();
+    let mut missing_tail: Vec<std::ffi::OsString> = Vec::new();
+    loop {
+        if probe.exists() {
+            break;
+        }
+        match (probe.file_name(), probe.parent()) {
+            (Some(name), Some(parent)) => {
+                missing_tail.push(name.to_os_string());
+                probe = parent.to_path_buf();
+            }
+            _ => return Err("Invalid target path: no existing ancestor".to_string()),
+        }
+        if probe == *base {
+            // Nothing below the base exists — the base itself is the anchor.
+            break;
+        }
+    }
+
+    if !probe.exists() {
+        return Err("Invalid target path: base does not exist".to_string());
+    }
+
+    let canonical_probe = dunce::canonicalize(&probe)
+        .map_err(|e| format!("Invalid target path: {}", e))?;
+
+    if !canonical_probe.starts_with(&canonical_base) {
         return Err("Path traversal detected".to_string());
     }
-    
+
     Ok(())
+}
+
+/// Validate that a relative path stays inside the server data root, returning
+/// the canonical absolute path on success. Used by WS request handlers for
+/// fs.read/fs.list/fs.applyPatch before any filesystem access.
+pub fn ensure_scoped(server_dir: &PathBuf, rel_path: &str) -> Result<PathBuf, String> {
+    // Reject absolute paths outright (drive letters, leading / or \, UNC).
+    let trimmed = rel_path.trim();
+    let looks_absolute = trimmed.starts_with('/')
+        || trimmed.starts_with('\\')
+        || trimmed.len() >= 2 && trimmed.as_bytes()[1] == b':';
+    if looks_absolute {
+        return Err(format!("Absolute paths are not allowed: {}", rel_path));
+    }
+
+    // Normalize separators, then reject any '..' component after normalization
+    // so `a\..\..\b` tricks are caught before they ever reach the filesystem.
+    let normalized = trimmed.replace('\\', "/");
+    for seg in normalized.split('/') {
+        if seg == ".." {
+            return Err("Path traversal detected".to_string());
+        }
+    }
+
+    let joined = server_dir.join(&normalized);
+    is_path_safe(server_dir, &joined)?;
+    Ok(joined)
+}
+
+#[cfg(test)]
+mod ensure_scoped_tests {
+    use super::*;
+
+    #[test]
+    fn rejects_absolute_paths() {
+        let base = PathBuf::from("/tmp/server-data");
+        assert!(ensure_scoped(&base, "C:\\Windows\\system32").is_err());
+        assert!(ensure_scoped(&base, "/etc/passwd").is_err());
+        assert!(ensure_scoped(&base, "\\\\server\\share").is_err());
+    }
+
+    #[test]
+    fn rejects_traversal_segments() {
+        let base = PathBuf::from("/tmp/server-data");
+        assert!(ensure_scoped(&base, "../etc/passwd").is_err());
+        assert!(ensure_scoped(&base, "resources\\..\\..\\secret").is_err());
+    }
+
+    #[test]
+    fn accepts_normal_relative_paths() {
+        // Real temp dir so canonicalization has an existing base to anchor to.
+        let unique = std::process::id().to_string() + "-nox-ensure-scoped";
+        let base = std::env::temp_dir().join(unique);
+        fs::create_dir_all(&base).expect("failed to create temp base dir");
+
+        let result = ensure_scoped(&base, "resources/test.lua");
+        let joined = result.expect("normal relative path should be accepted");
+
+        let expected_suffix = PathBuf::from("resources").join("test.lua");
+        assert!(
+            joined.ends_with(&expected_suffix),
+            "joined path {:?} should end with {:?}",
+            joined,
+            expected_suffix
+        );
+
+        // Cleanup best-effort.
+        let _ = fs::remove_dir_all(&base);
+    }
 }
 
 // Filesystem commands

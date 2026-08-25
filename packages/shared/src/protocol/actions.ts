@@ -19,6 +19,31 @@ export const PairingClaimResponseSchema = z.object({
 });
 
 // ============================================
+// Server Create / Auto-Pair
+// ============================================
+
+/**
+ * Response of POST /api/servers. Auto-pairs an agent device at creation time;
+ * `connect.sessionToken` carries the same one-time session token shape that
+ * pairing claim mints, so auto-paired devices can present a token at hello and
+ * AGENT_LEGACY_OK can be flipped off. Optional so older clients that predate
+ * token minting keep validating.
+ */
+export const ServerCreateResponseSchema = z.object({
+  server: z.object({
+    id: z.string(),
+    name: z.string(),
+    status: z.string(),
+  }),
+  connect: z.object({
+    serverId: z.string(),
+    agentDeviceId: z.string(),
+    wsUrl: z.string().url(),
+    sessionToken: z.string().optional(),
+  }),
+});
+
+// ============================================
 // Agent Hello/Auth
 // ============================================
 
@@ -28,6 +53,9 @@ export const AgentHelloSchema = z.object({
   agentVersion: z.string(),
   platform: z.enum(['windows', 'linux', 'unknown']),
   publicKey: z.string().optional(),
+  // Session token issued at pairing-claim time. Optional for transitional
+  // backwards compatibility (see AGENT_LEGACY_OK in the orchestrator gateway).
+  sessionToken: z.string().optional(),
   capabilities: z.array(z.string()),
 });
 
@@ -74,7 +102,12 @@ export const FsReadResultSchema = z.object({
 });
 
 export const FsApplyPatchArgsSchema = z.object({
-  changeId: z.string().uuid(),
+  // Change.id is minted by Prisma as a cuid (@default(cuid()) on the Change
+  // model), while some clients/fixtures mint UUIDs. changeId is an opaque
+  // correlation token the agent merely echoes back — it carries no security
+  // property — so accept ANY non-empty string rather than pinning a single
+  // id format that real production payloads would fail validation on.
+  changeId: z.string().min(1),
   files: z.array(z.object({
     path: z.string(),
     expectedSha256: z.string().optional(),
@@ -83,7 +116,7 @@ export const FsApplyPatchArgsSchema = z.object({
 });
 
 export const FsApplyPatchResultSchema = z.object({
-  changeId: z.string().uuid(),
+  changeId: z.string().min(1),
   appliedFiles: z.array(z.object({
     path: z.string(),
     success: z.boolean(),
@@ -105,12 +138,18 @@ export const GitStatusResultSchema = z.object({
 });
 
 export const GitCheckpointArgsSchema = z.object({
-  changeId: z.string().uuid(),
+  // Change.id is minted by Prisma as a cuid (@default(cuid()) on the Change
+  // model), while some clients/fixtures mint UUIDs. changeId is an opaque
+  // correlation token the agent merely echoes back — it carries no security
+  // property — so accept ANY non-empty string rather than pinning a single
+  // id format that real production payloads would fail validation on.
+  // (Same rationale as FsApplyPatchArgsSchema/FsApplyPatchResultSchema.)
+  changeId: z.string().min(1),
   message: z.string().optional(),
 });
 
 export const GitCheckpointResultSchema = z.object({
-  changeId: z.string().uuid(),
+  changeId: z.string().min(1),
   sha: z.string(),
   branch: z.string(),
 });
@@ -147,7 +186,28 @@ export const ScanResourcesResultSchema = z.object({
 // FiveM/txAdmin Actions
 // ============================================
 
-export const RestartResourceArgsSchema = z.object({
+// Optional per-server txAdmin connection details. The orchestrator relays
+// these from Server.settings so agents don't need their own config store;
+// every field is optional so agents without txAdmin keep working (they reply
+// NOT_IMPLEMENTED / source:'none' honestly).
+export const TxAdminConfigSchema = z.object({
+  useTxAdmin: z.boolean().optional(),
+  txadminUrl: z.string().optional(),
+  txadminApiKey: z.string().optional(),
+});
+
+export const ListPlayersArgsSchema = TxAdminConfigSchema;
+
+export const BanPlayerArgsSchema = TxAdminConfigSchema.extend({
+  identifier: z.string(),
+  reason: z.string().optional(),
+});
+
+export const UnbanPlayerArgsSchema = TxAdminConfigSchema.extend({
+  identifier: z.string(),
+});
+
+export const RestartResourceArgsSchema = TxAdminConfigSchema.extend({
   resourceName: z.string(),
   timeout: z.number().int().positive().optional().default(30000),
 });
@@ -220,8 +280,13 @@ export const AgentResponseSchema = z.discriminatedUnion('ok', [
 // Type exports
 export type PairingClaim = z.infer<typeof PairingClaimSchema>;
 export type PairingClaimResponse = z.infer<typeof PairingClaimResponseSchema>;
+export type ServerCreateResponse = z.infer<typeof ServerCreateResponseSchema>;
 export type AgentHello = z.infer<typeof AgentHelloSchema>;
 export type AgentAuthenticated = z.infer<typeof AgentAuthenticatedSchema>;
+export type TxAdminConfig = z.infer<typeof TxAdminConfigSchema>;
+export type ListPlayersArgs = z.infer<typeof ListPlayersArgsSchema>;
+export type BanPlayerArgs = z.infer<typeof BanPlayerArgsSchema>;
+export type UnbanPlayerArgs = z.infer<typeof UnbanPlayerArgsSchema>;
 export type FsListArgs = z.infer<typeof FsListArgsSchema>;
 export type FsListResult = z.infer<typeof FsListResultSchema>;
 export type FsReadArgs = z.infer<typeof FsReadArgsSchema>;

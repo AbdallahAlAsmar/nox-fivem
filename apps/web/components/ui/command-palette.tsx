@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { fetchServers } from '@/lib/api-base';
+import { fetchServers } from '@/lib/api';
 
 interface CommandPaletteProps {
   isOpen: boolean;

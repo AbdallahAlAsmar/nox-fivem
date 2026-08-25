@@ -45,30 +45,43 @@ const ACTION_LABELS: Record<string, string> = {
 
 export default function AuditLogPage() {
   const [logs, setLogs] = useState<AuditEntry[]>([]);
+  // True per-action totals across the whole org (server-side groupBy), so stat
+  // cards stay correct even when the log list is a single clamped page.
+  const [actionCounts, setActionCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   async function fetchLogs() {
     try {
-      const res = await fetch('/api/audit');
-      if (res.ok) {
-        const data = await res.json();
-        setLogs(data.logs || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch audit logs:', error);
+      setLoading(true);
+      setError(null);
+      // The API clamps to MAX_PAGE_SIZE=200 (same bound as the orchestrator)
+      // and returns grouped totals for the stat cards — requesting more than
+      // that would be dishonest about what the list actually shows.
+      const qs = new URLSearchParams({ limit: '200' });
+      if (filter !== 'all') qs.set('filter', filter);
+      const res = await fetch(`/api/audit?${qs.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setLogs(data.logs || []);
+      setActionCounts(data.actionCounts || {});
+    } catch (err: any) {
+      console.error('Failed to fetch audit logs:', err);
+      setError(err?.message || 'Failed to load audit log');
+      setLogs([]);
+      setActionCounts({});
     } finally {
       setLoading(false);
     }
   }
 
-  const filteredLogs = filter === 'all' 
-    ? logs 
-    : logs.filter(log => log.action.startsWith(filter.split('.')[0]));
+  const filteredLogs = logs;
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0F0F14] p-6">
@@ -107,7 +120,9 @@ export default function AuditLogPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {(['change.proposed', 'change.applied', 'server.scanned', 'agent.connected'] as const).map((action) => {
             const Icon = ACTION_ICONS[action] || AlertCircle;
-            const count = logs.filter(l => l.action === action).length;
+            // Server-side total for this action across the org; falls back to
+            // counting the loaded page if the grouped payload is absent.
+            const count = actionCounts[action] ?? logs.filter(l => l.action === action).length;
             return (
               <div key={action} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -126,6 +141,18 @@ export default function AuditLogPage() {
         <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-white/30 font-mono text-sm">Loading...</div>
+          ) : error ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-10 h-10 text-white/15 mx-auto mb-4" />
+              <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white/60 mb-2">Failed to load</h3>
+              <p className="font-sans text-xs text-white/40 mb-4">{error}</p>
+              <button
+                onClick={fetchLogs}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+              >
+                Retry
+              </button>
+            </div>
           ) : filteredLogs.length === 0 ? (
           <div className="p-8 text-center">
             <GitCommit className="w-10 h-10 text-[rgba(255,255,255,0.15)] mx-auto mb-4" />

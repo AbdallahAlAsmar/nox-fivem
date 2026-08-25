@@ -45,6 +45,7 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
   const [pendingChanges, setPendingChanges] = useState<any[]>([]);
   const [selectedChange, setSelectedChange] = useState<any | null>(null);
   const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isConnected } = useAgentStatus();
   const isAgentConnected = isConnected;
@@ -87,15 +88,30 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
     lastKnownMessageId.current = msgs?.[msgs.length - 1]?.id ?? null;
   }, []);
 
-  // Switch active thread
+  // Switch active thread. Load failures surface visibly (loadError state) —
+  // since lib/api stopped swallowing errors, every await here must be guarded.
   const switchThread = useCallback(async (threadId: string) => {
     setActiveThreadId(threadId);
     onThreadIdChange?.(threadId);
     if (pollingRef.current) clearInterval(pollingRef.current);
-    await loadThreadMessages(threadId);
-    // Poll for new messages every 2s
+    try {
+      await loadThreadMessages(threadId);
+    } catch (err) {
+      console.warn('[ChatPanel] Failed to load messages for thread:', threadId, err);
+      setLoadError('Failed to load conversation — check your connection');
+      return;
+    }
+    setLoadError(null);
+    // Poll for new messages every 2s. Background refreshes must never throw
+    // unhandled — a transient failure just skips this tick.
     pollingRef.current = setInterval(async () => {
-      const msgs = await fetchThreadMessages(threadId);
+      let msgs: any[] | null = null;
+      try {
+        msgs = await fetchThreadMessages(threadId);
+      } catch (err) {
+        console.warn('[ChatPanel] Message poll failed (will retry):', err);
+        return;
+      }
       if (!msgs?.length) return;
       const last = msgs[msgs.length - 1];
       if (lastKnownMessageId.current === last.id) return;
@@ -113,7 +129,10 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
 
   // Initial load: find existing thread or create one
   useEffect(() => {
-    loadThreads();
+    loadThreads().catch((err) => {
+      // Sidebar listing is non-critical; log so failures are diagnosable.
+      console.warn('[ChatPanel] Failed to load thread list:', err);
+    });
   }, [loadThreads]);
 
   useEffect(() => {
@@ -123,7 +142,10 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
       if (thread && thread.id) {
         await switchThread(thread.id);
       }
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn('[ChatPanel] Failed to resolve initial thread:', err);
+      setLoadError('Failed to load conversation — check your connection');
+    });
   }, [serverId, switchThread]);
 
   // Auto-scroll to bottom on new messages
@@ -139,10 +161,15 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
   }, []);
 
   const handleNewChat = async () => {
-    const thread = await createThread(serverId, `Chat ${threads.length + 1}`);
-    await loadThreads();
-    await switchThread(thread.id);
-    setShowThreadList(false);
+    try {
+      const thread = await createThread(serverId, `Chat ${threads.length + 1}`);
+      await loadThreads();
+      await switchThread(thread.id);
+      setShowThreadList(false);
+    } catch (err) {
+      console.warn('[ChatPanel] Failed to create new chat:', err);
+      setLoadError('Failed to create a new conversation');
+    }
   };
 
   const handleDeleteThread = async (threadId: string, e: React.MouseEvent) => {
@@ -185,12 +212,19 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
     setIsLoading(true);
 
     try {
-      await sendChatMessage(activeThreadId, captured);
+      await sendChatMessage(activeThreadId, captured, sharedUserId, selectedSkills.length > 0 ? selectedSkills : undefined);
+      setLoadError(null);
       // Reload messages for this thread
       await loadThreadMessages(activeThreadId);
     } catch (error) {
+      // Surface the failure (incl. typed cost-cap 402s) in the loadError banner.
+      setLoadError(error instanceof Error ? error.message : 'Failed to send message');
       // Reload to get actual persisted state
-      await loadThreadMessages(activeThreadId);
+      try {
+        await loadThreadMessages(activeThreadId);
+      } catch {
+        // secondary failure — the banner above already reports the primary error
+      }
     } finally {
       setIsLoading(false);
     }
@@ -306,6 +340,13 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {loadError && (
+            <div className="px-3 py-2 bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] rounded-lg flex items-center justify-between gap-2">
+              <p className="font-mono text-[10px] text-[#ef4444]/80 uppercase tracking-wider">
+                {loadError}
+              </p>
+            </div>
+          )}
           {agentStatus === 'disconnected' && messages.length === 0 && (
             <div className="text-center py-12 space-y-4">
               <div className="w-12 h-12 bg-[rgba(239,68,68,0.08)] rounded-2xl flex items-center justify-center mx-auto">

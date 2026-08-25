@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Server, MessageSquare, Settings, ArrowRight, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
+import { ORCHESTRATOR_URL } from '@/lib/config';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ interface OnboardingData {
   goal: string;
 }
 
-const ORCH_URL = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://localhost:3001';
+const ORCH_URL = ORCHESTRATOR_URL;
 
 // ─── Steps ─────────────────────────────────────────────────────────────────────
 
@@ -71,10 +72,13 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isSignedIn) {
-    router.push('/sign-in');
-    return null;
-  }
+  // Redirect in an effect, never during render — a render-phase
+  // router.push() triggers React "setState during render" warnings.
+  useEffect(() => {
+    if (!isSignedIn) {
+      router.push('/sign-in');
+    }
+  }, [isSignedIn, router]);
 
   const update = (patch: Partial<OnboardingData>) => {
     setData(prev => ({ ...prev, ...patch }));
@@ -100,6 +104,10 @@ export default function OnboardingPage() {
   };
 
   // ─── Welcome Step ────────────────────────────────────────────────────────────
+  if (!isSignedIn) {
+    return null; // effect is redirecting to /sign-in
+  }
+
   if (step === 'welcome') {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">

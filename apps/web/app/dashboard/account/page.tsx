@@ -18,8 +18,6 @@ import {
   Clock,
   LogOut,
   Upload,
-  Eye,
-  EyeOff,
   RefreshCw,
   Server,
   Copy,
@@ -30,10 +28,11 @@ type Tab = 'profile' | 'security' | 'api_keys' | 'activity';
 interface ApiKey {
   id: string;
   name: string;
-  key: string;
+  prefix?: string | null;
+  key?: string; // plaintext — present ONLY in the creation response
   createdAt: string;
-  lastUsedAt?: string;
-  lastIp?: string;
+  lastUsedAt?: string | null;
+  revokedAt?: string | null;
 }
 
 interface SecurityEvent {
@@ -69,17 +68,20 @@ const PROVIDER_ICONS: Record<string, string> = {
   github: 'GH',
 };
 
+/**
+ * Clerk reports providers as "oauth_google" etc. while the icon table is
+ * keyed by the bare name — strip the prefix before lookup.
+ */
+function providerIconKey(provider: string): string {
+  return provider.replace(/^oauth_/, '').toLowerCase();
+}
+
 export default function AccountPage() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
-  const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
   const [apiKeyName, setApiKeyName] = useState('');
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
@@ -136,6 +138,8 @@ export default function AccountPage() {
       if (res.ok) {
         toast.success('Profile updated');
         setIsEditing(false);
+        // Pull the fresh name back into the Clerk client cache.
+        await user?.reload();
       } else {
         toast.error('Failed to update profile');
       }
@@ -175,40 +179,6 @@ export default function AccountPage() {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const res = await fetch('/api/account/password', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword: password, newPassword }),
-      });
-
-      if (res.ok) {
-        toast.success('Password updated');
-        setPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Failed to update password');
-      }
-    } catch {
-      toast.error('Failed to update password');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleCreateApiKey = async () => {
     if (!newKeyName.trim()) {
       toast.error('Please enter a key name');
@@ -225,13 +195,17 @@ export default function AccountPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setCreatedKey(data.key);
-        setApiKeys((prev) => [...prev, data.key]);
+        // The plaintext token appears exactly once, in this response.
+        if (data.key?.key) {
+          setCreatedKey(data.key.key);
+          copyToClipboard(data.key.key);
+        }
+        setApiKeys((prev) => [{ ...data.key, key: undefined }, ...prev]);
         setNewKeyName('');
         toast.success('API key created');
-        setActiveTab('api_keys');
       } else {
-        toast.error('Failed to create API key');
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to create API key');
       }
     } catch {
       toast.error('Failed to create API key');
@@ -491,7 +465,7 @@ export default function AccountPage() {
                         className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
                         style={{ background: getProviderColor(acct.provider) + '22', color: getProviderColor(acct.provider) }}
                       >
-                        {PROVIDER_ICONS[acct.provider.toLowerCase()] ?? acct.provider[0].toUpperCase()}
+                        {PROVIDER_ICONS[providerIconKey(acct.provider)] ?? providerIconKey(acct.provider)[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-mono text-xs uppercase tracking-wider text-white">
@@ -517,72 +491,20 @@ export default function AccountPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            {/* Password Change */}
+            {/* Password — managed by Clerk */}
             <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Lock className="w-4 h-4 text-[#5E6AD2]" />
                 <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
-                  Change Password
+                  Password
                 </h2>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="block font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
-                    Current Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white pr-10 focus:border-[#5E6AD2] outline-none"
-                    />
-                    <button
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.3)] hover:text-white"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
-                    New Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white pr-10 focus:border-[#5E6AD2] outline-none"
-                    />
-                    <button
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.3)] hover:text-white"
-                    >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white focus:border-[#5E6AD2] outline-none"
-                  />
-                </div>
-                <button
-                  onClick={handleChangePassword}
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider rounded hover:bg-[#7c8aff] transition-colors disabled:opacity-50"
-                >
-                  {isLoading ? 'Updating...' : 'Update Password'}
-                </button>
-              </div>
+              <p className="font-sans text-xs text-[rgba(255,255,255,0.35)] leading-[1.7]">
+                Password changes are handled securely by your sign-in provider.
+                Use the &ldquo;Forgot password?&rdquo; link on the sign-in screen to reset it,
+                or sign in with a linked account (Google, Discord, GitHub) and manage
+                credentials from that provider.
+              </p>
             </div>
 
             {/* Danger Zone */}
@@ -678,23 +600,26 @@ export default function AccountPage() {
                       className="flex items-center gap-3 p-3 bg-[#0A0A0F] border border-[rgba(255,255,255,0.06)]"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-mono text-xs text-white truncate">{key.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-xs text-white truncate">{key.name}</p>
+                          {key.revokedAt && (
+                            <span className="px-1.5 py-0.5 bg-[rgba(239,68,68,0.1)] text-[#ef4444] font-mono text-[9px] uppercase tracking-wider rounded">
+                              Revoked
+                            </span>
+                          )}
+                        </div>
                         <p className="font-mono text-[11px] text-[rgba(255,255,255,0.4)] mt-0.5">
-                          {key.key.slice(0, 12)}...{key.key.slice(-4)}
+                          {key.prefix ?? 'nox_'}••••••••
                         </p>
                         <p className="font-mono text-[10px] text-[rgba(255,255,255,0.25)] mt-0.5">
                           Created {new Date(key.createdAt).toLocaleDateString()}
+                          {key.lastUsedAt && ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`}
                         </p>
                       </div>
                       <button
-                        onClick={() => copyToClipboard(key.key)}
-                        className="p-2 text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <button
                         onClick={() => handleDeleteApiKey(key.id)}
-                        className="p-2 text-[rgba(255,255,255,0.4)] hover:text-[#ff5050] transition-colors"
+                        disabled={!!key.revokedAt}
+                        className="p-2 text-[rgba(255,255,255,0.4)] hover:text-[#ff5050] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

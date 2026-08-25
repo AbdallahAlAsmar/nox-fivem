@@ -1,63 +1,125 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  FileDiff, RotateCcw, CheckCircle2, AlertCircle, 
+import {
+  FileDiff, RotateCcw, CheckCircle2, AlertCircle,
   ChevronDown, ChevronUp, GitCommit, GitBranch,
-  Eye, EyeOff, ArrowLeft, ArrowRight, Split
+  Eye, EyeOff, ArrowLeft, Loader2, Split
 } from 'lucide-react'
+import * as api from '../api'
 
 interface Change {
   id: string
   file: string
   diff: string
-  status: 'pending' | 'applied' | 'rolled_back'
+  status: 'pending' | 'applied' | 'failed' | 'rolled_back'
   timestamp: number
   commit?: string
-  author?: string
+}
+
+/** Map a Prisma Change row (orchestrator shape) onto what this UI renders. */
+function mapChange(c: any): Change {
+  let file = ''
+  const touched = Array.isArray(c.filesTouched) ? c.filesTouched : []
+  if (touched.length > 0 && typeof touched[0] === 'string') file = touched[0]
+  else if (typeof touched[0]?.path === 'string') file = touched[0].path
+  return {
+    id: c.id,
+    file,
+    diff: typeof c.diff === 'string' ? c.diff : '',
+    status: (c.status || 'pending') as Change['status'],
+    timestamp: c.createdAt ? new Date(c.createdAt).getTime() : Date.now(),
+    commit: c.gitCommitSha || undefined,
+  }
 }
 
 export default function Changes({ serverId }: { serverId?: string }) {
   const [changes, setChanges] = useState<Change[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  // Per-change in-flight state so Apply/Discard buttons show progress and
+  // cannot double-fire while a request is running.
+  const [busyIds, setBusyIds] = useState<Record<string, boolean>>({})
+  const [applyingAll, setApplyingAll] = useState(false)
   const [viewMode, setViewMode] = useState<'unified' | 'split'>('unified')
   const [showDiff, setShowDiff] = useState<Record<string, boolean>>({})
   const [timelineMode, setTimelineMode] = useState(false)
+  // Latest serverId wins — guards against out-of-order refetches after a fast
+  // server switch while a load is still in flight.
+  const requestIdRef = useRef(0)
 
-  useEffect(() => {
+  const loadChanges = async () => {
     if (!serverId) {
       setChanges([])
       setLoading(false)
       return
     }
+    const reqId = ++requestIdRef.current
     setLoading(true)
-    fetch(`${import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/servers/${serverId}/changes`)
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        const mapped: Change[] = data.map((c: any) => ({
-          id: c.id,
-          file: c.file,
-          diff: c.diff || '',
-          status: c.status as 'pending' | 'applied' | 'rolled_back',
-          timestamp: c.timestamp || Date.now(),
-          commit: c.commit,
-          author: c.author,
-        }))
-        setChanges(mapped)
-      })
-      .catch(() => setChanges([]))
-      .finally(() => setLoading(false))
+    setError(null)
+    try {
+      const data = await api.fetchChanges(serverId)
+      if (reqId !== requestIdRef.current) return
+      setChanges((Array.isArray(data) ? data : []).map(mapChange))
+    } catch (e) {
+      if (reqId !== requestIdRef.current) return
+      setError(e instanceof Error ? e.message : 'Failed to load changes')
+      setChanges([])
+    } finally {
+      if (reqId === requestIdRef.current) setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadChanges()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverId])
 
-  const handleApply = (id: string) => {
-    setChanges(prev => prev.map(c => c.id === id ? { ...c, status: 'applied' } : c))
+  const runOne = async (id: string, op: (cid: string) => Promise<any>, nextStatus: Change['status']) => {
+    if (busyIds[id]) return
+    setBusyIds(prev => ({ ...prev, [id]: true }))
+    setError(null)
+    try {
+      await op(id)
+      setChanges(prev => prev.map(c => c.id === id ? { ...c, status: nextStatus } : c))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `Action on ${id} failed`)
+    } finally {
+      setBusyIds(prev => ({ ...prev, [id]: false }))
+    }
   }
 
-  const handleRollback = (id: string) => {
-    setChanges(prev => prev.map(c => c.id === id ? { ...c, status: 'rolled_back' } : c))
-  }
+  const handleApply = (id: string) => runOne(id, api.applyChange.bind(api), 'applied')
 
-  const handleApplyAll = () => {
-    setChanges(prev => prev.map(c => c.status === 'pending' ? { ...c, status: 'applied' } : c))
+  const handleDiscard = (id: string) => runOne(id, api.cancelChange.bind(api), 'rolled_back')
+
+  const handleApplyAll = async () => {
+    if (applyingAll) return
+    setApplyingAll(true)
+    setError(null)
+    try {
+      // Sequential applies; the ORCHESTRATOR drives the git checkpoint
+      // (git.checkpoint) before each fs.applyPatch — the desktop just calls
+      // the single-apply endpoint per change.
+      const result = await api.applyAllChanges(serverId || '')
+      if (result.applied.length > 0) {
+        setChanges(prev =>
+          prev.map(c =>
+            result.applied.includes(c.id) ? { ...c, status: 'applied' as const } : c
+          )
+        )
+      }
+      if (result.failed.length > 0) {
+        setError(
+          `Applied ${result.applied.length}, failed ${result.failed.length}: ` +
+          result.failed[0].error +
+          (result.failed.length > 1 ? ` (+${result.failed.length - 1} more)` : '')
+        )
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Apply All failed')
+    } finally {
+      setApplyingAll(false)
+    }
   }
 
   const toggleDiff = (id: string) => {
@@ -115,9 +177,9 @@ export default function Changes({ serverId }: { serverId?: string }) {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <GitCommit className="w-4 h-4 text-[rgba(255,255,255,0.4)]" />
-                      <code className="font-mono text-xs text-[#5E6AD2]">{change.commit || 'unknown'}</code>
+                      <code className="font-mono text-xs text-[#5E6AD2]">{change.commit ? change.commit.slice(0, 7) : 'pending'}</code>
                       <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
-                        {change.author || 'AI'}
+                        AI
                       </span>
                     </div>
                     <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
@@ -195,21 +257,35 @@ export default function Changes({ serverId }: { serverId?: string }) {
           {pendingChanges.length > 0 && (
             <button
               onClick={handleApplyAll}
-              className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white bg-[#5E6AD2] hover:bg-[#4a55b0] transition-colors duration-100"
+              disabled={applyingAll}
+              className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white bg-[#5E6AD2] hover:bg-[#4a55b0] transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <CheckCircle2 className="w-3 h-3" />
-              Apply All
+              {applyingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+              {applyingAll ? 'Applying…' : 'Apply All'}
             </button>
           )}
         </div>
       </div>
 
+      {/* Error banner — action/load failures are always visible, never silent */}
+      {error && (
+        <div className="flex items-start gap-2 p-3 border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)] font-mono text-xs text-[#ef4444]">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError(null)} className="opacity-60 hover:opacity-100 flex-shrink-0">✕</button>
+        </div>
+      )}
+
       {/* Pending Changes */}
       {pendingChanges.length === 0 && appliedChanges.length === 0 && rolledBackChanges.length === 0 ? (
         <div className="text-center py-20 bg-nox-surface border border-[rgba(255,255,255,0.08)]">
           <FileDiff className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-4" />
-          <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">No pending changes</h3>
-          <p className="font-sans text-xs text-[rgba(255,255,255,0.4)]">AI changes will appear here for review</p>
+          <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">
+            {error ? 'Could not load changes' : 'No pending changes'}
+          </h3>
+          <p className="font-sans text-xs text-[rgba(255,255,255,0.4)]">
+            {error ? 'Check the error above and retry' : 'AI changes will appear here for review'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -278,16 +354,18 @@ export default function Changes({ serverId }: { serverId?: string }) {
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => handleApply(change.id)}
-                    className="flex items-center gap-1 px-4 py-2 font-mono text-xs uppercase tracking-[1.4px] bg-white text-[#0F0F14] font-medium hover:opacity-85 transition-opacity duration-100"
+                    disabled={!!busyIds[change.id] || applyingAll}
+                    className="flex items-center gap-1 px-4 py-2 font-mono text-xs uppercase tracking-[1.4px] bg-white text-[#0F0F14] font-medium hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-100"
                   >
-                    <CheckCircle2 className="w-3 h-3" />
+                    {busyIds[change.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
                     Apply
                   </button>
                   <button
-                    onClick={() => handleRollback(change.id)}
-                    className="flex items-center gap-1 px-4 py-2 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 border border-[rgba(255,255,255,0.08)]"
+                    onClick={() => handleDiscard(change.id)}
+                    disabled={!!busyIds[change.id] || applyingAll}
+                    className="flex items-center gap-1 px-4 py-2 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-100 border border-[rgba(255,255,255,0.08)]"
                   >
-                    <RotateCcw className="w-3 h-3" />
+                    {busyIds[change.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
                     Discard
                   </button>
                 </div>

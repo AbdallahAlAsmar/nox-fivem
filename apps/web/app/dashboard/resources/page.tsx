@@ -11,7 +11,7 @@ import {
   ArrowUpCircle, Trash2, Terminal,
 } from 'lucide-react';
 import useSWR from 'swr';
-import { fetchServers, fetchResourceCatalog, installResource, fetchResourceInstalls, rollbackResourceInstall } from '@/lib/api';
+import { fetchServers, fetchResourceCatalog, installResource, fetchResourceInstalls, rollbackResourceInstall, scanResources } from '@/lib/api';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { toast } from 'sonner';
 import { useNotifications } from '@/components/notifications';
@@ -110,11 +110,7 @@ export default function ResourceHubPage() {
     if (!selectedServer || scanning) return;
     setScanning(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'}/api/servers/${selectedServer}/scan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await scanResources(selectedServer);
       setHeaderMsg('Scan complete');
       setTimeout(() => setHeaderMsg(null), 3000);
     } catch {
@@ -138,12 +134,13 @@ export default function ResourceHubPage() {
         message: 'Resource installation in progress...',
       });
       await refreshInstalls();
-    } catch {
-      toast.error('Install failed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Failed to install ${slug}`;
+      toast.error(message);
       addNotification({
         type: 'failure',
-        title: 'Install Failed',
-        message: `Failed to install ${slug}`,
+        title: 'Installation Unavailable',
+        message,
       });
     } finally {
       setInstalling(null);
@@ -161,12 +158,13 @@ export default function ResourceHubPage() {
         message: 'Resource rollback in progress...',
       });
       await refreshInstalls();
-    } catch {
-      toast.error('Rollback failed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Failed to rollback ${resourceName}`;
+      toast.error(message);
       addNotification({
         type: 'failure',
         title: 'Rollback Failed',
-        message: `Failed to rollback ${resourceName}`,
+        message,
       });
     } finally {
       setRollbacking(null);

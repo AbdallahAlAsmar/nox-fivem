@@ -1,15 +1,22 @@
 import { WebSocket } from 'ws';
 import { FastifyRequest } from 'fastify';
+import * as crypto from 'crypto';
 import { prisma } from '@fivem-ai/db';
-import { 
-  AgentMessageEnvelopeSchema, 
-  createEnvelope, 
+import {
+  AgentMessageEnvelopeSchema,
+  createEnvelope,
   createResponse,
   ErrorCodes,
   createError,
   type AgentHello,
   type HeartbeatPayload,
 } from '@fivem-ai/shared/protocol';
+import type { ErrorCode } from '@fivem-ai/shared/protocol';
+
+const HELLO_TIMEOUT_MS = 5_000; // must complete handshake within 5s of upgrade
+const HEARTBEAT_REAP_INTERVAL_MS = 60_000; // scan cadence
+const HEARTBEAT_STALE_MS = 120_000; // heartbeat older than this => dead connection
+const DUPLICATE_FRESH_MS = 90_000; // existing connection considered alive within this window
 
 interface AgentConnection {
   serverId: string;
@@ -19,38 +26,84 @@ interface AgentConnection {
   capabilities: string[];
 }
 
+interface PendingRequest {
+  serverId?: string;
+  resolve: (value: any) => void;
+  reject: (error: any) => void;
+  timeout: NodeJS.Timeout;
+}
+
+function constantTimeHashCompare(aHex: string, bHex: string): boolean {
+  const a = Buffer.from(aHex, 'hex');
+  const b = Buffer.from(bHex, 'hex');
+  // Guard length mismatch first — timingSafeEqual throws on unequal lengths.
+  if (a.length !== b.length || a.length === 0) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * Transitional flag: when true, agents that paired before session tokens
+ * existed (pairingTokenHash is null) may still connect WITHOUT a sessionToken.
+ * Defaults to TRUE so existing deploys keep working; flipping it off is an ops
+ * action once all agents have re-paired.
+ */
+function agentLegacyOk(): boolean {
+  const raw = process.env.AGENT_LEGACY_OK;
+  if (raw === undefined || raw === '') return true;
+  return raw === 'true' || raw === '1';
+}
+
 export class AgentGateway {
   private connections: Map<string, AgentConnection> = new Map();
-  private pendingRequests: Map<string, {
-    resolve: (value: any) => void;
-    reject: (error: any) => void;
-    timeout: NodeJS.Timeout;
-  }> = new Map();
+  private pendingRequests: Map<string, PendingRequest> = new Map();
+  private heartbeatReaper: NodeJS.Timeout | null = null;
+  /** Subscribers (e.g. /ws/status sockets) notified when the connection set changes. */
+  public readonly statusListeners: Set<() => void> = new Set();
+
+  constructor() {
+    // Single reaper for the process lifetime of the gateway instance.
+    this.heartbeatReaper = setInterval(() => this.reapStaleConnections(), HEARTBEAT_REAP_INTERVAL_MS);
+    if (typeof this.heartbeatReaper.unref === 'function') {
+      this.heartbeatReaper.unref();
+    }
+  }
 
   handleConnection(ws: WebSocket, req: FastifyRequest) {
     console.log('Agent connection attempt from:', req.ip);
 
     let connection: AgentConnection | null = null;
+    let helloCompleted = false;
+
+    // Any socket that never completes a valid hello is closed after 5s.
+    const helloTimer = setTimeout(() => {
+      if (!helloCompleted && ws.readyState === WebSocket.OPEN) {
+        console.warn('Closing agent socket: no valid hello within 5s');
+        try {
+          ws.send(JSON.stringify(createEnvelope('agent.rejected', {
+            payload: createError(ErrorCodes.INVALID_TOKEN, 'Handshake timeout'),
+          })));
+        } catch {
+          // socket already going away
+        }
+        ws.close();
+      }
+    }, HELLO_TIMEOUT_MS);
+    if (typeof helloTimer.unref === 'function') helloTimer.unref();
 
     ws.on('message', async (data: Buffer) => {
       try {
         const rawMessage = JSON.parse(data.toString());
         const message = AgentMessageEnvelopeSchema.parse(rawMessage);
 
-        // Handle different message types
         switch (message.type) {
-          case 'agent.hello':
+          case 'agent.hello': {
+            if (helloCompleted) {
+              // A second hello on an authenticated socket is protocol abuse.
+              return;
+            }
             await this.handleHello(ws, message.payload as AgentHello, message.messageId);
-            connection = {
-              serverId: (message.payload as AgentHello).serverId,
-              agentDeviceId: (message.payload as AgentHello).agentDeviceId,
-              ws,
-              lastHeartbeat: new Date(),
-              capabilities: (message.payload as AgentHello).capabilities,
-            };
-            this.connections.set(connection.serverId, connection);
-            this.broadcastStatus();
             break;
+          }
 
           case 'agent.heartbeat':
             if (connection) {
@@ -76,22 +129,36 @@ export class AgentGateway {
     });
 
     ws.on('close', async () => {
-      if (connection) {
-        console.log(`Agent disconnected: ${connection.serverId}`);
+      clearTimeout(helloTimer);
+      if (!connection) return;
+
+      // Only clean up if THIS connection still owns the slot — a newer
+      // duplicate may already have replaced it. The stale-kick scenario
+      // (old socket's close fires AFTER its replacement registered) must not
+      // reject requests that were routed to the NEW connection, so the
+      // pending-request rejection below runs ONLY when ownership still holds.
+      const current = this.connections.get(connection.serverId);
+      if (current === connection) {
         this.connections.delete(connection.serverId);
         this.broadcastStatus();
 
-        // Update server status to offline
-        await prisma.server.update({
-          where: { id: connection.serverId },
-          data: { status: 'offline', lastSeenAt: new Date() },
-        });
-
-        // Reject any pending requests
+        // Reject only the pending requests that were sent to THIS agent (and
+        // which this connection still owns the slot for).
         for (const [requestId, pending] of this.pendingRequests) {
-          if (pending.timeout) clearTimeout(pending.timeout);
+          if (pending.serverId !== connection.serverId) continue;
+          clearTimeout(pending.timeout);
           pending.reject(new Error('Agent disconnected'));
           this.pendingRequests.delete(requestId);
+        }
+
+        // Update server status to offline
+        try {
+          await prisma.server.update({
+            where: { id: connection.serverId },
+            data: { status: 'offline', lastSeenAt: new Date() },
+          });
+        } catch (err) {
+          console.error(`Failed to mark server ${connection.serverId} offline:`, err);
         }
       }
     });
@@ -99,9 +166,26 @@ export class AgentGateway {
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
     });
+
+    // Expose the completion callback used by handleHello. Registration into
+    // this.connections happens ONLY after successful hello validation.
+    (ws as any).__onAuthenticated = (conn: AgentConnection) => {
+      helloCompleted = true;
+      clearTimeout(helloTimer);
+      connection = conn;
+      this.connections.set(conn.serverId, conn);
+      this.broadcastStatus();
+    };
   }
 
   private async handleHello(ws: WebSocket, hello: AgentHello, messageId: string) {
+    const rejectAndClose = (code: ErrorCode, messageText: string) => {
+      ws.send(JSON.stringify(createEnvelope('agent.rejected', {
+        payload: createError(code, messageText),
+      })));
+      ws.close();
+    };
+
     try {
       // Verify agent device exists and is paired
       const agentDevice = await prisma.agentDevice.findUnique({
@@ -110,19 +194,43 @@ export class AgentGateway {
       });
 
       if (!agentDevice) {
-        ws.send(JSON.stringify(createEnvelope('agent.rejected', {
-          payload: createError(ErrorCodes.INVALID_TOKEN, 'Agent device not found'),
-        })));
-        ws.close();
-        return;
+        return rejectAndClose(ErrorCodes.INVALID_TOKEN, 'Agent device not found');
       }
 
       if (agentDevice.status !== 'paired') {
-        ws.send(JSON.stringify(createEnvelope('agent.rejected', {
-          payload: createError(ErrorCodes.TOKEN_REVOKED, 'Agent is not paired'),
-        })));
-        ws.close();
-        return;
+        return rejectAndClose(ErrorCodes.TOKEN_REVOKED, 'Agent is not paired');
+      }
+
+      // Device/server binding check: a device may only speak for its own server.
+      if (agentDevice.serverId !== hello.serverId) {
+        return rejectAndClose(ErrorCodes.UNAUTHORIZED, 'Device is not bound to this server');
+      }
+
+      // ---- Session token verification -------------------------------------
+      const storedHash = agentDevice.pairingTokenHash;
+      if (hello.sessionToken) {
+        const providedHash = crypto.createHash('sha256').update(hello.sessionToken).digest('hex');
+        if (!storedHash || !constantTimeHashCompare(providedHash, storedHash)) {
+          return rejectAndClose(ErrorCodes.INVALID_TOKEN, 'Invalid session token');
+        }
+      } else {
+        // No token presented. Only tolerated in legacy mode AND only for
+        // devices that predate session tokens (null stored hash).
+        if (!(agentLegacyOk() && storedHash == null)) {
+          return rejectAndClose(ErrorCodes.INVALID_TOKEN, 'Session token required');
+        }
+      }
+
+      // ---- Duplicate connection handling ----------------------------------
+      const existing = this.connections.get(hello.serverId);
+      if (existing && existing.ws.readyState === WebSocket.OPEN) {
+        const fresh = Date.now() - existing.lastHeartbeat.getTime() < DUPLICATE_FRESH_MS;
+        if (fresh) {
+          return rejectAndClose(ErrorCodes.ALREADY_CONNECTED, 'Another agent is already connected for this server');
+        }
+        // Stale duplicate: kick the old socket; the new one takes over below.
+        try { existing.ws.close(); } catch { /* ignore */ }
+        this.connections.delete(hello.serverId);
       }
 
       // Update agent device info
@@ -149,12 +257,30 @@ export class AgentGateway {
       })));
 
       console.log(`Agent authenticated: ${hello.serverId} (${hello.agentVersion})`);
+
+      // Connection registration happens ONLY after successful validation.
+      (ws as any).__onAuthenticated?.({
+        serverId: hello.serverId,
+        agentDeviceId: hello.agentDeviceId,
+        ws,
+        lastHeartbeat: new Date(),
+        capabilities: hello.capabilities,
+      });
     } catch (error) {
       console.error('Failed to handle agent hello:', error);
-      ws.send(JSON.stringify(createEnvelope('agent.rejected', {
-        payload: createError(ErrorCodes.INTERNAL_ERROR, 'Authentication failed'),
-      })));
-      ws.close();
+      rejectAndClose(ErrorCodes.INTERNAL_ERROR, 'Authentication failed');
+    }
+  }
+
+  /** Close connections whose last heartbeat is older than the staleness window. */
+  private reapStaleConnections() {
+    const now = Date.now();
+    for (const [serverId, conn] of this.connections) {
+      if (now - conn.lastHeartbeat.getTime() > HEARTBEAT_STALE_MS) {
+        console.warn(`Reaping stale agent connection for server ${serverId}`);
+        try { conn.ws.close(); } catch { /* ignore */ }
+        // The close handler performs scoped cleanup + status broadcast.
+      }
     }
   }
 
@@ -225,12 +351,24 @@ export class AgentGateway {
         reject(new Error(`Request ${action} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
-      // Store pending request
-      this.pendingRequests.set(requestId, { resolve, reject, timeout });
+      // Store pending request tagged with its owning server so disconnects can
+      // reject only the requests that belong to the dropped agent.
+      this.pendingRequests.set(requestId, { resolve, reject, timeout, serverId });
 
       // Send message
       connection.ws.send(JSON.stringify(message));
     });
+  }
+
+  /**
+   * Immediately drop an agent's live connection and run the same cleanup as a
+   * natural disconnect. Used by the revoke endpoint.
+   */
+  forceDisconnect(serverId: string): void {
+    const connection = this.connections.get(serverId);
+    if (!connection) return;
+    try { connection.ws.close(); } catch { /* ignore */ }
+    // The socket's close handler owns map cleanup + audit/status effects.
   }
 
   // Check if agent is connected for a server
@@ -254,9 +392,14 @@ export class AgentGateway {
 
   // Broadcast status to all connected WebSocket clients
   broadcastStatus() {
-    // This would broadcast to any registered status subscribers
-    // For now, we rely on the /ws/status endpoint
     const servers = this.getConnectedServers();
     console.log(`[StatusBroadcast] ${servers.length} agents connected: ${servers.join(', ') || 'none'}`);
+    for (const listener of this.statusListeners) {
+      try {
+        listener();
+      } catch (err) {
+        console.error('[StatusBroadcast] listener failed:', err);
+      }
+    }
   }
 }

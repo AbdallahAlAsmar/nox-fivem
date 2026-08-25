@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import {
   Server,
@@ -39,8 +39,6 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as api from '../api'
-
-const ORC = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
 
 interface ServerCardData {
   id: string
@@ -386,42 +384,53 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
   const [isInspecting, setIsInspecting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
-  // Pairing modal state
-  const [pairingServer, setPairingServer] = useState<ServerCardData | null>(null)
-  const [pairingCode, setPairingCode] = useState<string | null>(null)
-  const [pairingLoading, setPairingLoading] = useState(false)
-  const [pairingError, setPairingError] = useState<string | null>(null)
-  const [pairingPath, setPairingPath] = useState('')
-  const [isPairing, setIsPairing] = useState(false)
+  // Reconnect-storm guards (module-level so they survive re-renders):
+  // - inFlightConnects: a connect_agent_cmd per server is running right now
+  // - lastAutoConnectAt: don't retry the same server more than once per 30s
+  const inFlightConnects = useRef<Set<string>>(new Set())
+  const lastAutoConnectAt = useRef<Map<string, number>>(new Map())
 
   const fetchServers = useCallback(async () => {
+    let fetched: ServerCardData[] = []
     try {
-      const data = await api.fetchServers()
-      setServers(data as ServerCardData[])
+      // Orchestrator Server.status also allows 'unpaired' — the card treats it
+      // like offline, so widen through unknown at this boundary.
+      fetched = (await api.fetchServers()) as unknown as ServerCardData[]
       setError(null)
-
-      // Auto-reconnect paired servers if saved locally
-      for (const s of data) {
-        const savedDevId = localStorage.getItem(`agent_device_${s.id}`)
-        const savedDir = localStorage.getItem(`server_dir_${s.id}`) || s.directory
-        if (savedDevId && savedDir && s.status !== 'online') {
-          try {
-            await invoke('connect_agent_cmd', {
-              serverId: s.id,
-              agentDeviceId: savedDevId,
-              serverDirectory: savedDir,
-            })
-          } catch (connErr) {
-            console.debug('Auto-connect attempt:', connErr)
-          }
-        }
-      }
     } catch (e) {
       console.error('Fetch servers error:', e)
-      setError('Failed to connect to orchestrator')
-    } finally {
-      setLoading(false)
+      setError('Could not reach the orchestrator. Check your connection and retry.')
     }
+
+    setServers(fetched)
+
+    // Auto-reconnect offline paired servers, gated so one slow tick cannot
+    // spam connect attempts for every server every poll.
+    const now = Date.now()
+    for (const s of fetched) {
+      const savedDevId = localStorage.getItem(`agent_device_${s.id}`)
+      const savedDir = localStorage.getItem(`server_dir_${s.id}`) || s.directory
+      const lastTry = lastAutoConnectAt.current.get(s.id) ?? 0
+      if (
+        savedDevId &&
+        savedDir &&
+        s.status !== 'online' &&
+        !inFlightConnects.current.has(s.id) &&
+        now - lastTry > 30_000
+      ) {
+        lastAutoConnectAt.current.set(s.id, now)
+        inFlightConnects.current.add(s.id)
+        invoke('connect_agent_cmd', {
+          serverId: s.id,
+          agentDeviceId: savedDevId,
+          serverDirectory: savedDir,
+        })
+          .catch((connErr) => console.debug('Auto-connect attempt:', connErr))
+          .finally(() => inFlightConnects.current.delete(s.id))
+      }
+    }
+
+    setLoading(false)
   }, [])
 
   const fetchChanges = useCallback(async () => {
@@ -443,6 +452,16 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     return () => clearInterval(interval)
   }, [fetchServers, fetchChanges])
 
+  // Close the Add Server modal with Escape.
+  useEffect(() => {
+    if (!showAddModal) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowAddModal(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showAddModal])
+
   const handleAddServer = async () => {
     if (!newServerName.trim() || !newServerDir.trim()) return
     if (!inspectResult?.hasServerCfg) {
@@ -454,8 +473,19 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     setIsCreating(true)
     setCreateError(null)
     try {
-      // Create server AND auto-pair in one step
-      const result = await api.autoPairServer(newServerName, newServerDir)
+      // Create server — the orchestrator auto-pairs an agent device and
+      // returns its id plus a one-time session token under `connect`
+      // (minted like pairing claim; persisted below for token-authenticated
+      // hellos).
+      const result = await api.createAndConnect(newServerName, newServerDir)
+
+      // Persist the minted session token bound to this server.
+      if (result.sessionToken) {
+        await invoke('set_session_token_cmd', {
+          serverId: result.id,
+          sessionToken: result.sessionToken,
+        })
+      }
 
       // Connect agent WebSocket via Tauri
       await invoke('connect_agent_cmd', {
@@ -579,13 +609,26 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
 
     try {
       let agentDeviceId = savedDeviceId
+      let freshSessionToken: string | undefined
 
       if (!agentDeviceId) {
-        // First time: go through pairing claim flow
+        // First time: go through pairing claim flow (mints a session token)
         const data = await api.connectExistingServer(server.id, directory)
         agentDeviceId = data.agentDeviceId
+        freshSessionToken = data.sessionToken
         localStorage.setItem(`agent_device_${server.id}`, agentDeviceId)
         localStorage.setItem(`server_dir_${server.id}`, directory)
+      }
+
+      // Persist a freshly-minted session token BEFORE connecting so the WS
+      // hello can present it (freshly-paired devices require it). Bound to
+      // this server at persist time — that binding is what first-connect
+      // matches on.
+      if (freshSessionToken) {
+        await invoke('set_session_token_cmd', {
+          serverId: server.id,
+          sessionToken: freshSessionToken,
+        })
       }
 
       // Connect WebSocket directly using the stored agentDeviceId
@@ -622,76 +665,6 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     }
   }
 
-  const handlePickDirectoryForPairing = async () => {
-    try {
-      const result = (await invoke('open_folder_cmd')) as string
-      if (result && result.length > 0) {
-        setPairingPath(result)
-        setToast('Folder selected')
-      } else {
-        setToast('No folder selected')
-      }
-      setTimeout(() => setToast(null), 3000)
-    } catch (e) {
-      console.log('Could not open folder:', e)
-      setToast('Could not open folder dialog')
-      setTimeout(() => setToast(null), 3000)
-    }
-  }
-
-  const handlePairServer = async () => {
-    if (!pairingServer || !pairingCode || !pairingPath.trim()) return
-    setIsPairing(true)
-    setPairingError(null)
-    try {
-      const data = await api.claimPairing(pairingCode, pairingPath)
-
-      // Connect agent WebSocket via Tauri
-      await invoke('connect_agent_cmd', {
-        serverId: data.serverId,
-        agentDeviceId: data.agentDeviceId,
-        serverDirectory: pairingPath,
-      })
-
-      // Store device ID & directory locally
-      localStorage.setItem(`agent_device_${data.serverId}`, data.agentDeviceId)
-      localStorage.setItem(`server_dir_${data.serverId}`, pairingPath)
-
-      // Trigger initial scan
-      try {
-        await api.scanResources(data.serverId)
-      } catch (scanErr) {
-        console.warn('Initial scan error:', scanErr)
-      }
-
-      setToast(`Server "${pairingServer.name}" paired & connected!`)
-      setPairingServer(null)
-      setPairingCode(null)
-      setPairingPath('')
-      setTimeout(() => setToast(null), 3000)
-      await fetchServers()
-    } catch (e) {
-      setPairingError(e instanceof Error ? e.message : 'Failed to pair server')
-    } finally {
-      setIsPairing(false)
-    }
-  }
-
-  const handleRegeneratePairing = async () => {
-    if (!pairingServer) return
-    setPairingLoading(true)
-    setPairingError(null)
-    try {
-      const pairing = await api.regeneratePairing(pairingServer.id)
-      setPairingCode(pairing.code)
-    } catch (e) {
-      setPairingError(
-        e instanceof Error ? e.message : 'Failed to regenerate pairing code',
-      )
-    } finally {
-      setPairingLoading(false)
-    }
-  }
 
   const displayServers = servers
   const hasError = !!error
@@ -1108,193 +1081,6 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
         </div>
       )}
 
-      {/* Pairing Modal */}
-      {pairingServer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/80"
-            onClick={() => {
-              setPairingServer(null)
-              setPairingCode(null)
-              setPairingPath('')
-              setPairingError(null)
-            }}
-          />
-          <div className="relative w-full max-w-lg bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.3)] flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-[#22c55e]" />
-                </div>
-                <div>
-                  <h3 className="font-mono text-sm uppercase tracking-[0.2em] text-white">
-                    Connect Desktop Agent
-                  </h3>
-                  <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-0.5">
-                    Link the NOX agent to{' '}
-                    <span className="font-mono text-[rgba(255,255,255,0.6)]">
-                      {pairingServer.name}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setPairingServer(null)
-                  setPairingCode(null)
-                  setPairingPath('')
-                  setPairingError(null)
-                }}
-                className="text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Step 1: Directory */}
-              <div className="border border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.06)] p-4">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-[rgba(94,106,210,0.06)] border border-[rgba(94,106,210,0.3)] flex items-center justify-center">
-                    <span className="font-mono text-[10px] font-medium text-[#5E6AD2]">
-                      1
-                    </span>
-                  </div>
-                  <FolderOpen className="w-3.5 h-3.5 text-[#5E6AD2]" />
-                  <h4 className="font-mono text-xs uppercase tracking-[0.12em] text-white">
-                    Select Server Directory
-                  </h4>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={pairingPath}
-                    onChange={(e) => setPairingPath(e.target.value)}
-                    placeholder="C:/FXServer/server-data"
-                    className="flex-1 px-3 py-2 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors"
-                  />
-                  <button
-                    onClick={handlePickDirectoryForPairing}
-                    className="px-3 py-2 bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.1)] text-[rgba(255,255,255,0.6)] hover:text-white font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-2"
-                  >
-                    <FolderOpen className="w-3.5 h-3.5" />
-                    Browse
-                  </button>
-                </div>
-                {pairingPath && (
-                  <p className="font-mono text-[10px] text-[rgba(34,197,94,0.7)] mt-1.5">
-                    ✓ {pairingPath}
-                  </p>
-                )}
-              </div>
-
-              {/* Step 2: Pairing Code */}
-              <div className="border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)] p-4">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-[rgba(245,158,11,0.06)] border border-[rgba(245,158,11,0.3)] flex items-center justify-center">
-                    <span className="font-mono text-[10px] font-medium text-[#f59e0b]">
-                      2
-                    </span>
-                  </div>
-                  <Download className="w-3.5 h-3.5 text-[#f59e0b]" />
-                  <h4 className="font-mono text-xs uppercase tracking-[0.12em] text-white">
-                    Pairing Code
-                  </h4>
-                </div>
-                {pairingError && (
-                  <p className="font-mono text-xs text-[#ef4444] mb-2">
-                    {pairingError}
-                  </p>
-                )}
-                {pairingCode ? (
-                  <div className="bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] p-3 flex items-center justify-between gap-3">
-                    <code className="font-mono text-sm text-[#5E6AD2] tracking-widest">
-                      {pairingCode}
-                    </code>
-                    <button
-                      onClick={async () => {
-                        await navigator.clipboard.writeText(pairingCode!)
-                        setToast('Code copied!')
-                        setTimeout(() => setToast(null), 2000)
-                      }}
-                      className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white transition-colors duration-100 flex-shrink-0 px-2 py-1 border border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)]"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                ) : pairingLoading ? (
-                  <div className="flex items-center gap-2 text-[rgba(255,255,255,0.4)]">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="font-mono text-xs">
-                      Generating code…
-                    </span>
-                  </div>
-                ) : null}
-                {!pairingCode && !pairingLoading && (
-                  <button
-                    onClick={handleRegeneratePairing}
-                    className="font-mono text-xs text-[rgba(255,255,255,0.5)] hover:text-white transition-colors"
-                  >
-                    Generate pairing code
-                  </button>
-                )}
-              </div>
-
-              {/* Step 3: Connect */}
-              <div className="border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] p-4">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-[rgba(34,197,94,0.06)] border border-[rgba(34,197,94,0.3)] flex items-center justify-center">
-                    <span className="font-mono text-[10px] font-medium text-[#22c55e]">
-                      3
-                    </span>
-                  </div>
-                  <Zap className="w-3.5 h-3.5 text-[#22c55e]" />
-                  <h4 className="font-mono text-xs uppercase tracking-[0.12em] text-white">
-                    Connect
-                  </h4>
-                </div>
-                <p className="font-sans text-xs text-[rgba(255,255,255,0.5)] leading-[1.6] mb-3">
-                  Click connect to pair this server with the NOX desktop agent.
-                  The agent will scan your server files and enable AI chat.
-                </p>
-                <button
-                  onClick={handlePairServer}
-                  disabled={
-                    isPairing ||
-                    !pairingCode ||
-                    !pairingPath.trim()
-                  }
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPairing ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Connecting…
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3.5 h-3.5" />
-                      Connect Agent
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setPairingServer(null)
-                setPairingCode(null)
-                setPairingPath('')
-                setPairingError(null)
-              }}
-              className="w-full mt-4 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white py-2 transition-colors"
-            >
-              I'll do this later
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

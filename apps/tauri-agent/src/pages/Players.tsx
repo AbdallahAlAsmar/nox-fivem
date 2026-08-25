@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
+import {
   Users, Search, Ban, RefreshCw, User, Shield, AlertCircle, CheckCircle2, X, Calendar
 } from 'lucide-react'
+import * as api from '../api'
 
 interface Player {
   id: string
@@ -19,24 +20,28 @@ interface Player {
 export default function Players({ serverId }: { serverId?: string }) {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'banned' | 'online'>('all')
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [banReason, setBanReason] = useState('')
   const [showBanModal, setShowBanModal] = useState(false)
   const [actionResult, setActionResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
-  const effectiveServerId = serverId || 'local'
+  // 'local' is not a real server ID — the orchestrator would 404 it. Guard so
+  // the page shows its empty state instead of firing a doomed request.
+  const effectiveServerId = serverId && serverId !== 'local' ? serverId : ''
 
   const loadPlayers = async () => {
+    if (!effectiveServerId) {
+      setPlayers([])
+      setError(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
+    setError(null)
     try {
-      const res = await fetch(`${ORCH}/api/servers/${effectiveServerId}/players`)
-      if (!res.ok) {
-        setPlayers([])
-        return
-      }
-      const data = await res.json()
+      const data = await api.fetchPlayers(effectiveServerId)
       const mapped: Player[] = data.map((p: any) => ({
         id: p.id,
         name: p.name || p.identifier || 'Unknown',
@@ -46,10 +51,11 @@ const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3
         permissions: p.permissions || [],
         isBanned: p.isBanned || false,
         banReason: p.banReason,
-        joinedAt: p.joinedAt || Date.now(),
+        joinedAt: p.joinedAt ? new Date(p.joinedAt).getTime() : Date.now(),
       }))
       setPlayers(mapped)
-    } catch (err) {
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load players')
       setPlayers([])
     } finally {
       setLoading(false)
@@ -58,7 +64,18 @@ const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3
 
   useEffect(() => {
     loadPlayers()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveServerId])
+
+  // Close the ban modal with Escape.
+  useEffect(() => {
+    if (!showBanModal) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowBanModal(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showBanModal])
 
   const handleBan = (player: Player) => {
     setSelectedPlayer(player)
@@ -69,32 +86,36 @@ const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3
   const confirmBan = async () => {
     if (!selectedPlayer) return
     try {
-      await fetch(`${ORCH}/api/servers/${effectiveServerId}/players/${selectedPlayer.id}/ban`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: banReason || 'No reason provided' })
-      })
-      setPlayers(prev => prev.map(p => 
-        p.id === selectedPlayer.id ? { ...p, isBanned: true, banReason } : p
-      ))
+      await api.banPlayer(effectiveServerId, selectedPlayer.id, banReason || 'No reason provided')
+      setPlayers(prev =>
+        prev.map(p =>
+          p.id === selectedPlayer.id ? { ...p, isBanned: true, banReason: banReason || 'No reason provided' } : p
+        )
+      )
       setShowBanModal(false)
       setActionResult({ type: 'success', message: `${selectedPlayer.name} has been banned` })
-    } catch (err) {
-      setActionResult({ type: 'error', message: 'Failed to ban player' })
+    } catch (e) {
+      setActionResult({
+        type: 'error',
+        message: e instanceof Error
+          ? `Failed to ban ${selectedPlayer.name}: ${e.message}`
+          : `Failed to ban ${selectedPlayer.name}`,
+      })
     }
   }
 
   const handleUnban = async (player: Player) => {
     try {
-      await fetch(`${ORCH}/api/servers/${effectiveServerId}/players/${player.id}/unban`, {
-        method: 'POST'
-      })
-      setPlayers(prev => prev.map(p => 
-        p.id === player.id ? { ...p, isBanned: false, banReason: undefined } : p
-      ))
+      await api.unbanPlayer(effectiveServerId, player.id)
+      setPlayers(prev =>
+        prev.map(p => (p.id === player.id ? { ...p, isBanned: false, banReason: undefined } : p))
+      )
       setActionResult({ type: 'success', message: `${player.name} has been unbanned` })
-    } catch (err) {
-      setActionResult({ type: 'error', message: 'Failed to unban player' })
+    } catch (e) {
+      setActionResult({
+        type: 'error',
+        message: e instanceof Error ? `Failed to unban ${player.name}: ${e.message}` : `Failed to unban ${player.name}`,
+      })
     }
   }
 
@@ -178,13 +199,30 @@ const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3
         )}
       </AnimatePresence>
 
+      {/* Load error — distinct from the empty state so failures are visible */}
+      {!loading && error && (
+        <div className="flex items-center gap-2 p-3 border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)] font-mono text-xs text-[#ef4444]">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={loadPlayers} className="underline opacity-80 hover:opacity-100">Retry</button>
+        </div>
+      )}
+
+      {/* No server selected hint */}
+      {!loading && !effectiveServerId && !error && (
+        <div className="flex items-center gap-2 p-3 border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.05)] font-mono text-xs text-[#f59e0b]">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          Select a connected server to view its players.
+        </div>
+      )}
+
       {/* Player List */}
       {loading ? (
         <div className="text-center py-20">
           <div className="w-8 h-8 border-2 border-[#5E6AD2] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="font-mono text-xs text-[rgba(255,255,255,0.4)] uppercase tracking-wider">Loading players…</p>
         </div>
-      ) : filteredPlayers.length === 0 ? (
+      ) : !error && effectiveServerId && filteredPlayers.length === 0 ? (
         <div className="text-center py-20 bg-nox-surface border border-[rgba(255,255,255,0.08)] border-dashed">
           <Users className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-4" />
           <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">No players found</h3>

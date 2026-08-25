@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, AlertCircle, Play, Pause } from 'lucide-react'
+import { fetchConsoleLines } from '../api'
 
 interface ConsoleProps {
   serverId?: string
@@ -11,13 +12,17 @@ export default function Console({ serverId }: ConsoleProps) {
   const [error, setError] = useState<string | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
   const [paused, setPaused] = useState(false)
+  // Mirror of `paused` for the polling interval, which would otherwise capture
+  // a stale closure value from when it started.
+  const pausedRef = useRef(paused)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
 
-  useEffect(() => {
-    if (!serverId) return
-    fetchConsole()
-  }, [serverId])
+  const togglePaused = () => {
+    setPaused(prev => {
+      pausedRef.current = !prev
+      return !prev
+    })
+  }
 
   useEffect(() => {
     if (autoScroll && !paused && lines.length > 0) {
@@ -30,14 +35,9 @@ export default function Console({ serverId }: ConsoleProps) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${ORCH}/api/servers/${serverId}/console`)
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error || `HTTP ${res.status}`)
-      }
-      const data = await res.json()
+      const data = await fetchConsoleLines(serverId)
       if (data?.result?.lines) {
-        setLines(data.result.lines.split('\n').filter(Boolean))
+        setLines(String(data.result.lines).split('\n').filter(Boolean))
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load console')
@@ -51,7 +51,8 @@ export default function Console({ serverId }: ConsoleProps) {
   const startPolling = () => {
     if (pollInterval.current) return
     pollInterval.current = setInterval(() => {
-      if (!paused) fetchConsole()
+      // Read the ref, not the captured state.
+      if (!pausedRef.current) fetchConsole()
     }, 2000)
   }
 
@@ -95,7 +96,7 @@ export default function Console({ serverId }: ConsoleProps) {
             {autoScroll ? 'Auto' : 'Locked'}
           </button>
           <button
-            onClick={() => setPaused(!paused)}
+            onClick={togglePaused}
             className={`flex items-center gap-1 px-2 py-1 font-mono text-xs uppercase tracking-wider transition-colors border ${
               paused
                 ? 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] text-[#ef4444]'

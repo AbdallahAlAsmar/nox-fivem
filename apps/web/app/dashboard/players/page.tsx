@@ -15,11 +15,13 @@ export default function PlayersPage() {
   const [search, setSearch] = useState('');
   const [filterBanned, setFilterBanned] = useState<'all' | 'online' | 'banned'>('all');
   const [banning, setBanning] = useState<string | null>(null);
-  const [banReason, setBanReason] = useState('');
+  // One reason string PER player row — a single shared state meant typing a
+  // reason into one row's input changed every other open row too.
+  const [banReasons, setBanReasons] = useState<Record<string, string>>({});
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const { dialog, confirm, close: closeConfirm } = useConfirmDialog();
 
-  const { data: servers, isLoading: loadingServers } = useSWR('servers', fetchServers, {
+  const { data: servers, isLoading: loadingServers, error: serversError, mutate: mutateServers } = useSWR('servers', fetchServers, {
     fallbackData: [],
   });
 
@@ -43,14 +45,18 @@ export default function PlayersPage() {
     if (!selectedServer) return;
     setBanning(playerId);
     try {
-      await banPlayer(selectedServer, playerId, banReason || `Banned by admin`);
+      await banPlayer(selectedServer, playerId, banReasons[playerId] || `Banned by admin`);
       toast.success(`Banned ${name}`);
       mutate();
     } catch {
       toast.error('Failed to ban player');
     }
     setBanning(null);
-    setBanReason('');
+    setBanReasons((prev) => {
+      const next = { ...prev };
+      delete next[playerId];
+      return next;
+    });
   };
 
   const handleUnban = async (playerId: string, name: string) => {
@@ -202,8 +208,8 @@ export default function PlayersPage() {
                       onBan={() => handleBan(player.id, player.name)}
                       onUnban={() => handleUnban(player.id, player.name)}
                       banning={banning === player.id}
-                      banReason={banReason}
-                      onBanReasonChange={(v) => setBanReason(v)}
+                      banReason={banReasons[player.id] ?? ''}
+                      onBanReasonChange={(v) => setBanReasons((prev) => ({ ...prev, [player.id]: v }))}
                     />
                   ))}
                 </div>
@@ -211,7 +217,21 @@ export default function PlayersPage() {
             </>
           )}
 
-          {!selectedServer && !loadingServers && (
+          {!selectedServer && !loadingServers && serversError && (
+            <div className="text-center py-16 bg-[#16161E]">
+              <AlertCircle className="w-10 h-10 text-white/20 mx-auto mb-4" />
+              <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white/60 mb-2">Failed to load servers</h3>
+              <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
+              <button
+                onClick={() => mutateServers()}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!selectedServer && !loadingServers && !serversError && (
             <div className="text-center py-20 bg-[#16161E]">
               <Users className="w-12 h-12 text-white/15 mx-auto mb-4" />
               <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">Select a server</h3>

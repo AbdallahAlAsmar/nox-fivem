@@ -129,3 +129,64 @@ export function isUnlimitedActions(planId: string): boolean {
   const plan = getPlan(planId);
   return plan?.actions === Infinity;
 }
+
+// ─── Token Cost Estimation ────────────────────────────────────────────────────
+//
+// Subscription plans bundle AI usage, but the platform still enforces org-level
+// cost caps (Organization.monthly_cost_cap_usd / conversation_cost_cap_usd), so
+// every usage row needs a real dollar estimate derived from token counts.
+
+interface ModelRate {
+  /** USD per 1M input tokens. */
+  inUsdPerMTok: number;
+  /** USD per 1M output tokens. */
+  outUsdPerMTok: number;
+}
+
+/**
+ * Static rates for well-known upstream models (USD per 1M tokens). Models not
+ * listed here — including the platform's 'Noxes AI' OmniRoute entry — fall
+ * back to {@link getDefaultModelRate}.
+ */
+const STATIC_MODEL_RATES: Record<string, ModelRate> = {
+  'gpt-4o': { inUsdPerMTok: 2.5, outUsdPerMTok: 10 },
+  'gpt-4o-mini': { inUsdPerMTok: 0.15, outUsdPerMTok: 0.6 },
+  'claude-3-5-sonnet': { inUsdPerMTok: 3, outUsdPerMTok: 15 },
+  'claude-3-5-haiku': { inUsdPerMTok: 0.8, outUsdPerMTok: 4 },
+};
+
+/**
+ * Conservative placeholder rate for the 'Noxes AI' default model and any other
+ * unmapped model. Env-tunable so ops can true it up against the actual
+ * OmniRoute backend without a deploy:
+ *   AI_COST_PER_MTOK_IN  (default 3.00)
+ *   AI_COST_PER_MTOK_OUT (default 15.00)
+ * Read at call time (not import time) so tests and runtime toggles see fresh
+ * values.
+ */
+export function getDefaultModelRate(): ModelRate {
+  const parse = (raw: string | undefined, fallback: number): number => {
+    const n = parseFloat(raw || '');
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  };
+  return {
+    inUsdPerMTok: parse(process.env.AI_COST_PER_MTOK_IN, 3.0),
+    outUsdPerMTok: parse(process.env.AI_COST_PER_MTOK_OUT, 15.0),
+  };
+}
+
+export function getModelRate(model: string): ModelRate {
+  return STATIC_MODEL_RATES[String(model || '').toLowerCase()] ?? getDefaultModelRate();
+}
+
+/**
+ * Estimate the USD cost of one LLM call from token counts. Rounded to 6
+ * decimal places — matches the precision stored in Usage.costUsd.
+ */
+export function estimateCostUsd(model: string, tokensIn: number, tokensOut: number): number {
+  const rate = getModelRate(model);
+  const inTok = Number.isFinite(tokensIn) && tokensIn > 0 ? tokensIn : 0;
+  const outTok = Number.isFinite(tokensOut) && tokensOut > 0 ? tokensOut : 0;
+  const usd = (inTok / 1_000_000) * rate.inUsdPerMTok + (outTok / 1_000_000) * rate.outUsdPerMTok;
+  return Math.round(usd * 1e6) / 1e6;
+}

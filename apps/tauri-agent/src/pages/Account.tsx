@@ -3,21 +3,22 @@
 import { useState, useEffect } from 'react'
 import {
   User, Mail, Calendar, LogOut, Shield, Key,
-  CheckCircle2, Clock, CreditCard,
+  CreditCard,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { useClerk } from '../contexts/ClerkContext'
-
-const ORCH = import.meta.env?.VITE_ORCHESTRATOR_URL || 'http://158.101.167.118:3001'
+import { useClerk as useClerkCore, useUser } from '@clerk/clerk-react'
+import * as api from '../api'
 
 export default function AccountPage() {
-  const { user, signOut } = useClerk()
+  // Real Clerk hooks: signOut actually terminates the session (the old local
+  // ClerkContext provider was never mounted, making Sign Out a no-op).
+  const { signOut } = useClerkCore()
+  const { user: clerkUser, isLoaded } = useUser()
   const [org, setOrg] = useState<any>(null)
   const [orgLoading, setOrgLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${ORCH}/api/org`)
-      .then(r => r.ok ? r.json() : null)
+    api.fetchOrg()
       .then(d => setOrg(d))
       .catch(() => setOrg(null))
       .finally(() => setOrgLoading(false))
@@ -26,6 +27,12 @@ export default function AccountPage() {
   const handleLogout = () => {
     signOut()
   }
+
+  const user = clerkUser ? {
+    id: clerkUser.id,
+    email: clerkUser.primaryEmailAddress?.emailAddress ?? '',
+    name: clerkUser.fullName ?? clerkUser.username ?? clerkUser.id,
+  } : null
 
   const primaryEmail = user?.email || ''
   const createdAt = '—'
@@ -42,10 +49,12 @@ export default function AccountPage() {
         {/* Profile Card */}
         <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
           <div className="flex items-start gap-4">
-            <img src="/nox-avatar.svg" alt="avatar" className="w-16 h-16 flex-shrink-0 opacity-80" />
+            <div className="w-16 h-16 flex-shrink-0 bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.3)] flex items-center justify-center">
+              <User className="w-7 h-7 text-[#5E6AD2]" />
+            </div>
             <div className="flex-1 min-w-0 pt-1">
-              <h2 className="font-mono text-base text-white font-medium truncate">{user?.name || 'Unnamed User'}</h2>
-              <p className="font-sans text-sm text-[rgba(255,255,255,0.4)] mt-0.5 truncate">{primaryEmail}</p>
+              <h2 className="font-mono text-base text-white font-medium truncate">{user?.name || (isLoaded ? 'Unnamed User' : 'Loading…')}</h2>
+              <p className="font-sans text-sm text-[rgba(255,255,255,0.4)] mt-0.5 truncate">{primaryEmail || (isLoaded ? '' : '…')}</p>
             </div>
           </div>
         </motion.section>
@@ -83,7 +92,7 @@ export default function AccountPage() {
                 <Key className="w-3.5 h-3.5 text-[rgba(255,255,255,0.3)]" />
                 <span className="font-mono text-[11px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">User ID</span>
               </div>
-              <span className="font-mono text-[11px] text-[rgba(255,255,255,0.3)] truncate max-w-[160px]" title={user?.id || ''}>{user?.id || '—'}</span>
+              <span className="font-mono text-[11px] text-[rgba(255,255,255,0.3)] truncate max-w-[160px]" title={clerkUser?.id || ''}>{clerkUser?.id || '—'}</span>
             </div>
           </div>
         </motion.section>
