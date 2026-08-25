@@ -238,7 +238,7 @@ describe('AgentGateway WS auth', () => {
     const mkConn = async (serverId: string, suffix: string) => {
       const token = `tok-${suffix}`;
       const storedHash = (await import('crypto')).createHash('sha256').update(token).digest('hex');
-      const otherServerId = makeHelloPayload().serverId;
+      void storedHash;
       mockedFindUnique.mockImplementation(async (_args: any) =>
         Promise.resolve({
           id: `device-${suffix}`,
@@ -248,7 +248,6 @@ describe('AgentGateway WS auth', () => {
           server: {},
         })
       );
-      void otherServerId;
 
       const ws = new FakeWebSocket();
       gateway.handleConnection(ws as any, { ip: '127.0.0.9' } as any);
@@ -260,7 +259,7 @@ describe('AgentGateway WS auth', () => {
       ws.emit('message', Buffer.from(makeEnvelope(payload)));
       await new Promise((r) => setTimeout(r, 10));
       expect(ws.lastMessage()?.type).toBe('agent.authenticated');
-      return true;
+      return ws;
     };
 
     const serverA = '3f2504e0-4f89-11d3-9a0c-0305e82c3401';
@@ -288,5 +287,69 @@ describe('AgentGateway WS auth', () => {
     expect(outcomeB).toBe('pending');  // untouched by A's disconnect
 
     gateway.forceDisconnect(serverB);
+  });
+
+  it('kick-stale: old socket close must NOT reject requests routed to the new connection', async () => {
+    const gateway = new AgentGateway();
+    const serverId = '3f2504e0-4f89-11d3-9a0c-0305e82c3407';
+    const storedHash = (await import('crypto')).createHash('sha256').update('tok').digest('hex');
+    mockedFindUnique.mockResolvedValue({
+      id: 'device-kick',
+      serverId,
+      status: 'paired',
+      pairingTokenHash: storedHash,
+      server: {},
+    });
+
+    const helloOn = async (ws: FakeWebSocket, deviceId: string) => {
+      ws.emit('message', Buffer.from(makeEnvelope(makeHelloPayload({
+        serverId,
+        agentDeviceId: deviceId,
+        sessionToken: 'tok',
+      }))));
+      await new Promise((r) => setTimeout(r, 10));
+      return ws.lastMessage()?.type;
+    };
+
+    // First connection takes the slot.
+    const oldWs = new FakeWebSocket();
+    gateway.handleConnection(oldWs as any, { ip: '127.0.0.5' } as any);
+    expect(await helloOn(oldWs, '3f2504e0-4f89-11d3-9a0c-0305e82c3308')).toBe('agent.authenticated');
+
+    // Age its heartbeat past DUPLICATE_FRESH_MS so the next hello treats it
+    // as a stale duplicate and KICKS it (the takeover path in handleHello).
+    const oldConn = (gateway as any).connections.get(serverId);
+    oldConn.lastHeartbeat = new Date(Date.now() - 120_000);
+
+    const newWs = new FakeWebSocket();
+    gateway.handleConnection(newWs as any, { ip: '127.0.0.6' } as any);
+    expect(await helloOn(newWs, '3f2504e0-4f89-11d3-9a0c-0305e82c3309')).toBe('agent.authenticated');
+    expect(gateway.isConnected(serverId)).toBe(true);
+    // The kick itself closed the old socket synchronously (fake ws behaviour);
+    // the new connection now owns the slot.
+    expect((gateway as any).connections.get(serverId)).not.toBe(oldConn);
+
+    // A request arrives and is routed to the NEW connection.
+    const reqPromise = gateway.sendCommand(serverId, 'fs.read', { path: 'x' }, 60_000)
+      .then(() => 'resolved', () => 'rejected');
+    await new Promise((r) => setTimeout(r, 5));
+    expect(newWs.sent.some((m: any) => m.type === 'agent.request')).toBe(true);
+
+    // NOW the OLD socket's close event arrives late (unclean network teardown
+    // surfacing after its replacement registered). Regression: this used to
+    // run the pending-request rejection loop unconditionally and killed the
+    // request that belongs to the new connection.
+    oldWs.emit('close');
+    await new Promise((r) => setTimeout(r, 20));
+
+    const outcome = await Promise.race([reqPromise, Promise.resolve('pending')]);
+    expect(outcome).toBe('pending'); // still owned by the live connection
+    expect(gateway.isConnected(serverId)).toBe(true);
+
+    // Sanity: answering over the new socket resolves normally afterwards.
+    gateway.forceDisconnect(serverId);
+    await new Promise((r) => setTimeout(r, 20)); // close handler is async
+    const finalOutcome = await Promise.race([reqPromise, Promise.resolve('pending')]);
+    expect(finalOutcome).toBe('rejected');
   });
 });

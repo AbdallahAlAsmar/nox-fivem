@@ -1181,6 +1181,11 @@ pub async fn disconnect_agent_cmd() -> Result<AgentState, String> {
     // calls connect_agent_cmd itself and must not self-cancel.)
     cancel_reconnect();
 
+    // Bump the generation BEFORE closing so the reader task's Close arm sees
+    // a superseded generation and does NOT respawn a reconnect loop — without
+    // this, a deliberate disconnect auto-reconnected within ~2s.
+    CONNECTION_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
     let mut conn = AGENT_CONNECTION.lock().unwrap();
     if let Some(connection) = conn.take() {
         let _ = connection.sender.send(Message::Close(None));

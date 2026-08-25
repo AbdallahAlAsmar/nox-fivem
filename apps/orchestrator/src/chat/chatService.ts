@@ -7,6 +7,25 @@ import { sanitizeRelativePath } from '../http/pathGuard';
 export const MAX_TOOL_ITERATIONS = 10;
 const HISTORY_WINDOW = 30;
 
+/**
+ * Slice history to at most HISTORY_WINDOW messages WITHOUT splitting an
+ * assistant-tool_calls message from its trailing tool-result messages: the
+ * provider rejects a window that opens (or contains) a dangling assistant
+ * tool_calls sequence with a 400. Walk back from the naive window edge to the
+ * oldest role:'user' message at-or-before it — every turn starts with a user
+ * message, so cutting there keeps each assistant→tool group intact.
+ */
+function windowHistoryAtTurnBoundary<T extends { role: string }>(messages: T[]): T[] {
+  if (messages.length <= HISTORY_WINDOW) return messages;
+  let start = messages.length - HISTORY_WINDOW;
+  while (start > 0 && messages[start].role !== 'user') {
+    start--;
+  }
+  // Degenerate case (no user message inside the window at all): fall back to
+  // the hard edge rather than growing the prompt unboundedly.
+  return start > 0 ? messages.slice(start) : messages.slice(-HISTORY_WINDOW);
+}
+
 /** Thrown when an org's conversation or monthly cost cap blocks a chat turn. */
 export class ChatCapError extends Error {
   readonly scope: 'conversation' | 'monthly';
@@ -118,11 +137,9 @@ export async function handleChatMessage(
     orderBy: { createdAt: 'asc' },
   });
   // Window history to the last N messages so long threads don't grow the
-  // prompt (and its token cost) without bound.
-  const previousMessages =
-    allPreviousMessages.length > HISTORY_WINDOW
-      ? allPreviousMessages.slice(-HISTORY_WINDOW)
-      : allPreviousMessages;
+  // prompt (and its token cost) without bound — cut at a turn boundary so a
+  // window never opens on a dangling assistant-tool_calls sequence.
+  const previousMessages = windowHistoryAtTurnBoundary(allPreviousMessages);
 
   // Enforce org cost caps BEFORE the first LLM call of the turn. Thrown
   // ChatCapError propagates to the HTTP layer, which maps it to a typed 402.
@@ -146,9 +163,6 @@ export async function handleChatMessage(
     selectedSkills,
     isAgentConnected,
   };
-
-  let assistantContent = '';
-  const toolCalls: any[] = [];
 
   try {
     let currentTurnMessages: any[] = [{ role: 'user', content: userMessage }];
@@ -216,13 +230,12 @@ export async function handleChatMessage(
         }
 
         // Update context to include the new messages from DB, windowed to the
-        // same HISTORY_WINDOW bound as the initial load.
+        // same HISTORY_WINDOW bound as the initial load (turn-boundary safe).
         const allMessages = await prisma.chatMessage.findMany({
           where: { threadId },
           orderBy: { createdAt: 'asc' },
         });
-        context.previousMessages =
-          allMessages.length > HISTORY_WINDOW ? allMessages.slice(-HISTORY_WINDOW) : allMessages;
+        context.previousMessages = windowHistoryAtTurnBoundary(allMessages);
 
         // Each completed LLM call above persisted its Usage row — re-check the
         // conversation cap before paying for another tool-loop iteration.

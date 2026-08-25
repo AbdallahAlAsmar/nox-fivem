@@ -133,11 +133,23 @@ export class AgentGateway {
       if (!connection) return;
 
       // Only clean up if THIS connection still owns the slot — a newer
-      // duplicate may already have replaced it.
+      // duplicate may already have replaced it. The stale-kick scenario
+      // (old socket's close fires AFTER its replacement registered) must not
+      // reject requests that were routed to the NEW connection, so the
+      // pending-request rejection below runs ONLY when ownership still holds.
       const current = this.connections.get(connection.serverId);
       if (current === connection) {
         this.connections.delete(connection.serverId);
         this.broadcastStatus();
+
+        // Reject only the pending requests that were sent to THIS agent (and
+        // which this connection still owns the slot for).
+        for (const [requestId, pending] of this.pendingRequests) {
+          if (pending.serverId !== connection.serverId) continue;
+          clearTimeout(pending.timeout);
+          pending.reject(new Error('Agent disconnected'));
+          this.pendingRequests.delete(requestId);
+        }
 
         // Update server status to offline
         try {
@@ -148,14 +160,6 @@ export class AgentGateway {
         } catch (err) {
           console.error(`Failed to mark server ${connection.serverId} offline:`, err);
         }
-      }
-
-      // Reject only the pending requests that were sent to THIS agent.
-      for (const [requestId, pending] of this.pendingRequests) {
-        if (pending.serverId !== connection.serverId) continue;
-        clearTimeout(pending.timeout);
-        pending.reject(new Error('Agent disconnected'));
-        this.pendingRequests.delete(requestId);
       }
     });
 
