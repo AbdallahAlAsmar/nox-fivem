@@ -296,8 +296,8 @@ export async function fetchUsage(): Promise<any> {
   return await swrFetcher(`${ORCHESTRATOR_URL}/api/usage`);
 }
 
-/** Batch approve changes */
-export async function batchApproveChanges(changeIds: string[], serverId?: string): Promise<{ approved: string[]; skipped: Array<{ id: string; reason: string }> }> {
+/** Batch apply changes — runs the real apply pipeline per change (partial success allowed). */
+export async function batchApproveChanges(changeIds: string[], serverId?: string): Promise<{ applied: string[]; failed: Array<{ id: string; error: string }>; skipped: Array<{ id: string; reason: string }> }> {
   const res = await authedFetch(`${ORCHESTRATOR_URL}/api/changes/batch/apply`, {
     method: 'POST',
     body: JSON.stringify({ changeIds, serverId }),

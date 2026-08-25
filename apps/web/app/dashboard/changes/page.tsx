@@ -77,9 +77,19 @@ export default function ChangesPage() {
     if (selectedIds.size === 0) return;
     try {
       const ids = Array.from(selectedIds);
+      // Batch apply runs the REAL pipeline per change ({applied, failed,
+      // skipped}, partial success allowed).
       const result = await batchApproveChanges(ids, selectedServer);
-      setBatchSuccess(`Approved ${result.approved.length} changes`);
-      setSelectedIds(new Set());
+      const failedCount = result.failed.length;
+      setBatchSuccess(
+        `Applied ${result.applied.length} changes` +
+        (failedCount > 0 ? ` — ${failedCount} failed` : '')
+      );
+      // Clear the selection once everything requested either applied or
+      // nothing failed (skipped terminal-state entries need no retry here).
+      if (result.applied.length > 0 || failedCount === 0) {
+        setSelectedIds(new Set());
+      }
       mutate();
       setTimeout(() => setBatchSuccess(null), 3000);
     } catch (e) {

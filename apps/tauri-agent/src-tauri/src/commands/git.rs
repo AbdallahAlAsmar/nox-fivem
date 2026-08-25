@@ -207,7 +207,8 @@ pub fn git_checkpoint_cmd(server_directory: String, change_id: String, message: 
     create_checkpoint(&server_directory, &change_id, message.as_deref())
 }
 
-/// A valid git object name: full 40-char SHA or 7-40 char abbreviated form,/// hex only. Anything else passed to `reset --hard` could be an option
+/// A valid git object name: full 40-char SHA or 7-40 char abbreviated form,
+/// hex only. Anything else passed to `reset --hard` could be an option
 /// injection (`--hard <flag>`) or a refname we never intended to accept.
 fn is_valid_sha(sha: &str) -> bool {
     let s = sha.trim();

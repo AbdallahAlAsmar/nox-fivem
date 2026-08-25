@@ -474,11 +474,12 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     setCreateError(null)
     try {
       // Create server — the orchestrator auto-pairs an agent device and
-      // returns its id under `connect`. (That payload carries no session
-      // token today; see createAndConnect's note in api.ts.)
+      // returns its id plus a one-time session token under `connect`
+      // (minted like pairing claim; persisted below for token-authenticated
+      // hellos).
       const result = await api.createAndConnect(newServerName, newServerDir)
 
-      // Persist a token if the orchestrator ever includes one in `connect`.
+      // Persist the minted session token bound to this server.
       if (result.sessionToken) {
         await invoke('set_session_token_cmd', {
           serverId: result.id,
