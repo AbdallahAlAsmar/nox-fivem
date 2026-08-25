@@ -51,7 +51,7 @@ Desktop Agent (Tauri/Rust, installed on customer's server machine)
 
 ### Apps & packages
 
-- `apps/web` — Next.js 14 App Router + Clerk auth (`middleware.ts` guards everything except `/`, sign-in/up, `/api`). Dashboard pages under `app/dashboard/*` (servers, resources, players, changes, audit, billing, onboarding). Talks to the orchestrator exclusively via `lib/api-base.ts` using `ORCHESTRATOR_URL` (defaults to `/api/orchestrator` proxy so the browser never hits mixed-HTTP issues).
+- `apps/web` — Next.js 14 App Router + Clerk auth (`middleware.ts` guards everything except `/`, sign-in/up, `/api`). Dashboard pages under `app/dashboard/*` (servers, resources, players, changes, audit, billing, onboarding). Talks to the orchestrator through `lib/api.ts` (typed wrappers) + `lib/auth-fetch.ts` (fresh-Clerk-token fetch with 401 retry) using `NEXT_PUBLIC_ORCHESTRATOR_URL` from `lib/config.ts` (defaults to `/api/orchestrator` proxy so the browser never hits mixed-HTTP issues).
 - `apps/orchestrator` — Fastify server. Key modules:
   - `ws/agentGateway.ts` — connection registry keyed by `serverId`; `sendCommand(serverId, action, args, timeoutMs)` implements request/response correlation via `requestId` + pending-request timeouts.
   - `chat/chatService.ts` — streams AI responses (OmniRoute, an OpenAI-compatible endpoint configured by `OMNIROUTE_BASE_URL`/`OMNIROUTE_API_KEY`, client lives in `claude/session.ts`); dispatches tool calls (`read_remote_file`, `list_remote_directory`, `propose_remote_write`, …) to the agent via the gateway, persists tool results as messages so multi-turn context stays coherent.
@@ -65,12 +65,12 @@ Desktop Agent (Tauri/Rust, installed on customer's server machine)
 ### Cross-cutting rules
 
 - Every agent↔orchestrator message is wrapped in an envelope validated against the Zod schemas; unknown types are logged and dropped, malformed ones get an `agent.error` reply.
-- File writes always go: AI proposes → `Change` row staged with diff → user approves in dashboard → agent applies after git checkpoint → `AuditLog` entry. Preserve this chain when adding features.
+- File writes always go: AI proposes → `Change` row staged with diff → user approves in dashboard → orchestrator sends `git.checkpoint` (fail-closed: no checkpoint sha, no apply) then `fs.applyPatch` to the agent → `AuditLog` entry. Preserve this chain when adding features; the checkpoint step is enforced orchestrator-side in the shared apply pipeline (`applyChangeToAgent`).
 - Agents are scoped to one server-data directory root; never add unscoped filesystem access.
 
 ## Environment
 
-`.env.example` documents the variables: `DATABASE_URL`/`DIRECT_URL` (Supabase Postgres), Clerk keys (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`), `OMNIROUTE_API_KEY`/`OMNIROUTE_BASE_URL` (AI provider), `JWT_SECRET` (pairing tokens), `ORCHESTRATOR_PORT`, `NEXT_PUBLIC_ORCHESTRATOR_URL`. Orchestrator CORS defaults allow localhost:3000 and :1420 (Tauri).
+`.env.example` documents the variables: `DATABASE_URL`/`DIRECT_URL` (Supabase Postgres), Clerk keys (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` — the orchestrator needs its own copy to verify dashboard bearer tokens), `OMNIROUTE_API_KEY`/`OMNIROUTE_BASE_URL` (AI provider), `JWT_SECRET` (pairing tokens), `ORCHESTRATOR_PORT`, `NEXT_PUBLIC_ORCHESTRATOR_URL`, `DASHBOARD_ORIGIN`/`CORS_ORIGINS` (orchestrator CORS; defaults allow localhost:3000 and :1420 Tauri), and the two TRANSITIONAL flags `AUTH_ALLOW_ANON` (tokenless dashboard requests become an anonymous dev-org user) plus `AGENT_LEGACY_OK` (tokenless pre-token agents may connect — flip false once all agents re-pair; POST /api/servers now mints session tokens for auto-paired devices). `AI_COST_PER_MTOK_IN`/`OUT` set cost-cap estimator rates. `ORCHESTRATOR_WS_URL` is the WS URL handed to desktop agents at pairing time.
 
 ## Deployment
 

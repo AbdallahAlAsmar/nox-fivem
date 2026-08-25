@@ -728,11 +728,23 @@ export async function registerRoutes(fastify: FastifyInstance) {
       metadata: z.record(z.unknown()).optional(),
     }).parse(request.body);
 
+    // A caller-supplied serverId is only accepted when it belongs to the
+    // caller's org (mirrors the web twin's POST /api/audit behavior); absent
+    // or foreign ids are stored as null rather than failing the write.
+    let scopedServerId: string | null = null;
+    if (body.serverId) {
+      const owned = await prisma.server.findFirst({
+        where: { id: body.serverId, orgId },
+        select: { id: true },
+      });
+      scopedServerId = owned?.id ?? null;
+    }
+
     await prisma.auditLog.create({
       data: {
         orgId,
         userId: user.userId,
-        serverId: body.serverId,
+        serverId: scopedServerId,
         action: body.action,
         metadata: (body.metadata || {}) as any,
       },
@@ -2081,8 +2093,10 @@ export async function registerRoutes(fastify: FastifyInstance) {
 // Helper functions
 function generatePairingCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  // crypto.randomInt is unbiased over [0, n) and safe for security-sensitive
+  // codes; Math.random() is neither. Format unchanged (36^8 space, XXXX-XXXX).
   const part = () => Array.from({ length: 4 }, () =>
-    chars[Math.floor(Math.random() * chars.length)]
+    chars[crypto.randomInt(chars.length)]
   ).join('');
   return `${part()}-${part()}`;
 }

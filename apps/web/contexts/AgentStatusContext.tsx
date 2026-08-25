@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authedFetch, AuthError } from '@/lib/auth-fetch';
+import { useAuth } from '@clerk/nextjs';
 
 interface AgentStatus {
   connected: boolean;
@@ -22,13 +23,13 @@ const AgentStatusContext = createContext<AgentStatusContextType>({
 });
 
 export function AgentStatusProvider({ children }: { children: ReactNode }) {
+  const { getToken } = useAuth();
   const [status, setStatus] = useState<AgentStatus>({
     connected: false,
     connectedServers: [],
     total: 0,
   });
   const [isChecking, setIsChecking] = useState(true);
-  const [ws, setWs] = useState<WebSocket | null>(null);
 
   const orchestratorUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
   const wsUrl = orchestratorUrl.replace('http://', 'ws://').replace('https://', 'wss://');
@@ -37,8 +38,9 @@ export function AgentStatusProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let wsInstance: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout | null = null;
+    let cancelled = false;
 
-    const connect = () => {
+    const connect = async () => {
       // Guard against malformed derivation (e.g. proxy-relative base URL) —
       // skip connecting rather than throwing inside the effect.
       if (!/^wss?:\/\//.test(wsUrl)) {
@@ -46,7 +48,20 @@ export function AgentStatusProvider({ children }: { children: ReactNode }) {
         setIsChecking(false);
         return;
       }
-      wsInstance = new WebSocket(`${wsUrl}/ws/status`);
+      // Present a fresh bearer token on the upgrade URL so the socket gets an
+      // org-scoped feed; this also un-blocks flipping AUTH_ALLOW_ANON=false
+      // (anonymous sockets now receive an empty list). getToken() refreshes
+      // near-expiry Clerk tokens automatically.
+      let url = `${wsUrl}/ws/status`;
+      try {
+        const token = await getToken();
+        if (token) url += `?token=${encodeURIComponent(token)}`;
+      } catch {
+        // Token fetch failed — connect anonymously rather than not at all.
+      }
+      if (cancelled) return;
+
+      wsInstance = new WebSocket(url);
 
       wsInstance.onopen = () => {
         console.log('[AgentStatus] WebSocket connected');
@@ -75,6 +90,7 @@ export function AgentStatusProvider({ children }: { children: ReactNode }) {
       wsInstance.onclose = () => {
         console.log('[AgentStatus] WebSocket disconnected, reconnecting...');
         wsInstance = null;
+        if (cancelled) return;
         // Reconnect after 3 seconds
         reconnectTimeout = setTimeout(connect, 3000);
       };
@@ -113,9 +129,8 @@ export function AgentStatusProvider({ children }: { children: ReactNode }) {
     // Poll every 10 seconds as fallback
     const pollInterval = setInterval(pollStatus, 10000);
 
-    setWs(wsInstance);
-
     return () => {
+      cancelled = true;
       if (wsInstance) wsInstance.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       clearInterval(pollInterval);

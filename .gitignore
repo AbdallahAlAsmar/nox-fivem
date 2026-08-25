@@ -44,6 +44,10 @@ apps/*/src-tauri/target/
 # Next.js
 apps/web/.next/
 apps/web/.cache/
+apps/web/tsconfig.tsbuildinfo
+
+# Claude Code design-skill scratch state
+.impeccable/
 
 # Cache
 .caches/
