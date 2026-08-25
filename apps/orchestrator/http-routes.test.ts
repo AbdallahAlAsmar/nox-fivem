@@ -48,7 +48,8 @@ vi.mock('@fivem-ai/db', () => {
       findMany: vi.fn().mockResolvedValue([]),
     },
     chatMessage: { findMany: vi.fn().mockResolvedValue([]), create: vi.fn(), deleteMany: vi.fn() },
-    change: { findFirst: vi.fn(), findMany: vi.fn().mockResolvedValue([]), findUnique: vi.fn(), update: vi.fn(), count: vi.fn().mockResolvedValue(0) },
+    change: { findFirst: changeFindFirst, findMany: changeFindMany, findUnique: vi.fn(), update: changeUpdate, count: vi.fn().mockResolvedValue(0) },
+
     resourceIndex: { findMany: vi.fn().mockResolvedValue([]), upsert: vi.fn() },
     player: { findFirst: vi.fn(), findMany: vi.fn().mockResolvedValue([]), update: vi.fn() },
     usageLog: { findMany: vi.fn() },
@@ -68,6 +69,16 @@ vi.mock('../src/chat/chatService', () => ({
 vi.mock('../src/cache/cache', () => ({
   cache: { get: vi.fn(), set: vi.fn(), invalidate: vi.fn() },
 }));
+
+// Hoisted so the @fivem-ai/db mock factory can close over them safely
+// (factories run during static-import evaluation, before module body consts).
+const { changeFindFirst, changeFindMany, changeUpdate } = vi.hoisted(() => ({
+  changeFindFirst: vi.fn().mockResolvedValue(null),
+  changeFindMany: vi.fn().mockResolvedValue([]),
+  changeUpdate: vi.fn(),
+}));
+
+import { prisma } from '@fivem-ai/db';
 
 const AUTH_USER = {
   userId: 'user_abc',
@@ -265,5 +276,226 @@ describe('POST /api/servers/:serverId/regenerate-pairing (alias)', () => {
       });
       expect(res.statusCode).toBe(404);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Batch apply — must run the REAL apply pipeline (fs.applyPatch through the
+// mocked gateway) per change, report per-change failures without aborting
+// siblings, and skip non-applicable statuses.
+// ---------------------------------------------------------------------------
+
+describe('POST /api/changes/batch/apply (real applies)', () => {
+  const gateway = () => (app as any).agentGateway;
+
+  /** A Change row whose diff parses into one safe file. */
+  function mkChange(id: string, status: string) {
+    return {
+      id,
+      serverId: 'srv1',
+      status,
+      filesTouched: ['resources/myres/fxmanifest.lua'],
+      diff: '```diff\n--- Current\n+++ Proposed\n-old line\n+new line\n```',
+    };
+  }
+
+  beforeEach(() => {
+    gateway().isConnected.mockReturnValue(true);
+    gateway().sendCommand.mockReset();
+    // Default: every fs.applyPatch succeeds.
+    gateway().sendCommand.mockResolvedValue({
+      changeId: 'x', appliedFiles: [], allSucceeded: true,
+    });
+    changeUpdate.mockResolvedValue({});
+    changeFindFirst.mockReset().mockResolvedValue(null);
+    changeFindMany.mockReset();
+    auditLogCreate.mockResolvedValue({});
+  });
+
+  it('applies each change via fs.applyPatch through the gateway', async () => {
+    changeFindMany.mockResolvedValue([
+      mkChange('chg-a', 'pending'),
+      mkChange('chg-b', 'pending'),
+    ]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/batch/apply',
+      headers: { authorization: 'Bearer good' },
+      payload: { changeIds: ['chg-a', 'chg-b'], serverId: 'srv1' },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.applied).toEqual(['chg-a', 'chg-b']);
+    expect(body.failed).toEqual([]);
+
+    // One REAL apply command per change, addressed to the agent.
+    expect(gateway().sendCommand).toHaveBeenCalledTimes(2);
+    expect(gateway().sendCommand).toHaveBeenCalledWith(
+      'srv1',
+      'fs.applyPatch',
+      expect.objectContaining({
+        changeId: 'chg-a',
+        files: [expect.objectContaining({ path: 'resources/myres/fxmanifest.lua' })],
+      }),
+      expect.any(Number),
+    );
+    expect(gateway().sendCommand).toHaveBeenCalledWith(
+      'srv1',
+      'fs.applyPatch',
+      expect.objectContaining({ changeId: 'chg-b' }),
+      expect.any(Number),
+    );
+    // Status flips to applied (not merely approved).
+    const updates = changeUpdate.mock.calls
+      .map((c: any[]) => c[0]?.data?.status);
+    expect(updates.filter((s: string) => s === 'applied').length).toBe(2);
+    expect(auditLogCreate).toHaveBeenCalled();
+  });
+
+  it('reports a per-change failure without aborting siblings', async () => {
+    changeFindMany.mockResolvedValue([
+      mkChange('chg-ok', 'pending'),
+      mkChange('chg-bad', 'pending'),
+      mkChange('chg-ok2', 'pending'),
+    ]);
+    gateway().sendCommand.mockImplementation(async (_serverId: string, _action: string, args: any) => {
+      if (args.changeId === 'chg-bad') throw new Error('agent write failed');
+      return { changeId: args.changeId, appliedFiles: [], allSucceeded: true };
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/batch/apply',
+      headers: { authorization: 'Bearer good' },
+      payload: { changeIds: ['chg-ok', 'chg-bad', 'chg-ok2'] },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.applied).toEqual(['chg-ok', 'chg-ok2']);
+    expect(body.failed).toEqual([
+      { id: 'chg-bad', error: expect.stringContaining('agent write failed') },
+    ]);
+    // Siblings were still attempted after the failure.
+    expect(gateway().sendCommand).toHaveBeenCalledTimes(3);
+  });
+
+  it('fails closed when no agent is connected (no status flips)', async () => {
+    gateway().isConnected.mockReturnValue(false);
+    changeFindMany.mockResolvedValue([
+      mkChange('chg-offline', 'pending'),
+    ]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/batch/apply',
+      headers: { authorization: 'Bearer good' },
+      payload: { changeIds: ['chg-offline'] },
+    });
+
+    expect(res.statusCode).toBe(200); // partial-success contract: per-change failure
+    const body = res.json();
+    expect(body.applied).toEqual([]);
+    expect(body.failed[0].error).toContain('Agent is not connected');
+    expect(gateway().sendCommand).not.toHaveBeenCalled();
+    // Nothing was stranded in approved-limbo.
+    const statuses = changeUpdate.mock.calls
+      .map((c: any[]) => c[0]?.data?.status)
+      .filter(Boolean);
+    expect(statuses).toEqual([]);
+  });
+
+  it('skips non-pending/non-approved changes and reports them', async () => {
+    changeFindMany.mockResolvedValue([
+      mkChange('chg-already-applied', 'applied'),
+      mkChange('chg-fresh', 'pending'),
+    ]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/batch/apply',
+      headers: { authorization: 'Bearer good' },
+      payload: { changeIds: ['chg-already-applied', 'chg-fresh'] },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.applied).toEqual(['chg-fresh']);
+    expect(body.skipped).toEqual([
+      { id: 'chg-already-applied', reason: 'Change is applied' },
+    ]);
+    expect(gateway().sendCommand).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('POST /api/changes/:changeId/apply (single)', () => {
+  function mkChange(id: string, status: string) {
+    return {
+      id,
+      serverId: 'srv1',
+      orgId: 'org-123',
+      status,
+      filesTouched: ['resources/myres/fxmanifest.lua'],
+      diff: '```diff\n--- Current\n+++ Proposed\n-old line\n+new line\n```',
+    };
+  }
+
+  beforeEach(() => {
+    const gw = (app as any).agentGateway;
+    gw.isConnected.mockReturnValue(true);
+    gw.sendCommand.mockReset().mockResolvedValue({ allSucceeded: true });
+    changeUpdate.mockResolvedValue({});
+    auditLogCreate.mockResolvedValue({});
+  });
+
+  it('rejects an offline agent BEFORE flipping status to approved', async () => {
+    (app as any).agentGateway.isConnected.mockReturnValue(false);
+    changeFindFirst.mockResolvedValue(mkChange('chg-1', 'pending'));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/chg-1/apply',
+      headers: { authorization: 'Bearer good' },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('Agent is not connected');
+    // No approved-limbo: status untouched.
+    expect(changeUpdate).not.toHaveBeenCalled();
+    expect(auditLogCreate).not.toHaveBeenCalled();
+  });
+
+  it('allows resume from approved status', async () => {
+    changeFindFirst.mockResolvedValue(mkChange('chg-2', 'approved'));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/changes/chg-2/apply',
+      headers: { authorization: 'Bearer good' },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().status).toBe('applied');
+    expect((app as any).agentGateway.sendCommand).toHaveBeenCalledWith(
+      'srv1',
+      'fs.applyPatch',
+      expect.objectContaining({ changeId: 'chg-2' }),
+      expect.any(Number),
+    );
+  });
+
+  it('still rejects terminal states (applied/failed/rolled_back)', async () => {
+    for (const status of ['applied', 'failed', 'rolled_back']) {
+      changeFindFirst.mockResolvedValue(mkChange('chg-3', status));
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/changes/chg-3/apply?status=${status}`,
+        headers: { authorization: 'Bearer good' },
+      });
+      expect(res.statusCode).toBe(400);
+    }
+    expect((app as any).agentGateway.sendCommand).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import * as crypto from 'crypto';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@fivem-ai/db';
 import { requireAuth, verifyBearerToken, authAllowAnon } from '../auth';
 import {
@@ -1113,61 +1114,59 @@ export async function registerRoutes(fastify: FastifyInstance) {
     return { status: 'cancelled', changeId: change.id };
   });
 
-  // Apply a change (triggers agent action)
-  fastify.post('/api/changes/:changeId/apply', async (request, reply) => {
-    const user = requireAuth(request, reply);
-    const params = z.object({
-      changeId: z.string(),
-    }).parse(request.params);
+  /**
+   * Shared apply pipeline for POST /api/changes/:changeId/apply and the batch
+   * endpoint: verify the agent is reachable, mark the change approved, rebuild
+   * the patch from the stored diff, path-guard every file, then push
+   * fs.applyPatch through the agent gateway. Every terminal outcome writes the
+   * corresponding Change status + AuditLog entry so the dashboard never shows
+   * a stale state. Returns {ok:true} on success or {ok:false,httpStatus,error}
+   * — callers decide how failures surface (HTTP status vs per-change batch
+   * entry). `auditExtra` lets the batch route stamp its entries.
+   *
+   * Resume support: callers may invoke this with status='approved' as well as
+   * 'pending' — covers changes stranded in approved-limbo by an earlier
+   * partial batch or a mid-flight disconnect. Cancel stays pending-only.
+   */
+  async function applyChangeToAgent(
+    change: { id: string; serverId: string; diff: string | null; filesTouched: Prisma.InputJsonValue | null },
+    actor: { userId: string; orgId: string },
+    auditExtra: Record<string, unknown> = {},
+  ): Promise<{ ok: true } | { ok: false; httpStatus: number; error: string }> {
+    const agentGateway = (fastify as any).agentGateway as AgentGateway | undefined;
 
-    const change = await assertChangeAccess(request, reply, params.changeId);
-    if (!change) return;
-
-    if (change.status !== 'pending') {
-      return reply.status(400).send({ error: 'Change is not pending' });
+    // Connectivity FIRST: flipping status before knowing the agent is
+    // reachable strands the change in approved-limbo (nothing watches
+    // approved-only changes, and cancel requires pending).
+    if (!agentGateway || !agentGateway.isConnected(change.serverId)) {
+      return { ok: false, httpStatus: 400, error: 'Agent is not connected' };
     }
 
-    // Update status to approved
+    // Approve (or re-affirm the approval when resuming from 'approved').
     await prisma.change.update({
-      where: { id: params.changeId },
+      where: { id: change.id },
       data: {
         status: 'approved',
-        approvedByUserId: user.userId,
+        approvedByUserId: actor.userId,
         approvedAt: new Date(),
       },
     });
 
-    // Log audit event
     await prisma.auditLog.create({
       data: {
-        orgId: user.orgId,
+        orgId: actor.orgId,
         serverId: change.serverId,
-        userId: user.userId,
+        userId: actor.userId,
         action: 'change.approved',
-        metadata: { changeId: change.id, filesTouched: change.filesTouched },
+        metadata: { changeId: change.id, filesTouched: change.filesTouched, ...auditExtra },
       },
     });
 
-    // Send apply command to agent via gateway
-    const agentGateway = (fastify as any).agentGateway as AgentGateway;
-    if (!agentGateway.isConnected(change.serverId)) {
-      return reply.status(400).send({ error: 'Agent is not connected' });
-    }
-
-    // Get the change details with files
-    const changeWithFiles = await prisma.change.findUnique({
-      where: { id: params.changeId },
-    });
-
-    if (!changeWithFiles) {
-      return reply.status(404).send({ error: 'Change not found' });
-    }
-
     // Build the patch from the stored diff and filesTouched metadata
-    const touchedFiles = Array.isArray(changeWithFiles.filesTouched)
-      ? (changeWithFiles.filesTouched as string[])
+    const touchedFiles = Array.isArray(change.filesTouched)
+      ? (change.filesTouched as string[])
       : [];
-    const parsed = parseDiffToPatch(changeWithFiles.diff, touchedFiles);
+    const parsed = parseDiffToPatch(String(change.diff ?? ''), touchedFiles);
 
     // Guard every relayed file path against traversal before it reaches the agent.
     const rejectedPaths: string[] = [];
@@ -1182,15 +1181,16 @@ export async function registerRoutes(fastify: FastifyInstance) {
     }
 
     if (rejectedPaths.length > 0) {
+      const error = `Unsafe paths rejected: ${rejectedPaths.join(', ')}`;
       await prisma.change.update({
-        where: { id: params.changeId },
-        data: { status: 'failed', applyResult: { error: `Unsafe paths rejected: ${rejectedPaths.join(', ')}` } },
+        where: { id: change.id },
+        data: { status: 'failed', applyResult: { error } },
       });
-      return reply.status(400).send({ error: `Change contains unsafe file paths and was not applied` });
+      return { ok: false, httpStatus: 400, error: 'Change contains unsafe file paths and was not applied' };
     }
 
     if (files.length === 0) {
-      return reply.status(400).send({ error: 'No files to apply in change' });
+      return { ok: false, httpStatus: 400, error: 'No files to apply in change' };
     }
 
     try {
@@ -1198,58 +1198,81 @@ export async function registerRoutes(fastify: FastifyInstance) {
         change.serverId,
         'fs.applyPatch',
         {
-          changeId: params.changeId,
+          changeId: change.id,
           files,
         },
         60000
       );
 
       await prisma.change.update({
-        where: { id: params.changeId },
+        where: { id: change.id },
         data: {
           status: 'applied',
           appliedAt: new Date(),
         },
       });
 
-      // Log audit event
       await prisma.auditLog.create({
         data: {
-          orgId: user.orgId,
+          orgId: actor.orgId,
           serverId: change.serverId,
-          userId: user.userId,
+          userId: actor.userId,
           action: 'change.applied',
-          metadata: { changeId: change.id, filesApplied: touchedFiles },
+          metadata: { changeId: change.id, filesApplied: touchedFiles, ...auditExtra },
         },
       });
 
-      return {
-        status: 'applied',
-        changeId: change.id,
-        message: 'Change applied successfully',
-      };
+      return { ok: true };
     } catch (error: any) {
+      const msg = error?.message || String(error);
       await prisma.change.update({
-        where: { id: params.changeId },
+        where: { id: change.id },
         data: {
           status: 'failed',
-          applyResult: { error: error.message },
+          applyResult: { error: msg },
         },
       });
 
-      // Log audit event
       await prisma.auditLog.create({
         data: {
-          orgId: user.orgId,
+          orgId: actor.orgId,
           serverId: change.serverId,
-          userId: user.userId,
+          userId: actor.userId,
           action: 'change.failed',
-          metadata: { changeId: change.id, error: error.message },
+          metadata: { changeId: change.id, error: msg, ...auditExtra },
         },
       });
 
-      return reply.status(500).send({ error: `Failed to apply change: ${error.message}` });
+      return { ok: false, httpStatus: 500, error: `Failed to apply change: ${msg}` };
     }
+  }
+
+  // Apply a change (triggers agent action)
+  fastify.post('/api/changes/:changeId/apply', async (request, reply) => {
+    const user = requireAuth(request, reply);
+    const params = z.object({
+      changeId: z.string(),
+    }).parse(request.params);
+
+    const change = await assertChangeAccess(request, reply, params.changeId);
+    if (!change) return;
+
+    // Apply is allowed from 'pending' (normal approval) or 'approved'
+    // (resume of an interrupted apply). Cancel remains pending-only.
+    if (change.status !== 'pending' && change.status !== 'approved') {
+      return reply.status(400).send({ error: `Change is ${change.status} and cannot be applied` });
+    }
+
+    const result = await applyChangeToAgent(change, { userId: user.userId, orgId: user.orgId });
+    if (!result.ok) {
+      return reply.status(result.httpStatus).send({ error: result.error });
+    }
+
+    return {
+      status: 'applied',
+      changeId: change.id,
+      message: 'Change applied successfully',
+    };
   });
 
   // ============================================
@@ -1795,7 +1818,10 @@ export async function registerRoutes(fastify: FastifyInstance) {
   // Batch Operations
   // ============================================
 
-  // Batch approve changes
+  // Batch apply changes — runs the REAL single-change pipeline (connectivity
+  // check → approve → git-checkpointed fs.applyPatch → audit) per change.
+  // Partial success is allowed: a failure records {id,error} and continues so
+  // siblings still land. 'approved' changes resume too (same rule as single).
   fastify.post('/api/changes/batch/apply', async (request, reply) => {
     const user = requireAuth(request, reply);
     const body = z.object({
@@ -1811,35 +1837,33 @@ export async function registerRoutes(fastify: FastifyInstance) {
       include: { server: true },
     });
 
-    const pendingChanges = changes.filter(c => c.status === 'pending');
+    const applicable = changes.filter(
+      (c) => c.status === 'pending' || c.status === 'approved',
+    );
     const results = {
-      approved: [] as string[],
+      applied: [] as string[],
+      failed: [] as Array<{ id: string; error: string }>,
       skipped: [] as Array<{ id: string; reason: string }>,
     };
 
-    for (const change of pendingChanges) {
+    for (const change of applicable) {
       try {
-        await prisma.change.update({
-          where: { id: change.id },
-          data: {
-            status: 'approved',
-            approvedByUserId: user.userId,
-            approvedAt: new Date(),
-          },
-        });
-        results.approved.push(change.id);
-
-        await prisma.auditLog.create({
-          data: {
-            orgId: user.orgId,
-            serverId: change.serverId,
-            userId: user.userId,
-            action: 'change.approved',
-            metadata: { changeId: change.id, filesTouched: change.filesTouched, batchApproved: true },
-          },
-        });
+        const result = await applyChangeToAgent(change, { userId: user.userId, orgId: user.orgId }, { batchApplied: true });
+        if (result.ok) {
+          results.applied.push(change.id);
+        } else {
+          results.failed.push({ id: change.id, error: result.error });
+        }
       } catch (e) {
-        results.skipped.push({ id: change.id, reason: (e as Error).message });
+        results.failed.push({ id: change.id, error: (e as Error).message });
+      }
+    }
+
+    // Changes the caller asked about but that are in a non-applicable state
+    // (applied/failed/rolled_back) — reported, not silently dropped.
+    for (const change of changes) {
+      if (change.status !== 'pending' && change.status !== 'approved') {
+        results.skipped.push({ id: change.id, reason: `Change is ${change.status}` });
       }
     }
 
