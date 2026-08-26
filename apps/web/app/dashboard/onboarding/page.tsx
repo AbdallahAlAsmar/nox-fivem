@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { ORCHESTRATOR_URL } from '@/lib/config';
+import { authedFetch } from '@/lib/auth-fetch';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -89,9 +90,11 @@ export default function OnboardingPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`${ORCH_URL}/api/onboarding/complete`, {
+      // authedFetch (not bare fetch): this call MUST carry the Clerk token so
+      // the orchestrator provisions/updates the caller's own org. Anonymous
+      // fallback targets dev-org which has no row → P2025.
+      const res = await authedFetch(`${ORCH_URL}/api/onboarding/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
