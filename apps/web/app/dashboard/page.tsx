@@ -344,6 +344,7 @@ export default function DashboardPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newServerName, setNewServerName] = useState('');
+  const [createdServerName, setCreatedServerName] = useState('');
   const [creating, setCreating] = useState(false);
   const [createdServer, setCreatedServer] = useState<{ id: string; pairingCode: string; pairing: { code: string; expiresAt: Date }; connect?: { serverId: string; agentDeviceId: string; wsUrl: string } } | null>(null);
   const { dialog, confirm, close: closeConfirm } = useConfirmDialog();
@@ -425,6 +426,7 @@ export default function DashboardPage() {
     setCreating(true);
     try {
       const result = await createServer(newServerName);
+      setCreatedServerName(newServerName.trim());
       setCreatedServer(result);
       toast.success(`Server "${newServerName}" created and ready`);
       setNewServerName('');
@@ -484,37 +486,31 @@ export default function DashboardPage() {
                         <CheckCircle2 className="w-5 h-5 text-[#22c55e]" />
                       </div>
                       <div>
-                        <h3 className="font-mono text-sm text-white">Server Ready</h3>
-                        <p className="font-sans text-xs text-white/40 mt-0.5">Auto-paired — agent can connect now</p>
+                        <h3 className="font-mono text-sm text-white">Server created</h3>
+                        <p className="font-sans text-xs text-white/40 mt-0.5">Now connect it in 2 steps</p>
                       </div>
                     </div>
 
-                    {createdServer.connect && (
-                      <div className="bg-[#0A0A0F] border border-white/10 p-3 space-y-2">
-                        <div className="flex justify-between">
-                          <span className="font-mono text-[10px] uppercase text-white/40">Server ID</span>
-                          <span className="font-mono text-xs text-white/60 truncate max-w-[180px]">{createdServer.connect.serverId}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-mono text-[10px] uppercase text-white/40">Device ID</span>
-                          <span className="font-mono text-xs text-white/60 truncate max-w-[180px]">{createdServer.connect.agentDeviceId}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-mono text-[10px] uppercase text-white/40">WebSocket</span>
-                          <span className="font-mono text-xs text-[#5E6AD2] truncate max-w-[180px]">{createdServer.connect.wsUrl}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <p className="font-sans text-xs text-white/40 text-center">
-                      The desktop agent will auto-connect on next launch.
-                    </p>
+                    <ol className="space-y-3 font-sans text-xs text-white/60 leading-[1.6] list-none">
+                      <li className="flex gap-2.5">
+                        <span className="font-mono text-[10px] text-[#5E6AD2] mt-0.5 flex-shrink-0">1.</span>
+                        <span>
+                          Download and install the{' '}
+                          <a href="/dist/NOX-Setup.exe" className="text-[#5E6AD2] hover:text-white underline">NOX desktop app</a>{' '}
+                          on the PC running your FiveM server.
+                        </span>
+                      </li>
+                      <li className="flex gap-2.5">
+                        <span className="font-mono text-[10px] text-[#5E6AD2] mt-0.5 flex-shrink-0">2.</span>
+                        <span>Open the app, <strong className="text-white/80">sign in with the same account</strong>, pick "{createdServerName}" and choose your server directory — it connects automatically.</span>
+                      </li>
+                    </ol>
 
                     <button
                       onClick={() => { setShowCreateModal(false); setCreatedServer(null); }}
                       className="w-full py-2.5 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors"
                     >
-                      Done
+                      Got it
                     </button>
                   </div>
                 ) : (

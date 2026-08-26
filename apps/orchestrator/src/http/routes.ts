@@ -242,6 +242,35 @@ export async function registerRoutes(fastify: FastifyInstance) {
     };
   });
 
+  // Mint a fresh session token for this server's paired device. Used by the
+  // desktop app when linking an existing (auto-paired) server whose token was
+  // never captured — the device belongs to the caller's org, so re-minting is
+  // safe and keeps pairing codes out of the normal connect path entirely.
+  fastify.post('/api/servers/:serverId/session-token', async (request, reply) => {
+    requireAuth(request, reply);
+    const params = z.object({ serverId: z.string() }).parse(request.params);
+
+    const server = await assertServerAccess(request, reply, params.serverId);
+    if (!server) return;
+
+    const pairedDevice = await prisma.agentDevice.findFirst({
+      where: { serverId: params.serverId, status: 'paired' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!pairedDevice) {
+      return reply.status(404).send({ error: 'No paired agent device for this server' });
+    }
+
+    const sessionToken = crypto.randomBytes(32).toString('base64url');
+    const pairingTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
+    await prisma.agentDevice.update({
+      where: { id: pairedDevice.id },
+      data: { pairingTokenHash, updatedAt: new Date() },
+    });
+
+    return { serverId: params.serverId, agentDeviceId: pairedDevice.id, sessionToken };
+  });
+
   // Rename a server (org-scoped)
   fastify.patch('/api/servers/:serverId', async (request, reply) => {
     requireAuth(request, reply);

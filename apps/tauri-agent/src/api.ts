@@ -178,11 +178,16 @@ export async function connectExistingServer(
   // 1. Fetch server details from orchestrator
   const details = await apiFetch(`/api/servers/${serverId}`)
 
-  // 2. If already paired, use existing paired agent device ID directly.
-  //    No fresh token is minted here — reuse whatever is persisted (the
-  //    Rust side only sends it when it belongs to this server).
+  // 2. Already paired (auto-pair at creation): mint a fresh session token for
+  //    the caller's own paired device — no pairing code involved. The device
+  //    belongs to the signed-in user's org, so re-minting is safe.
   if (details?.agent?.id) {
-    return { serverId, agentDeviceId: details.agent.id }
+    const mint = await apiFetch(`/api/servers/${serverId}/session-token`, { method: 'POST' })
+    return {
+      serverId,
+      agentDeviceId: mint.agentDeviceId || details.agent.id,
+      sessionToken: mint.sessionToken,
+    }
   }
 
   // 3. If there is an active pairing code, claim it (claim mints a token).

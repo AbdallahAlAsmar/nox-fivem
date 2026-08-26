@@ -347,16 +347,16 @@ export default function ServerDetailPage() {
         {activeTab === 'chat' && !loading && server && server.status !== 'online' && (
           <div className="p-6 overflow-y-auto">
             <div className="max-w-lg mx-auto">
-              <div className="flex items-start gap-3 p-4 border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)] mb-5">
-                <AlertCircle className="w-4 h-4 text-[#f59e0b] flex-shrink-0 mt-0.5" />
+              <div className={`flex items-start gap-3 p-4 border mb-5 ${server.hasAgent ? 'border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.06)]' : 'border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)]'}`}>
+                <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${server.hasAgent ? 'text-[#5E6AD2]' : 'text-[#f59e0b]'}`} />
                 <div>
-                  <p className="font-mono text-xs uppercase tracking-wider text-[#f59e0b]">
-                    Server not connected
+                  <p className={`font-mono text-xs uppercase tracking-wider ${server.hasAgent ? 'text-[#5E6AD2]' : 'text-[#f59e0b]'}`}>
+                    {server.hasAgent ? 'Desktop app is offline' : 'Server not connected'}
                   </p>
                   <p className="font-sans text-xs text-[rgba(255,255,255,0.6)] mt-1 leading-[1.6]">
-                    The NOX desktop app isn't linked to this server yet, so chat, players, and file
-                    tools are unavailable. Follow the steps below to connect it — takes about a
-                    minute.
+                    {server.hasAgent
+                      ? 'This server is linked to a NOX desktop app, but the app isn\'t running right now — so chat, players, and file tools are unavailable. Open the NOX app on your PC (make sure it\'s signed in), pick this server, and it will reconnect automatically.'
+                      : 'The NOX desktop app isn\'t linked to this server yet, so chat, players, and file tools are unavailable. Follow the steps below to connect it — takes about a minute.'}
                   </p>
                 </div>
               </div>
@@ -376,24 +376,33 @@ export default function ServerDetailPage() {
                   </p>
                 </div>
               ) : pairing ? (
-                <PairingSetupView
-                  pairing={{
-                    id: serverId,
-                    pairingCode: pairing.code,
-                    expiresAt: pairing.expiresAt,
-                  }}
-                  onRegenerate={regeneratePairingCode}
-                  serverName={server.name}
-                  hideDismiss
-                />
+                !server.hasAgent && (
+                  <PairingSetupView
+                    pairing={{
+                      id: serverId,
+                      pairingCode: pairing.code,
+                      expiresAt: pairing.expiresAt,
+                    }}
+                    onRegenerate={regeneratePairingCode}
+                    serverName={server.name}
+                    hideDismiss
+                  />
+                )
               ) : (
-                <button
-                  onClick={regeneratePairingCode}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Generate Pairing Code
-                </button>
+                !server.hasAgent && (
+                  <div className="space-y-3">
+                    <ol className="space-y-2.5 font-sans text-xs text-white/60 leading-[1.6] list-none">
+                      <li className="flex gap-2.5">
+                        <span className="font-mono text-[10px] text-[#5E6AD2] mt-0.5 flex-shrink-0">1.</span>
+                        <span>Download and install the <a href="/dist/NOX-Setup.exe" className="text-[#5E6AD2] hover:text-white underline">NOX desktop app</a>.</span>
+                      </li>
+                      <li className="flex gap-2.5">
+                        <span className="font-mono text-[10px] text-[#5E6AD2] mt-0.5 flex-shrink-0">2.</span>
+                        <span>Sign in with the same account, pick this server, choose your FiveM directory — it connects automatically.</span>
+                      </li>
+                    </ol>
+                  </div>
+                )
               )}
             </div>
           </div>
