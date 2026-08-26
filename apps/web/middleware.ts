@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api(.*)',
+  '/dist/(.*)',
   '/__clerk/(.*)',
   '/clerk.browser.js',
 ]);
