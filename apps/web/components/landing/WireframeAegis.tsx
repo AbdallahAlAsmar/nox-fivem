@@ -38,33 +38,34 @@ export default function WireframeAegis() {
 
     const LINE = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
 
-    // Aegis plate geometry on a ~4-unit grid, matching the SVG mark's
-    // construction: roof bars with center gap, folded corner legs, side
-    // plates sweeping down, bottom bars meeting at the point.
-    const plate = (points: number[][]) => {
+    // Single source of truth for mapping the 512-grid SVG coordinates to
+    // scene space. The mark's visual center in the SVG is ~(256, 267)
+    // (midpoint between roof y=92 and base tip y=442); we center on that,
+    // exactly as the logo lockup does.
+    const MARK_CENTER_Y = 267;
+    const SCALE = 4 / 360; // mark spans ~360 svg units tall → 4 scene units
+
+    const toScene = (sx: number, sy: number): [number, number] => [
+      (sx - 256) * SCALE,
+      -((sy - MARK_CENTER_Y) * SCALE),
+    ];
+
+    const plate = (pts: Array<[number, number]>) => {
       const geo = new THREE.BufferGeometry().setFromPoints(
-        points.map(([x, y]) => new THREE.Vector3(x / 128 - 2, -(y / 128) + 2 + 0.3, 0)),
+        pts.map(([x, y]) => {
+          const [nx, ny] = toScene(x, y);
+          return new THREE.Vector3(nx, ny, 0);
+        }),
       );
       return new THREE.Line(geo, LINE);
     };
 
-    // Coordinates derived from the 512-grid SVG paths (roof 92→162 fold,
-    // legs 177→218→312 sweep, base 327→442 point). Scale chosen so the full
-    // mark fits inside the viewport with margin at any aspect ratio —
-    // computed against the camera frustum instead of a hardcoded constant.
-    const S = 1.0;
-    const ox = -256, oy = -267; // center offset
-    const P = (x: number, y: number): number[] => [(x + ox) / 512 * 4 * S, -(y + oy) / 512 * 4 * S];
-
-    // Fit check: the mark spans y ∈ [-350, 350] in SVG units → ±2.73 scene
-    // units after transform. Vertical frustum half-height at z=0 is
-    // tan(fov/2) * dist ≈ tan(17.5°) * 7.2 ≈ 2.27 — too small. Pull the
-    // camera back so the whole shield is always visible with breathing room.
+    // Fit check: with SCALE=4/360 the mark spans ±2.0 units vertically.
+    // Rotated corners reach ~±2.6; the camera must clear that sphere.
     const fitCamera = () => {
       const w = mount.clientWidth || 1;
       const h = mount.clientHeight || 1;
-      // Mark's rotated bounding sphere radius (~3.1 units covers corners).
-      const RADIUS = 3.15;
+      const RADIUS = 2.65;
       const vFov = (35 * Math.PI) / 180;
       const vHalf = Math.tan(vFov / 2);
       const hHalf = vHalf * (w / h);
@@ -74,11 +75,11 @@ export default function WireframeAegis() {
       camera.updateProjectionMatrix();
     };
 
-    group.add(plate([P(244, 92), P(118, 92), P(84, 162)].map(([x, y]) => [x * 256, y * 256])));
-    group.add(plate([P(268, 92), P(394, 92), P(428, 162)].map(([x, y]) => [x * 256, y * 256])));
-    group.add(plate([P(76, 177), P(56, 218), P(140, 312)].map(([x, y]) => [x * 256, y * 256])));
-    group.add(plate([P(436, 177), P(456, 218), P(372, 312)].map(([x, y]) => [x * 256, y * 256])));
-    group.add(plate([P(153, 327), P(256, 442), P(359, 327)].map(([x, y]) => [x * 256, y * 256])));
+    group.add(plate([[244, 92], [118, 92], [84, 162]]));
+    group.add(plate([[268, 92], [394, 92], [428, 162]]));
+    group.add(plate([[76, 177], [56, 218], [140, 312]]));
+    group.add(plate([[436, 177], [456, 218], [372, 312]]));
+    group.add(plate([[153, 327], [256, 442], [359, 327]]));
 
     // Inner detail strokes (subtle): lens pips as small rings
     const pipGeo = new THREE.RingGeometry(0.045, 0.075, 24);
@@ -86,21 +87,19 @@ export default function WireframeAegis() {
     const pipL = new THREE.Mesh(pipGeo, pipMat);
     const pipR = new THREE.Mesh(pipGeo, pipMat);
 
-    // Convert SVG pips (224/288, 232) into scene space using same transform:
-    const toScene = (sx: number, sy: number) => {
-      const [nx, ny] = P(sx * 512 / 512, sy); // sx already in svg units
-      return new THREE.Vector3((sx + ox) / 512 * 4 * S, -(sy + oy) / 512 * 4 * S, 0.001);
-    };
-    pipL.position.copy(toScene(224, 232));
-    pipR.position.copy(toScene(288, 232));
+    const [pipLx, pipLy] = toScene(224, 232);
+    const [pipRx, pipRy] = toScene(288, 232);
+    pipL.position.set(pipLx, pipLy, 0.001);
+    pipR.position.set(pipRx, pipRy, 0.001);
     group.add(pipL, pipR);
 
     // Signal square — the one green element. Blinks at cursor cadence.
-    const sqSize = 26 / 512 * 4 * S;
+    const sqSize = 26 * SCALE;
     const sqGeo = new THREE.PlaneGeometry(sqSize, sqSize);
     const sqMat = new THREE.MeshBasicMaterial({ color: 0x3dffa2, transparent: true, opacity: 1, side: THREE.DoubleSide });
     const square = new THREE.Mesh(sqGeo, sqMat);
-    square.position.copy(toScene(256, 279));
+    const [sqX, sqY] = toScene(256, 279); // SVG rect x=243 y=266 w/h=26 → center (256, 279)
+    square.position.set(sqX, sqY, 0.001);
     group.add(square);
 
     // Resize handling
