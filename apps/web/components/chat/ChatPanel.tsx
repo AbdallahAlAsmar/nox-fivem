@@ -250,7 +250,7 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
                 <span className="font-mono text-xs uppercase tracking-widest text-white/40">Chats</span>
                 <button
                   onClick={handleNewChat}
-                  className="flex items-center gap-1 px-2 py-1 bg-[#5E6AD2]/15 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#5E6AD2]/25 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-[#3DFFA2]/15 text-[#3DFFA2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#3DFFA2]/25 transition-colors"
                 >
                   <Plus className="w-3 h-3" /> New Chat
                 </button>
@@ -265,12 +265,12 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
                       onClick={() => { switchThread(thread.id); setShowThreadList(false); onThreadIdChange?.(thread.id); }}
                       className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors group relative ${
                         activeThreadId === thread.id
-                          ? 'bg-[rgba(94,106,210,0.12)]'
+                          ? 'bg-[rgba(61,255,162,0.12)]'
                           : 'hover:bg-white/5'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <MessageSquare className={`w-3.5 h-3.5 flex-shrink-0 ${activeThreadId === thread.id ? 'text-[#5E6AD2]' : 'text-white/20'}`} />
+                        <MessageSquare className={`w-3.5 h-3.5 flex-shrink-0 ${activeThreadId === thread.id ? 'text-[#3DFFA2]' : 'text-white/20'}`} />
                         <div className="flex-1 min-w-0">
                           <p className={`font-mono text-xs truncate ${activeThreadId === thread.id ? 'text-white' : 'text-white/50'}`}>
                             {thread.title || 'Untitled'}
@@ -332,7 +332,7 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
           </button>
           <button
             onClick={handleNewChat}
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[#5E6AD2]/15 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#5E6AD2]/25 transition-colors"
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[#3DFFA2]/15 text-[#3DFFA2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#3DFFA2]/25 transition-colors"
           >
             <Plus className="w-3 h-3" /> New Chat
           </button>
@@ -355,7 +355,7 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
               <div>
                 <h3 className="font-mono text-sm text-[#ef4444]/80 mb-1">Agent Not Connected</h3>
                 <p className="font-sans text-xs text-white/40">
-                  Open the NOX Agent desktop app to connect to your server.
+                  Open the NOXES Agent desktop app to connect to your server.
                 </p>
                 <p className="font-sans text-xs text-white/25 mt-1">
                   Once connected, the status will update automatically.
@@ -365,8 +365,8 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
           )}
           {messages.length === 0 && agentStatus !== 'disconnected' && (
             <div className="text-center py-16 space-y-4">
-              <div className="w-12 h-12 bg-[rgba(94,106,210,0.08)] rounded-2xl flex items-center justify-center mx-auto">
-                <Bot className="w-6 h-6 text-[#5E6AD2]/60" />
+              <div className="w-12 h-12 bg-[rgba(61,255,162,0.08)] rounded-2xl flex items-center justify-center mx-auto">
+                <Bot className="w-6 h-6 text-[#3DFFA2]/60" />
               </div>
               <div>
                 <h3 className="font-mono text-sm text-white/60 mb-1">Start a conversation</h3>
@@ -395,19 +395,19 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
                 className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.role === 'assistant' && (
-                  <div className="w-6 h-6 rounded-full bg-[rgba(94,106,210,0.1)] flex items-center justify-center flex-shrink-0 mt-1">
-                    <Bot className="w-3 h-3 text-[#5E6AD2]/70" />
+                  <div className="w-6 h-6 rounded-full bg-[rgba(61,255,162,0.1)] flex items-center justify-center flex-shrink-0 mt-1">
+                    <Bot className="w-3 h-3 text-[#3DFFA2]/70" />
                   </div>
                 )}
                 <div
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${
                     msg.role === 'user'
-                      ? 'bg-[#5E6AD2] text-white'
+                      ? 'bg-[#3DFFA2] text-white'
                       : 'bg-[#14141e] text-white/80'
                   }`}
                 >
                   {msg.skillUsed && msg.role === 'assistant' && (
-                    <div className="flex items-center gap-1 text-[9px] text-[#5E6AD2]/60 mb-1 font-mono uppercase tracking-wider">
+                    <div className="flex items-center gap-1 text-[9px] text-[#3DFFA2]/60 mb-1 font-mono uppercase tracking-wider">
                       <Sparkles className="w-3 h-3" /> {msg.skillUsed}
                     </div>
                   )}
@@ -426,8 +426,8 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
           )}
           {isLoading && (
             <div className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-[rgba(94,106,210,0.1)] flex items-center justify-center flex-shrink-0 mt-1">
-                <Bot className="w-3 h-3 text-[#5E6AD2]/70" />
+              <div className="w-6 h-6 rounded-full bg-[rgba(61,255,162,0.1)] flex items-center justify-center flex-shrink-0 mt-1">
+                <Bot className="w-3 h-3 text-[#3DFFA2]/70" />
               </div>
               <div className="bg-[#14141e] rounded-2xl px-4 py-3 flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-white/20" />
@@ -462,11 +462,11 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
                         onClick={() => { toggleSkill(skill.id); setShowSkillPicker(false); }}
                         className={`flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors ${
                           selectedSkills.includes(skill.id)
-                            ? 'bg-[rgba(94,106,210,0.12)]'
+                            ? 'bg-[rgba(61,255,162,0.12)]'
                             : 'hover:bg-white/5'
                         }`}
                       >
-                        <Sparkles className={`w-3 h-3 flex-shrink-0 ${selectedSkills.includes(skill.id) ? 'text-[#5E6AD2]' : 'text-white/20'}`} />
+                        <Sparkles className={`w-3 h-3 flex-shrink-0 ${selectedSkills.includes(skill.id) ? 'text-[#3DFFA2]' : 'text-white/20'}`} />
                         <div>
                           <p className={`font-mono text-[10px] ${selectedSkills.includes(skill.id) ? 'text-white' : 'text-white/50'}`}>{skill.name}</p>
                           <p className="font-sans text-[9px] text-white/20">{skill.desc}</p>
@@ -484,7 +484,7 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
               <button
                 key={id}
                 onClick={() => toggleSkill(id)}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] bg-[rgba(94,106,210,0.12)] text-[#5E6AD2] font-mono rounded hover:bg-[rgba(94,106,210,0.2)] transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-[10px] bg-[rgba(61,255,162,0.12)] text-[#3DFFA2] font-mono rounded hover:bg-[rgba(61,255,162,0.2)] transition-colors"
               >
                 {skill.name} <span className="ml-0.5">×</span>
               </button>
@@ -497,7 +497,7 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
           {agentStatus === 'disconnected' && (
             <div className="mb-2 px-3 py-2 bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] rounded-lg">
               <p className="font-mono text-[10px] text-[#ef4444]/80 uppercase tracking-wider">
-                ⚠ Agent not connected — open NOX Agent app to enable AI assistance
+                ⚠ Agent not connected — open NOXES Agent app to enable AI assistance
               </p>
             </div>
           )}
@@ -509,12 +509,12 @@ export default function ChatPanel({ serverId, framework, onThreadIdChange }: Cha
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
               placeholder="Ask about your server..."
               disabled={isLoading || !activeThreadId || agentStatus === 'disconnected'}
-              className="flex-1 px-4 py-2.5 bg-[#0a0a0f] text-white font-mono text-sm placeholder:text-white/15 focus:outline-none focus:ring-1 focus:ring-[#5E6AD2]/40 disabled:opacity-40 transition-all"
+              className="flex-1 px-4 py-2.5 bg-[#0a0a0f] text-white font-mono text-sm placeholder:text-white/15 focus:outline-none focus:ring-1 focus:ring-[#3DFFA2]/40 disabled:opacity-40 transition-all"
             />
             <button
               onClick={handleSend}
               disabled={isLoading || !input.trim() || !activeThreadId || agentStatus === 'disconnected'}
-              className="px-4 py-2.5 bg-[#5E6AD2] text-white rounded-lg hover:bg-[#4f5bc0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="px-4 py-2.5 bg-[#3DFFA2] text-white rounded-lg hover:bg-[#36d98c] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>

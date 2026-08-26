@@ -68,7 +68,7 @@ export default function NewServerPage() {
             </p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full py-2.5 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors"
+              className="w-full py-2.5 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors"
             >
               Go to Dashboard
             </button>
@@ -93,7 +93,7 @@ export default function NewServerPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. My RP Server"
-                  className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white font-sans placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
+                  className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white font-sans placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
                   required
                   maxLength={64}
                 />

@@ -177,7 +177,7 @@ export default function ResourceHubPage() {
   const installingSlugs = new Set(installs.filter((i) => i.status === 'installing').map((i) => i.slug));
 
   const categoryColors: Record<string, string> = {
-    framework: 'bg-[#5E6AD2]/20 text-[#5E6AD2] border-[#5E6AD2]/30',
+    framework: 'bg-[#3DFFA2]/20 text-[#3DFFA2] border-[#3DFFA2]/30',
     jobs: 'bg-[#22c55e]/20 text-[#22c55e] border-[#22c55e]/30',
     admin: 'bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/30',
     inventory: 'bg-[#ec4899]/20 text-[#ec4899] border-[#ec4899]/30',
@@ -187,7 +187,7 @@ export default function ResourceHubPage() {
   };
 
   const installStatusStyles: Record<string, string> = {
-    installing: 'text-[#5E6AD2] bg-[#5E6AD2]/10 border-[#5E6AD2]/30',
+    installing: 'text-[#3DFFA2] bg-[#3DFFA2]/10 border-[#3DFFA2]/30',
     installed: 'text-[#22c55e] bg-[#22c55e]/10 border-[#22c55e]/30',
     failed: 'text-[#ef4444] bg-[#ef4444]/10 border-[#ef4444]/30',
     rollback_requested: 'text-[#f59e0b] bg-[#f59e0b]/10 border-[#f59e0b]/30',
@@ -212,7 +212,7 @@ export default function ResourceHubPage() {
               <select
                 value={selectedServer}
                 onChange={(e) => setSelectedServer(e.target.value)}
-                className="w-full appearance-none bg-[#16161E] border border-white/10 text-white font-mono text-xs uppercase tracking-wider px-4 py-2.5 pr-8 focus:outline-none focus:border-[#5E6AD2] transition-colors"
+                className="w-full appearance-none bg-[#16161E] border border-white/10 text-white font-mono text-xs uppercase tracking-wider px-4 py-2.5 pr-8 focus:outline-none focus:border-[#3DFFA2] transition-colors"
               >
                 <option value="">Select a server...</option>
                 {servers?.map((s: any) => (
@@ -243,7 +243,7 @@ export default function ResourceHubPage() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              className="p-3 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] font-mono text-xs text-[#5E6AD2]"
+              className="p-3 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] font-mono text-xs text-[#3DFFA2]"
             >
               {headerMsg}
             </motion.div>
@@ -265,7 +265,7 @@ export default function ResourceHubPage() {
                     </span>
                   )}
                   {installs.some((i) => i.status === 'installing' || i.status === 'rollback_requested') && (
-                    <span className="flex items-center gap-1.5 font-mono text-[10px] text-[#5E6AD2]">
+                    <span className="flex items-center gap-1.5 font-mono text-[10px] text-[#3DFFA2]">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       Active
                     </span>
@@ -304,13 +304,13 @@ export default function ResourceHubPage() {
                                 install.status === 'installed' ? 'bg-[#22c55e]/10' :
                                 install.status === 'failed' ? 'bg-[#ef4444]/10' :
                                 install.status === 'rollbacked' ? 'bg-[#8b5cf6]/10' :
-                                'bg-[#5E6AD2]/10'
+                                'bg-[#3DFFA2]/10'
                               }`}>
                                 {install.status === 'installed' && <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />}
                                 {install.status === 'failed' && <XCircle className="w-4 h-4 text-[#ef4444]" />}
                                 {install.status === 'rollbacked' && <RotateCcw className="w-4 h-4 text-[#8b5cf6]" />}
                                 {(install.status === 'installing' || install.status === 'rollback_requested') && (
-                                  <Loader2 className="w-4 h-4 text-[#5E6AD2] animate-spin" />
+                                  <Loader2 className="w-4 h-4 text-[#3DFFA2] animate-spin" />
                                 )}
                               </div>
 
@@ -331,7 +331,7 @@ export default function ResourceHubPage() {
                                   ) : install.status === 'installing' && (
                                     <span className="flex items-center gap-2">
                                       <span>Installing...</span>
-                                      <span className="text-[#5E6AD2]">{install.progress}%</span>
+                                      <span className="text-[#3DFFA2]">{install.progress}%</span>
                                     </span>
                                   )}
                                 </p>
@@ -339,7 +339,7 @@ export default function ResourceHubPage() {
                                 {(install.status === 'installing' || install.status === 'rollback_requested') && (
                                   <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
                                     <div
-                                      className="h-full bg-[#5E6AD2] transition-all duration-500"
+                                      className="h-full bg-[#3DFFA2] transition-all duration-500"
                                       style={{ width: `${install.progress}%` }}
                                     />
                                   </div>
@@ -385,7 +385,7 @@ export default function ResourceHubPage() {
                 onClick={() => setCategory(cat.id)}
                 className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors whitespace-nowrap ${
                   category === cat.id
-                    ? 'text-white bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)]'
+                    ? 'text-white bg-[rgba(61,255,162,0.2)] border border-[rgba(61,255,162,0.4)]'
                     : 'text-white/40 hover:text-white hover:bg-white/5 border border-transparent'
                 }`}
               >
@@ -402,7 +402,7 @@ export default function ResourceHubPage() {
               placeholder="Search resources..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-[#16161E] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#5E6AD2]"
+              className="w-full pl-9 pr-3 py-2 bg-[#16161E] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2]"
             />
           </div>
 
@@ -506,7 +506,7 @@ function ResourceCard({
               Installed
             </span>
           ) : isInstalling ? (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5E6AD2]/10 border border-[#5E6AD2]/30 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider">
+            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3DFFA2]/10 border border-[#3DFFA2]/30 text-[#3DFFA2] font-mono text-[10px] uppercase tracking-wider">
               <Loader2 className="w-3 h-3 animate-spin" />
               Installing...
             </span>
@@ -514,7 +514,7 @@ function ResourceCard({
             <button
               onClick={() => onInstall(resource.slug)}
               disabled={installing}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5E6AD2]/15 border border-[#5E6AD2]/30 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#5E6AD2]/25 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3DFFA2]/15 border border-[#3DFFA2]/30 text-[#3DFFA2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#3DFFA2]/25 transition-colors disabled:opacity-50"
             >
               <DownloadIcon className={`w-3 h-3 ${installing ? 'animate-spin' : ''}`} />
               {installing ? 'Installing...' : 'Install'}

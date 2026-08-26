@@ -16,14 +16,14 @@ const inter = Inter({
 
 export const metadata = {
   title: {
-    default: 'NOX // FiveM',
-    template: '%s | NOX // FiveM',
+    default: 'NOXES.',
+    template: '%s | NOXES.',
   },
   description:
-    'NOX // FiveM — AI-powered server development assistant that safely reads, modifies, and manages your FiveM server files.',
+    'NOXES. — AI-powered server development assistant that safely reads, modifies, and manages your FiveM server files.',
   openGraph: {
     type: 'website',
-    siteName: 'NOX // FiveM',
+    siteName: 'NOXES.',
     description: 'AI-powered FiveM server development assistant.',
   },
 };

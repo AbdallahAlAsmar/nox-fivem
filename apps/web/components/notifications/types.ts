@@ -41,8 +41,8 @@ export const NOTIFICATION_ICONS = {
   },
   pending_approval: {
     icon: '⏳',
-    color: 'text-[#5E6AD2]',
-    bg: 'bg-[rgba(94,106,210,0.1)]',
+    color: 'text-[#3DFFA2]',
+    bg: 'bg-[rgba(61,255,162,0.1)]',
   },
   info: {
     icon: 'ℹ️',
@@ -59,7 +59,7 @@ export const NOTIFICATION_ICONS = {
 export const NOTIFICATION_COLORS = {
   cost_cap: '#f59e0b',
   failure: '#ef4444',
-  pending_approval: '#5E6AD2',
+  pending_approval: '#3DFFA2',
   info: '#3b82f6',
   success: '#22c55e',
 } as const;

@@ -41,10 +41,10 @@ export function ConfirmDialog({
       bg: 'bg-[rgba(245,158,11,0.05)]',
     },
     info: {
-      border: 'border-[rgba(94,106,210,0.3)]',
-      confirm: 'bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white',
-      icon: 'text-[#5E6AD2]',
-      bg: 'bg-[rgba(94,106,210,0.05)]',
+      border: 'border-[rgba(61,255,162,0.3)]',
+      confirm: 'bg-[#3DFFA2] hover:bg-[#36d98c] text-white',
+      icon: 'text-[#3DFFA2]',
+      bg: 'bg-[rgba(61,255,162,0.05)]',
     },
   };
 

@@ -134,10 +134,10 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                       key={server.id}
                       onClick={() => navigateTo(`/dashboard/servers/${server.id}`)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded text-left transition-colors ${
-                        idx === selectedIndex ? 'bg-[rgba(94,106,210,0.15)]' : 'hover:bg-white/5'
+                        idx === selectedIndex ? 'bg-[rgba(61,255,162,0.15)]' : 'hover:bg-white/5'
                       }`}
                     >
-                      <Server className={`w-4 h-4 flex-shrink-0 ${idx === selectedIndex ? 'text-[#5E6AD2]' : 'text-white/30'}`} />
+                      <Server className={`w-4 h-4 flex-shrink-0 ${idx === selectedIndex ? 'text-[#3DFFA2]' : 'text-white/30'}`} />
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-mono truncate ${idx === selectedIndex ? 'text-white' : 'text-white/70'}`}>
                           {server.name}
@@ -165,10 +165,10 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                       key={cmd.label}
                       onClick={() => navigateTo(cmd.href)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded text-left transition-colors ${
-                        actualIdx === selectedIndex ? 'bg-[rgba(94,106,210,0.15)]' : 'hover:bg-white/5'
+                        actualIdx === selectedIndex ? 'bg-[rgba(61,255,162,0.15)]' : 'hover:bg-white/5'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 flex-shrink-0 ${actualIdx === selectedIndex ? 'text-[#5E6AD2]' : 'text-white/30'}`} />
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${actualIdx === selectedIndex ? 'text-[#3DFFA2]' : 'text-white/30'}`} />
                       <span className={`text-sm font-mono ${actualIdx === selectedIndex ? 'text-white' : 'text-white/70'}`}>
                         {cmd.label}
                       </span>

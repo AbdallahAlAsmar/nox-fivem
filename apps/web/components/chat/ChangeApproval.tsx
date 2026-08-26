@@ -91,8 +91,8 @@ export function ChangeApprovalModal({ change, onApprove, onDeny, onClose }: Chan
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-[#0a0a0f] border-b border-[rgba(255,255,255,0.08)]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.3)] rounded-lg flex items-center justify-center">
-              <FileDiff className="w-4 h-4 text-[#5E6AD2]" />
+            <div className="w-8 h-8 bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)] rounded-lg flex items-center justify-center">
+              <FileDiff className="w-4 h-4 text-[#3DFFA2]" />
             </div>
             <div>
               <h3 className="font-mono text-sm font-medium text-white">Review Changes</h3>
@@ -116,7 +116,7 @@ export function ChangeApprovalModal({ change, onApprove, onDeny, onClose }: Chan
             {change.filesTouched.map((file, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] rounded font-mono text-xs text-[#5E6AD2]"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] rounded font-mono text-xs text-[#3DFFA2]"
               >
                 {file}
               </span>
@@ -171,7 +171,7 @@ export function ChangeApprovalModal({ change, onApprove, onDeny, onClose }: Chan
             </button>
             <button
               onClick={() => onApprove(change.id)}
-              className="flex items-center gap-1.5 px-3.5 py-2 font-mono text-xs uppercase tracking-wider bg-[#5E6AD2] hover:bg-[#4f5bc4] text-white rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 font-mono text-xs uppercase tracking-wider bg-[#3DFFA2] hover:bg-[#4f5bc4] text-white rounded-lg transition-colors"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               Apply
@@ -195,13 +195,13 @@ export function PendingChangesBar({ changes, onReview }: PendingChangesBarProps)
     <motion.div
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-40 bg-[#16161E]/95 backdrop-blur-sm border-b border-[rgba(94,106,210,0.3)] px-4 py-2.5"
+      className="fixed top-0 left-0 right-0 z-40 bg-[#16161E]/95 backdrop-blur-sm border-b border-[rgba(61,255,162,0.3)] px-4 py-2.5"
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.3)] rounded">
-            <AlertCircle className="w-3.5 h-3.5 text-[#5E6AD2]" />
-            <span className="font-mono text-xs text-[#5E6AD2]">
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)] rounded">
+            <AlertCircle className="w-3.5 h-3.5 text-[#3DFFA2]" />
+            <span className="font-mono text-xs text-[#3DFFA2]">
               {changes.length} pending change{changes.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -214,7 +214,7 @@ export function PendingChangesBar({ changes, onReview }: PendingChangesBarProps)
         <div className="flex items-center gap-2">
           <button
             onClick={() => onReview(changes[0])}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5E6AD2] hover:bg-[#4f5bc4] text-white font-mono text-xs uppercase tracking-wider rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3DFFA2] hover:bg-[#4f5bc4] text-white font-mono text-xs uppercase tracking-wider rounded-lg transition-colors"
           >
             <FileDiff className="w-3.5 h-3.5" />
             Review Changes

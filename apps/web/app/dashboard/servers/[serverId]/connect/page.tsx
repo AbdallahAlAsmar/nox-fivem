@@ -257,7 +257,7 @@ function ConnectedView({
               <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
                 Server ID
               </label>
-              <code className="block px-3 py-2 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] font-mono text-xs text-[#5E6AD2] truncate">
+              <code className="block px-3 py-2 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] font-mono text-xs text-[#3DFFA2] truncate">
                 {serverId}
               </code>
             </div>
@@ -295,7 +295,7 @@ function ConnectedView({
         <div className="text-center">
           <Link
             href={`/dashboard/servers/${serverId}`}
-            className="font-mono text-xs uppercase tracking-wider text-[#5E6AD2] hover:underline"
+            className="font-mono text-xs uppercase tracking-wider text-[#3DFFA2] hover:underline"
           >
             Open Full Dashboard →
           </Link>
@@ -320,7 +320,7 @@ function NotFound() {
         </p>
         <Link
           href="/dashboard"
-          className="font-mono text-xs uppercase tracking-wider text-[#5E6AD2] hover:underline"
+          className="font-mono text-xs uppercase tracking-wider text-[#3DFFA2] hover:underline"
         >
           ← Back to Dashboard
         </Link>

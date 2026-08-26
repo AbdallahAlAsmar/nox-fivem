@@ -101,8 +101,8 @@ export default function SidebarNav() {
             >
               <div className={`flex items-center justify-between px-5 h-14 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`} data-tour="dashboard-header">
                 <div className="flex items-center gap-2 font-mono">
-                  <img src="/nox-logo.svg" alt="NOX" className="w-8 h-8 text-white" />
-                  <span className="text-white font-mono text-sm font-bold tracking-[0.2em]">NOX</span>
+                  <img src="/noxes-logo.svg" alt="NOXES" className="w-8 h-8 text-white" />
+                  <span className="text-white font-mono text-sm font-bold tracking-[0.2em]">NOXES</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -130,14 +130,14 @@ export default function SidebarNav() {
                       className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                         active
                           ? isDark
-                            ? 'text-white bg-[rgba(94,106,210,0.15)] border-l-2 border-[#5E6AD2]'
-                            : 'text-[#5E6AD2] bg-[rgba(94,106,210,0.08)] border-l-2 border-[#5E6AD2]'
+                            ? 'text-white bg-[rgba(61,255,162,0.15)] border-l-2 border-[#3DFFA2]'
+                            : 'text-[#3DFFA2] bg-[rgba(61,255,162,0.08)] border-l-2 border-[#3DFFA2]'
                           : isDark
                             ? 'text-white/40 hover:text-white hover:bg-white/5'
                             : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#5E6AD2]' : isDark ? 'text-white/40' : 'text-gray-400'}`} />
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#3DFFA2]' : isDark ? 'text-white/40' : 'text-gray-400'}`} />
                       <span className="flex-1">{item.label}</span>
                       {active && <ChevronRight className={`w-3 h-3 opacity-50 ${isDark ? 'text-white/50' : 'text-gray-400'}`} />}
                     </Link>
@@ -151,7 +151,7 @@ export default function SidebarNav() {
                       {userAvatar ? (
                         <img src={userAvatar} alt="avatar" className="w-7 h-7 rounded flex-shrink-0 opacity-90" />
                       ) : (
-                        <div className="w-7 h-7 rounded bg-[#5E6AD2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        <div className="w-7 h-7 rounded bg-[#3DFFA2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                           {userInitial}
                         </div>
                       )}
@@ -200,14 +200,14 @@ export default function SidebarNav() {
           <div className="h-14 flex items-center border-b border-white/10 flex-shrink-0">
             <div className="flex items-center justify-between w-full px-5" data-tour="dashboard-header">
               <div className="flex items-center gap-3">
-                <img src="/nox-logo.svg" alt="NOX" className="w-8 h-8 text-white flex-shrink-0" />
+                <img src="/noxes-logo.svg" alt="NOXES" className="w-8 h-8 text-white flex-shrink-0" />
                 <motion.span
                   initial={false}
                   animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
                   transition={{ duration: 0.15 }}
                   className="font-mono text-white font-bold text-sm tracking-[0.2em] whitespace-nowrap overflow-hidden"
                 >
-                  NOX
+                  NOXES
                 </motion.span>
               </div>
               <button
@@ -238,14 +238,14 @@ export default function SidebarNav() {
                   className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                     active
                       ? isDark
-                        ? 'text-white bg-[rgba(94,106,210,0.15)] border-l-2 border-[#5E6AD2]'
-                        : 'text-[#5E6AD2] bg-[rgba(94,106,210,0.08)] border-l-2 border-[#5E6AD2]'
+                        ? 'text-white bg-[rgba(61,255,162,0.15)] border-l-2 border-[#3DFFA2]'
+                        : 'text-[#3DFFA2] bg-[rgba(61,255,162,0.08)] border-l-2 border-[#3DFFA2]'
                       : isDark
                         ? 'text-white/40 hover:text-white hover:bg-white/5'
                         : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 flex-shrink-0 ${active ? (isDark ? 'text-[#5E6AD2]' : 'text-[#5E6AD2]') : isDark ? 'text-white/40' : 'text-gray-400'}`} />
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${active ? (isDark ? 'text-[#3DFFA2]' : 'text-[#3DFFA2]') : isDark ? 'text-white/40' : 'text-gray-400'}`} />
                   <motion.span
                     initial={false}
                     animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
@@ -271,7 +271,7 @@ export default function SidebarNav() {
                   {userAvatar ? (
                     <img src={userAvatar} alt="avatar" className="w-7 h-7 rounded flex-shrink-0 opacity-90" />
                   ) : (
-                    <div className="w-7 h-7 rounded bg-[#5E6AD2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    <div className="w-7 h-7 rounded bg-[#3DFFA2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                       {userInitial}
                     </div>
                   )}

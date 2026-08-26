@@ -123,12 +123,12 @@ export function InteractiveDemo() {
               <div className="w-2.5 h-2.5 bg-[rgba(255,255,255,0.15)] rounded-full" />
             </div>
             <span className="font-mono text-[11px] text-[rgba(255,255,255,0.4)] ml-2 uppercase tracking-wider">
-              NOX — Interactive Demo
+              NOXES — Interactive Demo
             </span>
           </div>
           <button
             onClick={isPlaying ? resetDemo : startDemo}
-            className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.3)] text-[#5E6AD2] hover:bg-[rgba(94,106,210,0.25)] transition-colors rounded"
+            className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)] text-[#3DFFA2] hover:bg-[rgba(61,255,162,0.25)] transition-colors rounded"
           >
             {isPlaying ? 'Reset' : 'Play Demo'}
           </button>
@@ -138,12 +138,12 @@ export function InteractiveDemo() {
         <div className="p-6 min-h-[320px] max-h-[400px] overflow-y-auto space-y-4">
           {!isPlaying && !isApplied && (
             <div className="flex flex-col items-center justify-center h-[240px] text-center">
-              <Bot className="w-12 h-12 text-[rgba(94,106,210,0.4)] mb-4" />
+              <Bot className="w-12 h-12 text-[rgba(61,255,162,0.4)] mb-4" />
               <p className="font-mono text-sm text-[rgba(255,255,255,0.5)] mb-2">
-                Watch NOX process a real request
+                Watch NOXES process a real request
               </p>
               <p className="font-sans text-xs text-[rgba(255,255,255,0.3)] max-w-xs">
-                This demo simulates how NOX reads, modifies, and applies changes to your FiveM server files.
+                This demo simulates how NOXES reads, modifies, and applies changes to your FiveM server files.
               </p>
               <button
                 onClick={startDemo}
@@ -172,7 +172,7 @@ export function InteractiveDemo() {
                     <div className="bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] px-3 py-2.5 rounded-r-lg rounded-bl-lg min-w-[200px]">
                       <p className="font-sans text-sm text-[rgba(255,255,255,0.8)] leading-[1.5]">
                         {typedText}
-                        <span className="inline-block w-0.5 h-4 bg-[#5E6AD2] ml-0.5 animate-pulse" />
+                        <span className="inline-block w-0.5 h-4 bg-[#3DFFA2] ml-0.5 animate-pulse" />
                       </p>
                     </div>
                   </motion.div>
@@ -186,11 +186,11 @@ export function InteractiveDemo() {
                     exit={{ opacity: 0, y: -8 }}
                     className="flex items-start gap-3"
                   >
-                    <div className="w-7 h-7 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] rounded flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-3.5 h-3.5 text-[#5E6AD2]" />
+                    <div className="w-7 h-7 bg-[rgba(61,255,162,0.2)] border border-[rgba(61,255,162,0.4)] rounded flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-3.5 h-3.5 text-[#3DFFA2]" />
                     </div>
                     <div className="flex-1 space-y-3">
-                      <div className="bg-[rgba(94,106,210,0.08)] border border-[rgba(94,106,210,0.2)] px-3 py-2.5 rounded-r-lg rounded-bl-lg">
+                      <div className="bg-[rgba(61,255,162,0.08)] border border-[rgba(61,255,162,0.2)] px-3 py-2.5 rounded-r-lg rounded-bl-lg">
                         <p className="font-sans text-sm text-[rgba(255,255,255,0.7)] leading-[1.5]">
                           {typedText}
                         </p>
@@ -264,7 +264,7 @@ export function InteractiveDemo() {
                 <div
                   key={i}
                   className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
-                    i <= step ? 'bg-[#5E6AD2]' : 'bg-[rgba(255,255,255,0.1)]'
+                    i <= step ? 'bg-[#3DFFA2]' : 'bg-[rgba(255,255,255,0.1)]'
                   }`}
                 />
               ))}
@@ -275,7 +275,7 @@ export function InteractiveDemo() {
 
       {/* Caption */}
       <p className="font-mono text-xs text-[rgba(255,255,255,0.3)] text-center mt-4 uppercase tracking-wider">
-        Try it yourself — type a request and see NOX in action
+        Try it yourself — type a request and see NOXES in action
       </p>
     </div>
   );

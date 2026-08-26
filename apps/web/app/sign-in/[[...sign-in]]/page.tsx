@@ -7,11 +7,11 @@ export default function SignInPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-0 font-mono mb-4">
-            <img src="/nox-avatar.svg" alt="NOX" className="w-8 h-8 opacity-90" />
-            <span className="text-white font-mono text-3xl font-medium tracking-[0.2em] ml-1">NOX<span className="font-normal opacity-60">.</span></span>
+            <img src="/noxes-avatar.svg" alt="NOXES" className="w-8 h-8 opacity-90" />
+            <span className="text-white font-mono text-3xl font-medium tracking-[0.2em] ml-1">NOXES<span className="font-normal opacity-60">.</span></span>
           </div>
           <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-[rgba(255,255,255,0.5)]">
-            Sign in to NOX // FiveM
+            Sign in to NOXES.
           </h1>
         </div>
 
@@ -32,7 +32,7 @@ export default function SignInPage() {
               formFieldLabel: 'text-[rgba(255,255,255,0.6)] font-mono text-xs uppercase tracking-wider',
               formButtonPrimary:
                 'bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-[1.4px] hover:opacity-85 rounded-none',
-              footerActionLink: 'text-[#5E6AD2] hover:underline font-mono text-xs',
+              footerActionLink: 'text-[#3DFFA2] hover:underline font-mono text-xs',
             },
           }}
         />

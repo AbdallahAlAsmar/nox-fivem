@@ -26,11 +26,11 @@ const ACTION_ICONS: Record<string, any> = {
 };
 
 const ACTION_COLORS: Record<string, string> = {
-  'change.proposed': 'text-[#5E6AD2]',
+  'change.proposed': 'text-[#3DFFA2]',
   'change.approved': 'text-[#22c55e]',
   'change.applied': 'text-[#22c55e]',
   'change.rolled_back': 'text-[#f59e0b]',
-  'server.scanned': 'text-[#5E6AD2]',
+  'server.scanned': 'text-[#3DFFA2]',
   'agent.connected': 'text-[#22c55e]',
 };
 
@@ -99,7 +99,7 @@ export default function AuditLogPage() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="appearance-none bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2 pr-8 focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
+            className="appearance-none bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2 pr-8 focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
           >
             <option value="all">All Actions</option>
             <option value="change">Changes</option>
@@ -148,7 +148,7 @@ export default function AuditLogPage() {
               <p className="font-sans text-xs text-white/40 mb-4">{error}</p>
               <button
                 onClick={fetchLogs}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
               >
                 Retry
               </button>

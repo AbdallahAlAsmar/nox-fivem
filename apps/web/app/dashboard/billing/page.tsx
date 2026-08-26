@@ -12,7 +12,7 @@ const PLANS = [
     name: 'Starter',
     price: '$0',
     period: '/month',
-    description: 'Perfect for trying out NOX',
+    description: 'Perfect for trying out NOXES',
     servers: 1,
     actions: 100,
     aiModels: 'Basic models',
@@ -41,9 +41,9 @@ const PLANS = [
     actions: 1000,
     aiModels: 'All models',
     support: 'Priority',
-    color: 'text-[#5E6AD2]',
-    border: 'border-[rgba(94,106,210,0.5)]',
-    bg: 'bg-[rgba(94,106,210,0.08)]',
+    color: 'text-[#3DFFA2]',
+    border: 'border-[rgba(61,255,162,0.5)]',
+    bg: 'bg-[rgba(61,255,162,0.08)]',
     highlighted: true,
     features: [
       { name: '5 Servers', included: true },
@@ -126,9 +126,9 @@ export default function BillingPage() {
               Manage your plan, usage, and costs
             </p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)] rounded-full">
-            <Zap className="w-3 h-3 text-[#5E6AD2]" />
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#5E6AD2]">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.3)] rounded-full">
+            <Zap className="w-3 h-3 text-[#3DFFA2]" />
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#3DFFA2]">
               {usage?.plan === 'starter' || usage?.plan === 'free' ? 'Starter Plan' : `${usage?.plan?.toUpperCase()} Plan`}
             </span>
           </div>
@@ -142,7 +142,7 @@ export default function BillingPage() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-1.5 font-mono text-[10px] uppercase tracking-wider rounded transition-colors ${
                 activeTab === tab
-                  ? 'bg-[#5E6AD2] text-white'
+                  ? 'bg-[#3DFFA2] text-white'
                   : 'text-[rgba(255,255,255,0.4)] hover:text-white/70'
               }`}
             >
@@ -178,8 +178,8 @@ export default function BillingPage() {
                         value: formatCost(usage?.totalCostUsd || 0),
                         sub: 'last 30 days',
                         icon: CreditCard,
-                        color: 'text-[#5E6AD2]',
-                        bg: 'bg-[rgba(94,106,210,0.08)]',
+                        color: 'text-[#3DFFA2]',
+                        bg: 'bg-[rgba(61,255,162,0.08)]',
                       },
                       {
                         label: 'Tokens Used',
@@ -239,7 +239,7 @@ export default function BillingPage() {
                         animate={{ width: `${Math.min(costPercent, 100)}%` }}
                         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                         className={`h-full rounded-full ${
-                          costPercent >= 100 ? 'bg-[#ef4444]' : costPercent >= 80 ? 'bg-[#f59e0b]' : 'bg-[#5E6AD2]'
+                          costPercent >= 100 ? 'bg-[#ef4444]' : costPercent >= 80 ? 'bg-[#f59e0b]' : 'bg-[#3DFFA2]'
                         }`}
                       />
                     </div>
@@ -271,7 +271,7 @@ export default function BillingPage() {
                         initial={{ width: 0 }}
                         animate={{ width: `${usagePercent}%` }}
                         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                        className={`h-full rounded-full ${isNearLimit ? 'bg-[#f59e0b]' : 'bg-[#5E6AD2]'}`}
+                        className={`h-full rounded-full ${isNearLimit ? 'bg-[#f59e0b]' : 'bg-[#3DFFA2]'}`}
                       />
                     </div>
                     {isNearLimit && (
@@ -293,7 +293,7 @@ export default function BillingPage() {
                             {currentPlan.name}
                           </span>
                           {currentPlan.highlighted && (
-                            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#5E6AD2]">
+                            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(61,255,162,0.2)] border border-[rgba(61,255,162,0.4)] text-[#3DFFA2]">
                               Recommended
                             </span>
                           )}
@@ -455,16 +455,16 @@ export default function BillingPage() {
                               <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
                                 <div className="bg-[#1e1e2e] dark:bg-[#1e1e2e] border border-[rgba(255,255,255,0.1)] dark:border-[rgba(255,255,255,0.1)] rounded px-2 py-1.5 whitespace-nowrap">
                                   <p className="font-mono text-[10px] text-[rgba(255,255,255,0.6)] dark:text-[rgba(255,255,255,0.6)]">{d.day}</p>
-                                  <p className="font-mono text-[10px] text-[#5E6AD2]">{formatCost(d.costUsd)}</p>
+                                  <p className="font-mono text-[10px] text-[#3DFFA2]">{formatCost(d.costUsd)}</p>
                                   <p className="font-mono text-[9px] text-[rgba(255,255,255,0.3)] dark:text-[rgba(255,255,255,0.3)]">{formatNumber(d.tokensOut)} tokens</p>
                                 </div>
                               </div>
                               <div
                                 className={`w-full rounded-t transition-all duration-200 ${
                                   isToday
-                                    ? 'bg-[#5E6AD2]'
+                                    ? 'bg-[#3DFFA2]'
                                     : d.costUsd > 0
-                                    ? 'bg-[rgba(94,106,210,0.6)] hover:bg-[rgba(94,106,210,0.8)]'
+                                    ? 'bg-[rgba(61,255,162,0.6)] hover:bg-[rgba(61,255,162,0.8)]'
                                     : 'bg-[rgba(255,255,255,0.05)] dark:bg-[rgba(255,255,255,0.05)]'
                                 }`}
                                 style={{ height: `${height}%`, minHeight: '2px' }}
@@ -553,7 +553,7 @@ export default function BillingPage() {
                           {plan.name}
                         </span>
                         {plan.highlighted && (
-                          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#5E6AD2]">
+                          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(61,255,162,0.2)] border border-[rgba(61,255,162,0.4)] text-[#3DFFA2]">
                             Recommended
                           </span>
                         )}

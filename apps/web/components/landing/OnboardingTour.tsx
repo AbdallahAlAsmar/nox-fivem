@@ -20,7 +20,7 @@ export function OnboardingTour() {
   const steps: Step[] = [
     {
       target: '[data-tour="dashboard-header"]',
-      content: 'Welcome to NOX! This is your command center. Let us show you around.',
+      content: 'Welcome to NOXES! This is your command center. Let us show you around.',
       placement: 'bottom',
     },
     {
@@ -73,7 +73,7 @@ export function OnboardingTour() {
       onEvent={handleEvent}
       styles={{
         beacon: {
-          background: '#5E6AD2',
+          background: '#3DFFA2',
           border: '2px solid #16161E',
           borderRadius: '50%',
           height: 36,
@@ -94,7 +94,7 @@ export function OnboardingTour() {
           textAlign: 'left',
         },
         buttonPrimary: {
-          background: '#5E6AD2',
+          background: '#3DFFA2',
           borderRadius: 4,
           color: '#fff',
           fontSize: 13,

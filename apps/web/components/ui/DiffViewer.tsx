@@ -100,7 +100,7 @@ export function DiffViewer({ diff, maxLines = 200, compact = false }: DiffViewer
           {files.map((file, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] rounded font-mono text-[10px] text-[#5E6AD2]"
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] rounded font-mono text-[10px] text-[#3DFFA2]"
             >
               {file}
             </span>

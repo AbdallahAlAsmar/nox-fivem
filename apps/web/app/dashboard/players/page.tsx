@@ -84,7 +84,7 @@ export default function PlayersPage() {
                 initial={{ opacity: 0, y: -12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
-                className="font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(94,106,210,0.4)] text-white"
+                className="font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(61,255,162,0.4)] text-white"
               >
                 {toastMsg}
               </motion.div>
@@ -121,7 +121,7 @@ export default function PlayersPage() {
               <select
                 value={selectedServer}
                 onChange={(e) => { setSelectedServer(e.target.value); setSearch(''); setFilterBanned('all'); }}
-                className="w-full appearance-none bg-[#16161E] border border-white/10 text-white font-mono text-xs uppercase tracking-wider px-4 py-2.5 pr-8 focus:outline-none focus:border-[#5E6AD2] transition-colors"
+                className="w-full appearance-none bg-[#16161E] border border-white/10 text-white font-mono text-xs uppercase tracking-wider px-4 py-2.5 pr-8 focus:outline-none focus:border-[#3DFFA2] transition-colors"
               >
                 <option value="">Select a server...</option>
                 {servers?.map((s: any) => (
@@ -155,7 +155,7 @@ export default function PlayersPage() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search by name or ID..."
-                    className="w-full pl-9 pr-4 py-2 bg-transparent border border-white/10 text-sm text-white font-sans placeholder:text-white/25 focus:outline-none focus:border-[#5E6AD2] transition-colors"
+                    className="w-full pl-9 pr-4 py-2 bg-transparent border border-white/10 text-sm text-white font-sans placeholder:text-white/25 focus:outline-none focus:border-[#3DFFA2] transition-colors"
                   />
                 </div>
                 <div className="flex gap-1">
@@ -165,7 +165,7 @@ export default function PlayersPage() {
                       onClick={() => setFilterBanned(f)}
                       className={`font-mono text-[10px] uppercase tracking-wider px-3 py-2 transition-colors ${
                         filterBanned === f
-                          ? 'bg-[rgba(94,106,210,0.15)] text-[#5E6AD2]'
+                          ? 'bg-[rgba(61,255,162,0.15)] text-[#3DFFA2]'
                           : 'text-white/40 hover:text-white hover:bg-white/5'
                       }`}
                     >
@@ -224,7 +224,7 @@ export default function PlayersPage() {
               <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
               <button
                 onClick={() => mutateServers()}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
               >
                 Retry
               </button>
@@ -263,7 +263,7 @@ export default function PlayersPage() {
               <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
               <button
                 onClick={() => mutate()}
-                className="flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
               >
                 <span className="w-3.5 h-3.5">↻</span>
                 Retry
@@ -300,7 +300,7 @@ function PlayerRow({
       className={`bg-[#16161E] transition-colors duration-100 ${
         player.isBanned
           ? 'border-l-2 border-l-[#ef4444]'
-          : 'border-l-2 border-l-[rgba(94,106,210,0.5)] hover:border-l-[#5E6AD2]'
+          : 'border-l-2 border-l-[rgba(61,255,162,0.5)] hover:border-l-[#3DFFA2]'
       }`}
     >
       <div className="flex items-center gap-4 px-5 py-3.5">

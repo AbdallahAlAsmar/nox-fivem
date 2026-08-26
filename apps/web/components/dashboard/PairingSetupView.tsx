@@ -75,24 +75,24 @@ export function PairingSetupView({
           </h1>
           <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-0.5">
             {serverName
-              ? `Pair ${serverName} with the NOX desktop agent`
-              : 'Pair this server with the NOX desktop agent'}
+              ? `Pair ${serverName} with the NOXES desktop agent`
+              : 'Pair this server with the NOXES desktop agent'}
           </p>
         </div>
       </div>
 
-      <div className="border border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.06)] p-4">
+      <div className="border border-[rgba(61,255,162,0.3)] bg-[rgba(61,255,162,0.06)] p-4">
         <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-6 h-6 rounded-full bg-[rgba(94,106,210,0.06)] border border-[rgba(94,106,210,0.3)] flex items-center justify-center">
-            <span className="font-mono text-[10px] font-medium text-[#5E6AD2]">1</span>
+          <div className="w-6 h-6 rounded-full bg-[rgba(61,255,162,0.06)] border border-[rgba(61,255,162,0.3)] flex items-center justify-center">
+            <span className="font-mono text-[10px] font-medium text-[#3DFFA2]">1</span>
           </div>
-          <Download className="w-3.5 h-3.5 text-[#5E6AD2]" />
+          <Download className="w-3.5 h-3.5 text-[#3DFFA2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.12em] text-white">
             Download the Desktop App
           </h3>
         </div>
         <p className="font-sans text-xs text-[rgba(255,255,255,0.5)] leading-[1.6] mb-3">
-          Install the NOX desktop app on your Windows PC. It manages your servers, validates paths,
+          Install the NOXES desktop app on your Windows PC. It manages your servers, validates paths,
           and runs the AI agent.
         </p>
         {installerMissing ? (
@@ -111,7 +111,7 @@ export function PairingSetupView({
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
           >
             {downloading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -134,11 +134,11 @@ export function PairingSetupView({
           </h3>
         </div>
         <p className="font-sans text-xs text-[rgba(255,255,255,0.5)] leading-[1.6] mb-3">
-          Open the NOX desktop app, click Add Server, and enter the code below to link this server
+          Open the NOXES desktop app, click Add Server, and enter the code below to link this server
           to the agent.
         </p>
         <div className="bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] p-3 flex items-center justify-between gap-3">
-          <code className="font-mono text-sm text-[#5E6AD2] tracking-widest">
+          <code className="font-mono text-sm text-[#3DFFA2] tracking-widest">
             {pairing.pairingCode}
           </code>
           <button

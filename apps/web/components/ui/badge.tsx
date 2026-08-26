@@ -11,7 +11,7 @@ const badgeVariants = cva(
         secondary: 'border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.5)]',
         destructive: 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] text-[#ef4444]',
         outline: 'border-[rgba(255,255,255,0.15)] bg-transparent text-[rgba(255,255,255,0.6)]',
-        accent: 'border-[rgba(94,106,210,0.4)] bg-[rgba(94,106,210,0.1)] text-[#5E6AD2]',
+        accent: 'border-[rgba(61,255,162,0.4)] bg-[rgba(61,255,162,0.1)] text-[#3DFFA2]',
       },
     },
     defaultVariants: {

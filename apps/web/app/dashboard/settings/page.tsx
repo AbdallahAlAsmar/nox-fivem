@@ -38,7 +38,7 @@ export default function SettingsPage() {
         <div>
           <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-white">Settings</h1>
           <p className="font-sans text-xs text-white/40 mt-1">
-            Configure your NOX // FiveM experience
+            Configure your NOXES. experience
           </p>
         </div>
 
@@ -50,7 +50,7 @@ export default function SettingsPage() {
           className="bg-[#16161E] border border-white/10 p-5"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Monitor className="w-4 h-4 text-[#5E6AD2]" />
+            <Monitor className="w-4 h-4 text-[#3DFFA2]" />
             <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Appearance</h2>
           </div>
           <div className="space-y-4">
@@ -64,7 +64,7 @@ export default function SettingsPage() {
               <button
                 onClick={toggleTheme}
                 className={`w-11 h-6 rounded-full transition-colors duration-200 flex items-center px-1 ${
-                  isDark ? 'bg-[#5E6AD2]' : 'bg-white/20'
+                  isDark ? 'bg-[#3DFFA2]' : 'bg-white/20'
                 }`}
               >
                 <motion.div
@@ -85,7 +85,7 @@ export default function SettingsPage() {
           className="bg-[#16161E] border border-white/10 p-5"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Globe className="w-4 h-4 text-[#5E6AD2]" />
+            <Globe className="w-4 h-4 text-[#3DFFA2]" />
             <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Regional</h2>
           </div>
           <div className="space-y-3">
@@ -93,7 +93,7 @@ export default function SettingsPage() {
               <label className="block font-mono text-[10px] uppercase tracking-wider text-white/50 mb-2">
                 Language
               </label>
-              <select className="w-full px-3 py-2 bg-transparent border border-white/10 text-white font-mono text-xs uppercase tracking-wider focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100">
+              <select className="w-full px-3 py-2 bg-transparent border border-white/10 text-white font-mono text-xs uppercase tracking-wider focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100">
                 <option value="en">English</option>
                 <option value="ar">العربية</option>
                 <option value="fa">فارسی</option>
@@ -110,12 +110,12 @@ export default function SettingsPage() {
           className="bg-[#16161E] border border-white/10 p-5"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Shield className="w-4 h-4 text-[#5E6AD2]" />
+            <Shield className="w-4 h-4 text-[#3DFFA2]" />
             <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Security</h2>
           </div>
           <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 bg-[rgba(94,106,210,0.08)] border border-[rgba(94,106,210,0.2)]">
-              <CheckCircle2 className="w-4 h-4 text-[#5E6AD2] flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 bg-[rgba(61,255,162,0.08)] border border-[rgba(61,255,162,0.2)]">
+              <CheckCircle2 className="w-4 h-4 text-[#3DFFA2] flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-mono text-xs uppercase tracking-wider text-white">AI changes are sandboxed</p>
                 <p className="font-sans text-xs text-white/40 mt-1 leading-[1.6]">
@@ -138,7 +138,7 @@ export default function SettingsPage() {
         {/* Save */}
         <div className="flex items-center justify-end gap-3 pt-2">
           {saved && (
-            <span className="font-mono text-xs uppercase tracking-wider text-[#5E6AD2] flex items-center gap-1.5">
+            <span className="font-mono text-xs uppercase tracking-wider text-[#3DFFA2] flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Settings saved
             </span>

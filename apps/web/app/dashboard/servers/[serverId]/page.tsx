@@ -317,7 +317,7 @@ export default function ServerDetailPage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                 isActive
-                  ? 'text-white border-b-2 border-[#5E6AD2] -mb-px'
+                  ? 'text-white border-b-2 border-[#3DFFA2] -mb-px'
                   : 'text-[rgba(255,255,255,0.4)] hover:text-white/70'
               }`}
             >
@@ -335,7 +335,7 @@ export default function ServerDetailPage() {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(94,106,210,0.4)] text-white"
+            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(61,255,162,0.4)] text-white"
           >
             {headerMessage}
           </motion.div>
@@ -347,16 +347,16 @@ export default function ServerDetailPage() {
         {activeTab === 'chat' && !loading && server && server.status !== 'online' && (
           <div className="p-6 overflow-y-auto">
             <div className="max-w-lg mx-auto">
-              <div className={`flex items-start gap-3 p-4 border mb-5 ${server.hasAgent ? 'border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.06)]' : 'border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)]'}`}>
-                <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${server.hasAgent ? 'text-[#5E6AD2]' : 'text-[#f59e0b]'}`} />
+              <div className={`flex items-start gap-3 p-4 border mb-5 ${server.hasAgent ? 'border-[rgba(61,255,162,0.3)] bg-[rgba(61,255,162,0.06)]' : 'border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)]'}`}>
+                <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${server.hasAgent ? 'text-[#3DFFA2]' : 'text-[#f59e0b]'}`} />
                 <div>
-                  <p className={`font-mono text-xs uppercase tracking-wider ${server.hasAgent ? 'text-[#5E6AD2]' : 'text-[#f59e0b]'}`}>
+                  <p className={`font-mono text-xs uppercase tracking-wider ${server.hasAgent ? 'text-[#3DFFA2]' : 'text-[#f59e0b]'}`}>
                     {server.hasAgent ? 'Desktop app is offline' : 'Server not connected'}
                   </p>
                   <p className="font-sans text-xs text-[rgba(255,255,255,0.6)] mt-1 leading-[1.6]">
                     {server.hasAgent
-                      ? 'This server is linked to a NOX desktop app, but the app isn\'t running right now — so chat, players, and file tools are unavailable. Open the NOX app on your PC (make sure it\'s signed in), pick this server, and it will reconnect automatically.'
-                      : 'The NOX desktop app isn\'t linked to this server yet, so chat, players, and file tools are unavailable. Follow the steps below to connect it — takes about a minute.'}
+                      ? 'This server is linked to a NOXES desktop app, but the app isn\'t running right now — so chat, players, and file tools are unavailable. Open the NOXES app on your PC (make sure it\'s signed in), pick this server, and it will reconnect automatically.'
+                      : 'The NOXES desktop app isn\'t linked to this server yet, so chat, players, and file tools are unavailable. Follow the steps below to connect it — takes about a minute.'}
                   </p>
                 </div>
               </div>
@@ -393,11 +393,11 @@ export default function ServerDetailPage() {
                   <div className="space-y-3">
                     <ol className="space-y-2.5 font-sans text-xs text-white/60 leading-[1.6] list-none">
                       <li className="flex gap-2.5">
-                        <span className="font-mono text-[10px] text-[#5E6AD2] mt-0.5 flex-shrink-0">1.</span>
-                        <span>Download and install the <a href="/dist/NOX-Setup.exe" className="text-[#5E6AD2] hover:text-white underline">NOX desktop app</a>.</span>
+                        <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">1.</span>
+                        <span>Download and install the <a href="/dist/NOX-Setup.exe" className="text-[#3DFFA2] hover:text-white underline">NOXES desktop app</a>.</span>
                       </li>
                       <li className="flex gap-2.5">
-                        <span className="font-mono text-[10px] text-[#5E6AD2] mt-0.5 flex-shrink-0">2.</span>
+                        <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">2.</span>
                         <span>Sign in with the same account, pick this server, choose your FiveM directory — it connects automatically.</span>
                       </li>
                     </ol>
@@ -480,7 +480,7 @@ export default function ServerDetailPage() {
               </p>
               <Link
                 href="/dashboard"
-                className="font-mono text-xs uppercase tracking-wider text-[#5E6AD2] hover:underline"
+                className="font-mono text-xs uppercase tracking-wider text-[#3DFFA2] hover:underline"
               >
                 ← Back to Dashboard
               </Link>
@@ -582,7 +582,7 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
           <AlertCircle className="w-8 h-8 text-[rgba(239,68,68,0.5)] mx-auto mb-2" />
           <p className="font-mono text-xs text-[rgba(239,68,68,0.7)] mb-2">{error}</p>
           <p className="font-sans text-xs text-[rgba(255,255,255,0.4)]">
-            {!hasAgent ? 'Agent not connected — pair the NOX agent to this server' : 'Retry in a moment'}
+            {!hasAgent ? 'Agent not connected — pair the NOXES agent to this server' : 'Retry in a moment'}
           </p>
           <button
             onClick={loadPlayers}
@@ -658,11 +658,11 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                   isBanned
                     ? 'bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)]'
-                    : 'bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)]'
+                    : 'bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.3)]'
                 }`}>
                   {isBanned
                     ? <Ban className="w-4 h-4 text-[#ef4444]" />
-                    : <Users className="w-4 h-4 text-[#5E6AD2]" />
+                    : <Users className="w-4 h-4 text-[#3DFFA2]" />
                   }
                 </div>
                 <div className="flex-1 min-w-0">
@@ -807,7 +807,7 @@ function ServerResourcesView({
             placeholder="Search resources..."
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs focus:outline-none focus:border-[#5E6AD2]"
+            className="w-full pl-9 pr-3 py-1.5 bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2]"
           />
         </div>
 
@@ -847,8 +847,8 @@ function ServerResourcesView({
                 key={i}
                 className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-3 flex items-center gap-3 hover:border-[rgba(255,255,255,0.16)] transition-colors"
               >
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)]">
-                  <Package className="w-4 h-4 text-[#5E6AD2]" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.3)]">
+                  <Package className="w-4 h-4 text-[#3DFFA2]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -1070,7 +1070,7 @@ function ServerSettingsView({
       </div>
 
       {msg && (
-        <div className="p-3 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] font-mono text-xs text-[#5E6AD2]">
+        <div className="p-3 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] font-mono text-xs text-[#3DFFA2]">
           {msg}
         </div>
       )}
@@ -1086,12 +1086,12 @@ function ServerSettingsView({
               type="text"
               value={serverName}
               onChange={(e) => onNameChange(e.target.value)}
-              className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#5E6AD2]"
+              className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2]"
             />
             <button
               onClick={onSaveName}
               disabled={isSavingName || serverName === server?.name}
-              className="px-4 py-2 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSavingName ? 'Saving...' : 'Save'}
             </button>
@@ -1147,12 +1147,12 @@ function ServerSettingsView({
               value={serverDir}
               onChange={(e) => setServerDir(e.target.value)}
               placeholder="Enter server directory path..."
-              className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#5E6AD2]"
+              className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2]"
             />
             <button
               onClick={handleSaveDir}
               disabled={saving}
-              className="px-4 py-2 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
@@ -1178,7 +1178,7 @@ function ServerSettingsView({
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 font-mono text-sm text-[#5E6AD2]">
+            <code className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 font-mono text-sm text-[#3DFFA2]">
               {pairing.code}
             </code>
             <button

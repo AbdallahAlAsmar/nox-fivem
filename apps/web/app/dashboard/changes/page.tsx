@@ -148,7 +148,7 @@ export default function ChangesPage() {
             <select
               value={selectedServer}
               onChange={(e) => setSelectedServer(e.target.value)}
-              className="appearance-none bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2 pr-8 focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
+              className="appearance-none bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2 pr-8 focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
             >
               <option value="">All servers</option>
               {servers?.map((s: any) => (
@@ -165,7 +165,7 @@ export default function ChangesPage() {
                 onClick={() => setStatusFilter(s)}
                 className={`font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border transition-colors duration-100 ${
                   statusFilter === s
-                    ? 'bg-[rgba(94,106,210,0.15)] border-[rgba(94,106,210,0.4)] text-[#5E6AD2]'
+                    ? 'bg-[rgba(61,255,162,0.15)] border-[rgba(61,255,162,0.4)] text-[#3DFFA2]'
                     : 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.4)] hover:text-white hover:border-[rgba(255,255,255,0.2)]'
                 }`}
               >
@@ -237,7 +237,7 @@ export default function ChangesPage() {
             <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
             <button
               onClick={() => { mutateServers(); mutate(); }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
             >
               Retry
             </button>
@@ -310,7 +310,7 @@ function ChangeRow({
     <motion.div
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
-      className={`relative pl-10 ${isSelected ? 'bg-[rgba(94,106,210,0.05)]' : ''}`}
+      className={`relative pl-10 ${isSelected ? 'bg-[rgba(61,255,162,0.05)]' : ''}`}
     >
       {/* Timeline dot */}
       <div className={`absolute left-3.5 top-4 w-3 h-3 rounded-full border-2 ${
@@ -331,7 +331,7 @@ function ChangeRow({
                 onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
                 className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                   isSelected
-                    ? 'bg-[#5E6AD2] border-[#5E6AD2]'
+                    ? 'bg-[#3DFFA2] border-[#3DFFA2]'
                     : 'border-white/20 hover:border-white/40'
                 }`}
               >

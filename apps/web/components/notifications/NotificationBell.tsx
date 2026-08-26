@@ -25,7 +25,7 @@ export function NotificationBell() {
       case 'failure':
         return <XCircle className="w-4 h-4 text-[#ef4444]" />;
       case 'pending_approval':
-        return <Clock className="w-4 h-4 text-[#5E6AD2]" />;
+        return <Clock className="w-4 h-4 text-[#3DFFA2]" />;
       case 'success':
         return <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />;
       default:
@@ -40,7 +40,7 @@ export function NotificationBell() {
       case 'failure':
         return 'text-[#ef4444]';
       case 'pending_approval':
-        return 'text-[#5E6AD2]';
+        return 'text-[#3DFFA2]';
       case 'success':
         return 'text-[#22c55e]';
       default:
@@ -102,7 +102,7 @@ export function NotificationBell() {
                 <div
                   key={notification.id}
                   className={`p-3 border-b border-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.02)] transition-colors ${
-                    !notification.read ? 'bg-[rgba(94,106,210,0.05)]' : ''
+                    !notification.read ? 'bg-[rgba(61,255,162,0.05)]' : ''
                   }`}
                   onClick={() => markAsRead(notification.id)}
                 >
@@ -133,7 +133,7 @@ export function NotificationBell() {
                     <a
                       href={notification.action.href}
                       onClick={(e) => e.stopPropagation()}
-                      className="block mt-2 text-[11px] font-mono text-[#5E6AD2] hover:text-[#7c8aff] transition-colors"
+                      className="block mt-2 text-[11px] font-mono text-[#3DFFA2] hover:text-[#7c8aff] transition-colors"
                     >
                       {notification.action.label} →
                     </a>

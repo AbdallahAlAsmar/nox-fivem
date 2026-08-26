@@ -222,7 +222,7 @@ export default function ResourceEditorPage() {
                             <FileText className="w-3.5 h-3.5 flex-shrink-0" />
                             <span className="truncate">{r.name}</span>
                             {r.name === resourceName && (
-                              <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${isDark ? 'bg-[#5E6AD2]/20 text-[#5E6AD2]' : 'bg-indigo-50 text-indigo-600'}`}>
+                              <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${isDark ? 'bg-[#3DFFA2]/20 text-[#3DFFA2]' : 'bg-indigo-50 text-indigo-600'}`}>
                                 current
                               </span>
                             )}
@@ -256,7 +256,7 @@ export default function ResourceEditorPage() {
           <button
             onClick={handleSave}
             disabled={saving || !content}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#5E6AD2] hover:bg-[#4f5bc0] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {saving ? (
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -276,7 +276,7 @@ export default function ResourceEditorPage() {
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
-              className={`font-mono text-xs uppercase tracking-wider px-4 py-2.5 border ${isDark ? 'bg-[#16161E] border-[rgba(94,106,210,0.4)] text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+              className={`font-mono text-xs uppercase tracking-wider px-4 py-2.5 border ${isDark ? 'bg-[#16161E] border-[rgba(61,255,162,0.4)] text-white' : 'bg-white border-gray-200 text-gray-900'}`}
             >
               <CheckCircle2 className="w-3.5 h-3.5 inline mr-1.5 text-[#22c55e]" />
               {saveMsg}
@@ -306,11 +306,11 @@ export default function ResourceEditorPage() {
                 {errorMsg}
               </h2>
               <p className={`font-sans text-xs mb-4 ${isDark ? 'text-white/40' : 'text-gray-500'}`}>
-                Ensure the NOX agent is connected to this server, then try again.
+                Ensure the NOXES agent is connected to this server, then try again.
               </p>
               <button
                 onClick={() => router.push(`/dashboard/servers/${serverId}`)}
-                className="flex items-center gap-1.5 mx-auto px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] transition-colors"
+                className="flex items-center gap-1.5 mx-auto px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
               >
                 <ArrowLeft className="w-3 h-3" />
                 Back to Server
@@ -371,7 +371,7 @@ export default function ResourceEditorPage() {
                 spellCheck={false}
                 className={`w-full h-full p-4 font-mono text-xs resize-none focus:outline-none overflow-auto transition-colors duration-150 ${
                   isDark
-                    ? 'bg-[#0a0a0f] text-[#e2e8f0] selection:bg-[#5E6AD2]/30 selection:text-white'
+                    ? 'bg-[#0a0a0f] text-[#e2e8f0] selection:bg-[#3DFFA2]/30 selection:text-white'
                     : 'bg-white text-gray-800 selection:bg-indigo-100 selection:text-indigo-900'
                 }`}
                 style={{

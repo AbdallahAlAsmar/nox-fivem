@@ -24,7 +24,7 @@ const ORCH_URL = ORCHESTRATOR_URL;
 // ─── Steps ─────────────────────────────────────────────────────────────────────
 
 const STEPS: { key: Step; title: string; subtitle: string }[] = [
-  { key: 'welcome', title: 'Welcome', subtitle: "Let's set up NOX for your server" },
+  { key: 'welcome', title: 'Welcome', subtitle: "Let's set up NOXES for your server" },
   { key: 'config', title: 'Server Name', subtitle: 'Give your workspace a name' },
   { key: 'framework', title: 'Framework', subtitle: 'Tell us what you run' },
   { key: 'complete', title: "You're Set", subtitle: 'Ready to go' },
@@ -35,7 +35,7 @@ const FRAMEWORKS = [
     id: 'qbcore' as const,
     name: 'QBCore',
     desc: 'Popular FRP framework with jobs, inventory, and housing',
-    color: 'from-[#5E6AD2] to-[#4f5bc0]',
+    color: 'from-[#3DFFA2] to-[#36d98c]',
   },
   {
     id: 'esx' as const,
@@ -119,7 +119,7 @@ export default function OnboardingPage() {
           {/* Logo */}
           <div className="flex items-center justify-center gap-0 mb-10">
             <span className="font-mono text-4xl font-bold tracking-[0.2em] text-white">
-              NOX<span className="font-normal text-white/40">.</span>
+              NOXES<span className="font-normal text-white/40">.</span>
             </span>
           </div>
 
@@ -127,7 +127,7 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-center gap-2 mb-10">
             {STEPS.map((s, i) => (
               <div key={s.key} className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-[#5E6AD2]' : 'bg-white/15'}`} />
+                <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-[#3DFFA2]' : 'bg-white/15'}`} />
                 {i < STEPS.length - 1 && <div className="w-6 h-px bg-white/10" />}
               </div>
             ))}
@@ -136,7 +136,7 @@ export default function OnboardingPage() {
           {/* Content */}
           <div className="text-center mb-8">
             <h1 className="font-mono text-xl font-medium text-white mb-3">
-              Welcome to NOX
+              Welcome to NOXES
             </h1>
             <p className="font-sans text-sm text-white/40 leading-[1.7] max-w-sm mx-auto">
               AI-powered server management for FiveM. Let's configure your workspace in under a minute.
@@ -147,7 +147,7 @@ export default function OnboardingPage() {
           <div className="space-y-2 mb-8">
             {[
               { icon: Server, label: 'Server Management', desc: 'Connect & monitor your FiveM instances' },
-              { icon: MessageSquare, label: 'AI Chat', desc: 'Ask NOX to make changes to your server' },
+              { icon: MessageSquare, label: 'AI Chat', desc: 'Ask NOXES to make changes to your server' },
               { icon: Settings, label: 'Change Approval', desc: 'Review AI proposals before they apply' },
             ].map(({ icon: Icon, label, desc }, i) => (
               <motion.div
@@ -157,8 +157,8 @@ export default function OnboardingPage() {
                 transition={{ delay: 0.1 * i }}
                 className="flex items-center gap-3 px-4 py-3 bg-[#16161E] border border-[rgba(255,255,255,0.06)]"
               >
-                <div className="w-8 h-8 rounded-lg bg-[rgba(94,106,210,0.12)] flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-[#5E6AD2]" />
+                <div className="w-8 h-8 rounded-lg bg-[rgba(61,255,162,0.12)] flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-[#3DFFA2]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-xs text-white">{label}</div>
@@ -216,7 +216,7 @@ export default function OnboardingPage() {
 
           <Link
             href="/dashboard"
-            className="block w-full text-center px-4 py-3 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-[1.4px] hover:bg-[#4f5bc0] transition-colors"
+            className="block w-full text-center px-4 py-3 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-[1.4px] hover:bg-[#36d98c] transition-colors"
           >
             Go to Dashboard
           </Link>
@@ -240,7 +240,7 @@ export default function OnboardingPage() {
               const currentIdx = STEPS.findIndex(st => st.key === step);
               return (
                 <div key={s.key} className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#5E6AD2]' : 'bg-white/15'}`} />
+                  <div className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#3DFFA2]' : 'bg-white/15'}`} />
                   {i < STEPS.length - 1 && <div className="w-6 h-px bg-white/10" />}
                 </div>
               );
@@ -248,7 +248,7 @@ export default function OnboardingPage() {
           </div>
 
           <h1 className="font-mono text-lg text-white mb-1">What's your workspace name?</h1>
-          <p className="font-sans text-sm text-white/35 mb-8">This is how you'll identify it in NOX.</p>
+          <p className="font-sans text-sm text-white/35 mb-8">This is how you'll identify it in NOXES.</p>
 
           <input
             type="text"
@@ -256,7 +256,7 @@ export default function OnboardingPage() {
             onChange={(e) => update({ name: e.target.value })}
             placeholder="e.g. My RP Server"
             autoFocus
-            className="w-full px-4 py-3 bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#5E6AD2] mb-6"
+            className="w-full px-4 py-3 bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#3DFFA2] mb-6"
             onKeyDown={(e) => e.key === 'Enter' && setStep('framework')}
           />
 
@@ -270,7 +270,7 @@ export default function OnboardingPage() {
             <button
               onClick={() => setStep('framework')}
               disabled={!data.name.trim()}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               Continue
               <ChevronRight className="w-3.5 h-3.5" />
@@ -296,7 +296,7 @@ export default function OnboardingPage() {
               const currentIdx = STEPS.findIndex(st => st.key === step);
               return (
                 <div key={s.key} className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#5E6AD2]' : 'bg-white/15'}`} />
+                  <div className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#3DFFA2]' : 'bg-white/15'}`} />
                   {i < STEPS.length - 1 && <div className="w-6 h-px bg-white/10" />}
                 </div>
               );
@@ -304,7 +304,7 @@ export default function OnboardingPage() {
           </div>
 
           <h1 className="font-mono text-lg text-white mb-1">What framework do you run?</h1>
-          <p className="font-sans text-sm text-white/35 mb-6">NOX tailors its suggestions to your setup.</p>
+          <p className="font-sans text-sm text-white/35 mb-6">NOXES tailors its suggestions to your setup.</p>
 
           <div className="space-y-2 mb-6">
             {FRAMEWORKS.map((fw) => (
@@ -313,7 +313,7 @@ export default function OnboardingPage() {
                 onClick={() => update({ framework: fw.id })}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                   data.framework === fw.id
-                    ? 'bg-[rgba(94,106,210,0.12)] border border-[rgba(94,106,210,0.4)]'
+                    ? 'bg-[rgba(61,255,162,0.12)] border border-[rgba(61,255,162,0.4)]'
                     : 'bg-[#16161E] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
                 }`}
               >
@@ -325,7 +325,7 @@ export default function OnboardingPage() {
                   <div className="font-sans text-[10px] text-white/35 mt-0.5">{fw.desc}</div>
                 </div>
                 {data.framework === fw.id && (
-                  <CheckCircle2 className="w-4 h-4 text-[#5E6AD2] flex-shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-[#3DFFA2] flex-shrink-0" />
                 )}
               </button>
             ))}
@@ -337,7 +337,7 @@ export default function OnboardingPage() {
               onClick={() => update({ hasServer: !data.hasServer })}
               className={`w-full flex items-center justify-between px-4 py-3 bg-[#16161E] border transition-colors ${
                 data.hasServer
-                  ? 'border-[rgba(94,106,210,0.4)]'
+                  ? 'border-[rgba(61,255,162,0.4)]'
                   : 'border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
               }`}
             >
@@ -360,7 +360,7 @@ export default function OnboardingPage() {
             value={data.goal}
             onChange={(e) => update({ goal: e.target.value })}
             placeholder="What do you want to build? (optional)"
-            className="w-full px-4 py-3 bg-[#16161E] border border-[rgba(255,255,255,0.06)] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#5E6AD2] mb-6"
+            className="w-full px-4 py-3 bg-[#16161E] border border-[rgba(255,255,255,0.06)] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#3DFFA2] mb-6"
           />
 
           <div className="flex items-center justify-between">
@@ -373,7 +373,7 @@ export default function OnboardingPage() {
             <button
               onClick={handleComplete}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4f5bc0] disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving...' : 'Finish Setup'}
             </button>

@@ -16,7 +16,7 @@ const SECTIONS = [
       },
       {
         title: '2. Install the Agent',
-        body: 'Download the NOX agent for your platform (Windows/Linux). Run the pair command and enter the pairing code from the dashboard. Point the agent to your server-data folder.',
+        body: 'Download the NOXES agent for your platform (Windows/Linux). Run the pair command and enter the pairing code from the dashboard. Point the agent to your server-data folder.',
       },
       {
         title: '3. Connect & Start',
@@ -53,7 +53,7 @@ const SECTIONS = [
         title: 'Server shows offline',
         body: 'The server goes offline when the agent disconnects. Restart the agent process. Check that the agent has not been killed by a system sleep/hibernate cycle.',
         steps: [
-          'Restart the NOX agent application',
+          'Restart the NOXES agent application',
           'Check system power settings (disable sleep)',
           'Verify network connectivity',
           'Re-pair if connection is lost',
@@ -157,7 +157,7 @@ const SECTIONS = [
     content: [
       {
         title: 'Local-First Architecture',
-        body: 'Your server files never leave your machine. The NOX agent runs locally and only sends file diffs (text patches) to the orchestrator for review.',
+        body: 'Your server files never leave your machine. The NOXES agent runs locally and only sends file diffs (text patches) to the orchestrator for review.',
       },
       {
         title: 'Git Checkpoints',
@@ -265,7 +265,7 @@ export default function DocsPage() {
             placeholder="Search documentation..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2.5 bg-[#16161E] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#5E6AD2] transition-colors"
+            className="w-full pl-10 pr-3 py-2.5 bg-[#16161E] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2] transition-colors"
           />
           {searchQuery && (
             <button
@@ -302,7 +302,7 @@ export default function DocsPage() {
                     className="w-full text-left p-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-[10px] text-[#5E6AD2] uppercase">{result.section}</span>
+                      <span className="font-mono text-[10px] text-[#3DFFA2] uppercase">{result.section}</span>
                       <span className="font-mono text-xs text-white">{result.item.title}</span>
                     </div>
                     <p className="font-sans text-xs text-white/50 line-clamp-1">
@@ -337,7 +337,7 @@ export default function DocsPage() {
                 onClick={() => { setActiveSection(s.id); setSearchQuery(''); }}
                 className={`flex items-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-wider border transition-colors duration-100 whitespace-nowrap ${
                   isActive
-                    ? 'bg-[rgba(94,106,210,0.15)] border-[rgba(94,106,210,0.4)] text-[#5E6AD2]'
+                    ? 'bg-[rgba(61,255,162,0.15)] border-[rgba(61,255,162,0.4)] text-[#3DFFA2]'
                     : 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.4)] hover:text-white hover:border-[rgba(255,255,255,0.2)]'
                 }`}
               >
@@ -404,7 +404,7 @@ export default function DocsPage() {
                             <ol className="space-y-2">
                               {(item as any).steps.map((step: string, si: number) => (
                                 <li key={si} className="flex items-start gap-3">
-                                  <span className="w-5 h-5 rounded-full bg-[#5E6AD2]/20 text-[#5E6AD2] font-mono text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <span className="w-5 h-5 rounded-full bg-[#3DFFA2]/20 text-[#3DFFA2] font-mono text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
                                     {si + 1}
                                   </span>
                                   <span className="font-sans text-xs text-white/60">{step}</span>
@@ -447,9 +447,9 @@ export default function DocsPage() {
         </div>
 
         {/* Need help section */}
-        <div className="bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] rounded-lg p-5">
+        <div className="bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] rounded-lg p-5">
           <div className="flex items-start gap-3">
-            <HelpCircle className="w-5 h-5 text-[#5E6AD2] flex-shrink-0 mt-0.5" />
+            <HelpCircle className="w-5 h-5 text-[#3DFFA2] flex-shrink-0 mt-0.5" />
             <div>
               <h3 className="font-mono text-sm font-medium text-white mb-1">Need Help?</h3>
               <p className="font-sans text-xs text-white/50 leading-[1.6]">
@@ -460,7 +460,7 @@ export default function DocsPage() {
                   href="https://github.com/nousresearch/nox-fivem/issues"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5E6AD2]/15 border border-[#5E6AD2]/30 text-[#5E6AD2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#5E6AD2]/25 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3DFFA2]/15 border border-[#3DFFA2]/30 text-[#3DFFA2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#3DFFA2]/25 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
                   GitHub Issues

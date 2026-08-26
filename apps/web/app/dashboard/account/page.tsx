@@ -49,7 +49,7 @@ function getProviderColor(provider: string): string {
     case 'oauth_google': return '#ea4335';
     case 'oauth_discord': return '#5865f2';
     case 'oauth_github': return '#6e5494';
-    default: return '#5E6AD2';
+    default: return '#3DFFA2';
   }
 }
 
@@ -288,7 +288,7 @@ export default function AccountPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 font-mono text-xs uppercase tracking-wider rounded transition-all duration-100 ${
                 activeTab === tab.id
-                  ? 'bg-[#5E6AD2] text-white'
+                  ? 'bg-[#3DFFA2] text-white'
                   : 'text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.05)]'
               }`}
             >
@@ -317,15 +317,15 @@ export default function AccountPage() {
                       className="w-20 h-20 ring-2 ring-[rgba(255,255,255,0.1)] rounded object-cover"
                     />
                   ) : (
-                    <div className="w-20 h-20 ring-2 ring-[rgba(255,255,255,0.1)] rounded bg-[rgba(94,106,210,0.2)] flex items-center justify-center">
-                      <span className="font-mono text-2xl text-[#5E6AD2]">
+                    <div className="w-20 h-20 ring-2 ring-[rgba(255,255,255,0.1)] rounded bg-[rgba(61,255,162,0.2)] flex items-center justify-center">
+                      <span className="font-mono text-2xl text-[#3DFFA2]">
                         {(user?.fullName ?? 'U')[0].toUpperCase()}
                       </span>
                     </div>
                   )}
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 w-6 h-6 bg-[#5E6AD2] rounded-full flex items-center justify-center hover:bg-[#7c8aff] transition-colors"
+                    className="absolute bottom-0 right-0 w-6 h-6 bg-[#3DFFA2] rounded-full flex items-center justify-center hover:bg-[#7c8aff] transition-colors"
                   >
                     <Upload className="w-3 h-3 text-white" />
                   </button>
@@ -346,7 +346,7 @@ export default function AccountPage() {
                       <button
                         onClick={handleUpdateProfile}
                         disabled={isLoading}
-                        className="px-2 py-1 bg-[#5E6AD2] text-white text-xs font-mono rounded hover:bg-[#7c8aff] transition-colors disabled:opacity-50"
+                        className="px-2 py-1 bg-[#3DFFA2] text-white text-xs font-mono rounded hover:bg-[#7c8aff] transition-colors disabled:opacity-50"
                       >
                         Save
                       </button>
@@ -377,7 +377,7 @@ export default function AccountPage() {
             <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-[#5E6AD2]" />
+                  <User className="w-4 h-4 text-[#3DFFA2]" />
                   <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
                     Profile Details
                   </h2>
@@ -402,7 +402,7 @@ export default function AccountPage() {
                       type="text"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="font-sans text-sm text-white bg-transparent border-b border-[rgba(255,255,255,0.2)] focus:border-[#5E6AD2] outline-none w-40"
+                      className="font-sans text-sm text-white bg-transparent border-b border-[rgba(255,255,255,0.2)] focus:border-[#3DFFA2] outline-none w-40"
                     />
                   ) : (
                     <span className="font-sans text-sm text-white">
@@ -445,7 +445,7 @@ export default function AccountPage() {
             {/* Linked Accounts */}
             <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Shield className="w-4 h-4 text-[#5E6AD2]" />
+                <Shield className="w-4 h-4 text-[#3DFFA2]" />
                 <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
                   Linked Accounts
                 </h2>
@@ -475,7 +475,7 @@ export default function AccountPage() {
                           {acct.identifier}
                         </p>
                       </div>
-                      <CheckCircle2 className="w-4 h-4 text-[#5E6AD2] flex-shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-[#3DFFA2] flex-shrink-0" />
                     </div>
                   ))}
                 </div>
@@ -494,7 +494,7 @@ export default function AccountPage() {
             {/* Password — managed by Clerk */}
             <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Lock className="w-4 h-4 text-[#5E6AD2]" />
+                <Lock className="w-4 h-4 text-[#3DFFA2]" />
                 <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
                   Password
                 </h2>
@@ -522,7 +522,7 @@ export default function AccountPage() {
                       Sign Out
                     </p>
                     <p className="font-sans text-xs text-[rgba(255,255,255,0.35)] mt-0.5">
-                      Log out of your NOX account on this device
+                      Log out of your NOXES account on this device
                     </p>
                   </div>
                   <button
@@ -563,7 +563,7 @@ export default function AccountPage() {
           >
             <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Key className="w-4 h-4 text-[#5E6AD2]" />
+                <Key className="w-4 h-4 text-[#3DFFA2]" />
                 <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
                   API Keys
                 </h2>
@@ -576,12 +576,12 @@ export default function AccountPage() {
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   placeholder="Key name (e.g., 'Production Server')"
-                  className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white placeholder:text-[rgba(255,255,255,0.2)] focus:border-[#5E6AD2] outline-none"
+                  className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-sans text-sm text-white placeholder:text-[rgba(255,255,255,0.2)] focus:border-[#3DFFA2] outline-none"
                 />
                 <button
                   onClick={handleCreateApiKey}
                   disabled={isLoading || !newKeyName.trim()}
-                  className="px-4 py-2 bg-[#5E6AD2] text-white font-mono text-xs uppercase tracking-wider rounded hover:bg-[#7c8aff] transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider rounded hover:bg-[#7c8aff] transition-colors disabled:opacity-50"
                 >
                   Create
                 </button>
@@ -630,8 +630,8 @@ export default function AccountPage() {
             </div>
 
             {createdKey && (
-              <div className="bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.3)] p-4">
-                <p className="font-mono text-xs uppercase tracking-wider text-[#5E6AD2] mb-2">
+              <div className="bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.3)] p-4">
+                <p className="font-mono text-xs uppercase tracking-wider text-[#3DFFA2] mb-2">
                   Your new API key (save it now — you won't see it again)
                 </p>
                 <div className="flex items-center gap-2">
@@ -660,7 +660,7 @@ export default function AccountPage() {
             <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#5E6AD2]" />
+                  <Clock className="w-4 h-4 text-[#3DFFA2]" />
                   <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">
                     Security Activity
                   </h2>
@@ -687,7 +687,7 @@ export default function AccountPage() {
                         event.type === 'login' ? 'text-[#22c55e]' :
                         event.type === 'logout' ? 'text-[rgba(255,255,255,0.4)]' :
                         event.type === 'password_change' ? 'text-[#f59e0b]' :
-                        event.type === 'api_key_created' ? 'text-[#5E6AD2]' :
+                        event.type === 'api_key_created' ? 'text-[#3DFFA2]' :
                         'text-[#ef4444]'
                       }`}>
                         {event.type === 'login' && <CheckCircle2 className="w-4 h-4" />}
