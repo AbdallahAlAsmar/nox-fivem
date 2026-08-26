@@ -27,7 +27,7 @@ export default function WireframeAegis() {
     const scene = new THREE.Scene();
     // Orthographic-ish feel via narrow FOV at distance — keeps plates flat.
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
-    camera.position.set(0, 0, 7.2);
+    // initial camera position set by fitCamera() on first resize
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -49,10 +49,30 @@ export default function WireframeAegis() {
     };
 
     // Coordinates derived from the 512-grid SVG paths (roof 92→162 fold,
-    // legs 177→218→312 sweep, base 327→442 point), scaled to fill view.
-    const S = 1.55; // scale up from 512-space to view space
+    // legs 177→218→312 sweep, base 327→442 point). Scale chosen so the full
+    // mark fits inside the viewport with margin at any aspect ratio —
+    // computed against the camera frustum instead of a hardcoded constant.
+    const S = 1.0;
     const ox = -256, oy = -267; // center offset
     const P = (x: number, y: number): number[] => [(x + ox) / 512 * 4 * S, -(y + oy) / 512 * 4 * S];
+
+    // Fit check: the mark spans y ∈ [-350, 350] in SVG units → ±2.73 scene
+    // units after transform. Vertical frustum half-height at z=0 is
+    // tan(fov/2) * dist ≈ tan(17.5°) * 7.2 ≈ 2.27 — too small. Pull the
+    // camera back so the whole shield is always visible with breathing room.
+    const fitCamera = () => {
+      const w = mount.clientWidth || 1;
+      const h = mount.clientHeight || 1;
+      // Mark's rotated bounding sphere radius (~3.1 units covers corners).
+      const RADIUS = 3.15;
+      const vFov = (35 * Math.PI) / 180;
+      const vHalf = Math.tan(vFov / 2);
+      const hHalf = vHalf * (w / h);
+      const distV = RADIUS / vHalf;
+      const distH = RADIUS / hHalf;
+      camera.position.set(0, 0, Math.max(distV, distH) * 1.08); // 8% margin
+      camera.updateProjectionMatrix();
+    };
 
     group.add(plate([P(244, 92), P(118, 92), P(84, 162)].map(([x, y]) => [x * 256, y * 256])));
     group.add(plate([P(268, 92), P(394, 92), P(428, 162)].map(([x, y]) => [x * 256, y * 256])));
@@ -89,7 +109,7 @@ export default function WireframeAegis() {
       const h = mount.clientHeight || Math.max(w, 320);
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
-      camera.updateProjectionMatrix();
+      fitCamera();
     };
     resize();
     const ro = new ResizeObserver(resize);
