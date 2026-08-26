@@ -98,6 +98,13 @@ export default function OnboardingPage() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json().catch(() => ({}));
+      // If onboarding created their server, send them straight into the
+      // desktop-app connect flow for it.
+      if (result?.serverId) {
+        router.push(`/dashboard/servers/${result.serverId}/connect`);
+        return;
+      }
       setStep('complete');
     } catch (e) {
       setError((e as Error).message);

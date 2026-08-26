@@ -1871,6 +1871,41 @@ export async function registerRoutes(fastify: FastifyInstance) {
       },
     });
 
+    // The onboarding wizard's server name IS the user's first server — create
+    // it so the dashboard isn't empty after setup. Auto-pairs a device (with
+    // session token) exactly like POST /api/servers, so the desktop app can
+    // connect it without any pairing step.
+    let createdServerId: string | null = null;
+    if (body.hasServer && body.name.trim()) {
+      const existing = await prisma.server.findFirst({
+        where: { orgId: user.orgId, name: body.name.trim() },
+        select: { id: true },
+      });
+      if (!existing) {
+        const framework = ['qbcore', 'esx', 'vRP'].includes(body.framework) ? body.framework : 'unknown';
+        const server = await prisma.server.create({
+          data: {
+            orgId: user.orgId,
+            name: body.name.trim(),
+            framework,
+            status: 'unpaired',
+            settings: {},
+          },
+        });
+        createdServerId = server.id;
+
+        const sessionToken = crypto.randomBytes(32).toString('base64url');
+        await prisma.agentDevice.create({
+          data: {
+            serverId: server.id,
+            name: 'auto-paired',
+            status: 'paired',
+            pairingTokenHash: crypto.createHash('sha256').update(sessionToken).digest('hex'),
+          },
+        });
+      }
+    }
+
     await prisma.auditLog.create({
       data: {
         orgId: user.orgId,
@@ -1880,7 +1915,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
       },
     });
 
-    return { ok: true };
+    return { ok: true, serverId: createdServerId };
   });
 
   // ============================================
