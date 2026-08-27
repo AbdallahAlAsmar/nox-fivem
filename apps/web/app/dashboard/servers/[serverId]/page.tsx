@@ -32,7 +32,7 @@ import {
   Ban,
 } from 'lucide-react';
 import ChatPanel from '@/components/chat/ChatPanel';
-import { PairingSetupView } from '@/components/dashboard/PairingSetupView';
+import { DesktopConnectGuide } from '@/components/dashboard/DesktopConnectGuide';
 import { ORCHESTRATOR_URL } from '@/lib/config';
 import { scanResources, restartServer, deleteServer } from '@/lib/api';
 import { fetchPlayers, banPlayer, unbanPlayer } from '@/lib/api';
@@ -228,6 +228,10 @@ export default function ServerDetailPage() {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
+  // Website create auto-marks the device `paired` before any desktop session
+  // exists. Only `offline` (or a prior lastSeenAt) means it was live and dropped.
+  const wasConnected = !!server && (server.status === 'offline' || !!server.lastSeenAt);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#0F0F14]">
       {/* Top bar */}
@@ -347,16 +351,16 @@ export default function ServerDetailPage() {
         {activeTab === 'chat' && !loading && server && server.status !== 'online' && (
           <div className="p-6 overflow-y-auto">
             <div className="max-w-lg mx-auto">
-              <div className={`flex items-start gap-3 p-4 border mb-5 ${server.hasAgent ? 'border-[rgba(61,255,162,0.3)] bg-[rgba(61,255,162,0.06)]' : 'border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)]'}`}>
-                <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${server.hasAgent ? 'text-[#3DFFA2]' : 'text-[#f59e0b]'}`} />
+              <div className={`flex items-start gap-3 p-4 border mb-5 ${wasConnected ? 'border-[rgba(61,255,162,0.3)] bg-[rgba(61,255,162,0.06)]' : 'border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)]'}`}>
+                <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${wasConnected ? 'text-[#3DFFA2]' : 'text-[#f59e0b]'}`} />
                 <div>
-                  <p className={`font-mono text-xs uppercase tracking-wider ${server.hasAgent ? 'text-[#3DFFA2]' : 'text-[#f59e0b]'}`}>
-                    {server.hasAgent ? 'Desktop app is offline' : 'Server not connected'}
+                  <p className={`font-mono text-xs uppercase tracking-wider ${wasConnected ? 'text-[#3DFFA2]' : 'text-[#f59e0b]'}`}>
+                    {wasConnected ? 'Desktop app is offline' : 'Connect the desktop app'}
                   </p>
                   <p className="font-sans text-xs text-[rgba(255,255,255,0.6)] mt-1 leading-[1.6]">
-                    {server.hasAgent
-                      ? 'This server is linked to a NOXES desktop app, but the app isn\'t running right now — so chat, players, and file tools are unavailable. Open the NOXES app on your PC (make sure it\'s signed in), pick this server, and it will reconnect automatically.'
-                      : 'The NOXES desktop app isn\'t linked to this server yet, so chat, players, and file tools are unavailable. Follow the steps below to connect it — takes about a minute.'}
+                    {wasConnected
+                      ? 'This server was linked before, but the NOXES desktop app isn\'t running right now — so chat, players, and file tools are unavailable. Open the app on your PC (same account), pick this server, and it will reconnect automatically.'
+                      : 'Chat, players, and file tools need the NOXES desktop app on the PC that holds your FiveM files. Follow the steps below — about a minute.'}
                   </p>
                 </div>
               </div>
@@ -368,41 +372,26 @@ export default function ServerDetailPage() {
                 </div>
               )}
 
-              {regenerating ? (
+              {wasConnected ? (
+                <div className="space-y-2.5 font-sans text-xs text-white/60 leading-[1.6]">
+                  <p className="flex gap-2.5">
+                    <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">1.</span>
+                    <span>Open the NOXES desktop app and sign in with the same account.</span>
+                  </p>
+                  <p className="flex gap-2.5">
+                    <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">2.</span>
+                    <span>Select this server — it reconnects automatically if the folder is already set.</span>
+                  </p>
+                </div>
+              ) : regenerating ? (
                 <div className="py-12 flex flex-col items-center gap-3">
                   <Loader2 className="w-7 h-7 text-[rgba(255,255,255,0.3)] animate-spin" />
                   <p className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
-                    Generating pairing code…
+                    Preparing connection…
                   </p>
                 </div>
-              ) : pairing ? (
-                !server.hasAgent && (
-                  <PairingSetupView
-                    pairing={{
-                      id: serverId,
-                      pairingCode: pairing.code,
-                      expiresAt: pairing.expiresAt,
-                    }}
-                    onRegenerate={regeneratePairingCode}
-                    serverName={server.name}
-                    hideDismiss
-                  />
-                )
               ) : (
-                !server.hasAgent && (
-                  <div className="space-y-3">
-                    <ol className="space-y-2.5 font-sans text-xs text-white/60 leading-[1.6] list-none">
-                      <li className="flex gap-2.5">
-                        <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">1.</span>
-                        <span>Download and install the <a href="/dist/NOX-Setup.exe" className="text-[#3DFFA2] hover:text-white underline">NOXES desktop app</a>.</span>
-                      </li>
-                      <li className="flex gap-2.5">
-                        <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">2.</span>
-                        <span>Sign in with the same account, pick this server, choose your FiveM directory — it connects automatically.</span>
-                      </li>
-                    </ol>
-                  </div>
-                )
+                <DesktopConnectGuide serverName={server.name} />
               )}
             </div>
           </div>
