@@ -496,7 +496,7 @@ export default function DashboardPage() {
                         <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">1.</span>
                         <span>
                           Download and install the{' '}
-                          <a href="/dist/NOX-Setup.exe" className="text-[#3DFFA2] hover:text-white underline">NOXES desktop app</a>{' '}
+                          <a href="/dist/NOXES-Setup.exe" className="text-[#3DFFA2] hover:text-white underline">NOXES desktop app</a>{' '}
                           on the PC running your FiveM server.
                         </span>
                       </li>

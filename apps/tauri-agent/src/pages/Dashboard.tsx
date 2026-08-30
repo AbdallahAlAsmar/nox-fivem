@@ -118,7 +118,7 @@ function ActivityItemRow({ item }: { item: ActivityItem }) {
     heartbeat: Activity,
   }
   const colorMap: Record<string, string> = {
-    change: 'text-[#5E6AD2]',
+    change: 'text-[#3DFFA2]',
     scan: 'text-[#22c55e]',
     heartbeat: 'text-[rgba(255,255,255,0.5)]',
   }
@@ -269,9 +269,9 @@ function ServerCard({
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); onConnect(server); }}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[#5E6AD2] bg-[rgba(94,106,210,0.08)] hover:bg-[rgba(94,106,210,0.18)] transition-colors duration-100 border-r border-[rgba(255,255,255,0.06)] font-semibold"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[#3DFFA2] bg-[rgba(61,255,162,0.08)] hover:bg-[rgba(61,255,162,0.18)] transition-colors duration-100 border-r border-[rgba(255,255,255,0.06)] font-semibold"
           >
-            <Zap className="w-3 h-3 text-[#5E6AD2]" />
+            <Zap className="w-3 h-3 text-[#3DFFA2]" />
             Connect
           </button>
         )}
@@ -339,8 +339,8 @@ function ServerCardSkeleton() {
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="text-center py-20 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
-      <div className="w-14 h-14 bg-[rgba(94,106,210,0.1)] border border-[rgba(94,106,210,0.2)] flex items-center justify-center mx-auto mb-4">
-        <Server className="w-7 h-7 text-[#5E6AD2]" />
+      <div className="w-14 h-14 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] flex items-center justify-center mx-auto mb-4">
+        <Server className="w-7 h-7 text-[#3DFFA2]" />
       </div>
       <h2 className="font-mono text-sm uppercase tracking-[0.2em] text-white mb-2">
         No servers yet
@@ -729,7 +729,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(94,106,210,0.4)] text-white"
+            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(61,255,162,0.4)] text-white"
           >
             {toast}
           </motion.div>
@@ -775,7 +775,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                   new Date().toDateString(),
               ).length}
               icon={MessageSquare}
-              color="text-[#5E6AD2]"
+              color="text-[#3DFFA2]"
               sub="today"
             />
             <StatCard
@@ -964,7 +964,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                   value={newServerName}
                   onChange={(e) => setNewServerName(e.target.value)}
                   placeholder="My FiveM Server"
-                  className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors"
+                  className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors"
                 />
               </div>
 
@@ -981,7 +981,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                       setInspectResult(null)
                     }}
                     placeholder="C:/FXServer/server-data"
-                    className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors"
+                    className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors"
                   />
                   <button
                     onClick={handlePickDirectoryFromModal}

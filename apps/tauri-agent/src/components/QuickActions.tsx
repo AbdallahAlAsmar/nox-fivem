@@ -109,7 +109,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
         if (!realServerId) throw new Error('select a connected server first')
         const playerId = prompt('Enter player identifier:')
         if (playerId) {
-          await api.banPlayer(realServerId, playerId, 'Banned via NOX quick action')
+          await api.banPlayer(realServerId, playerId, 'Banned via NOXES quick action')
           setResult({ type: 'success', message: `Player ${playerId} banned` })
         }
       },
@@ -125,7 +125,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
         className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center px-2 py-3 font-mono text-xs uppercase tracking-wider transition-all duration-100 border-l ${
           isOpen
             ? 'bg-[#16161E] text-white border-[rgba(255,255,255,0.08)]'
-            : 'bg-[#5E6AD2] text-[#0F0F14] border-transparent hover:bg-[#4a55b0]'
+            : 'bg-[#3DFFA2] text-[#0F0F14] border-transparent hover:bg-[#36d98c]'
         }`}
         style={{ borderRadius: '4px 0 0 4px' }}
       >
@@ -252,7 +252,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
                     className={`mt-3 p-3 font-mono text-xs border ${
                       result.type === 'success' ? 'border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.05)] text-[#22c55e]' :
                       result.type === 'error' ? 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)] text-[#ef4444]' :
-                      'border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.05)] text-[#5E6AD2]'
+                      'border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.05)] text-[#3DFFA2]'
                     }`}
                   >
                     <div className="flex items-center gap-2">

@@ -135,14 +135,14 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
           {/* Server Name */}
           <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <SettingsIcon className="w-4 h-4 text-[#5E6AD2]" />
+              <SettingsIcon className="w-4 h-4 text-[#3DFFA2]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server Name</h3>
             </div>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors"
+              className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors"
               placeholder="My FiveM Server"
             />
           </div>
@@ -150,7 +150,7 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
           {/* Server Directory */}
           <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <FolderOpen className="w-4 h-4 text-[#5E6AD2]" />
+              <FolderOpen className="w-4 h-4 text-[#3DFFA2]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server Directory</h3>
             </div>
             <div className="flex gap-2">
@@ -159,7 +159,7 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
                 value={serverDir}
                 onChange={(e) => setServerDir(e.target.value)}
                 placeholder="C:/FXServer/server-data"
-                className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors"
+                className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors"
               />
               <button
                 onClick={handleBrowseDir}
@@ -174,7 +174,7 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
           {/* Framework (read-only) */}
           <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <SettingsIcon className="w-4 h-4 text-[#5E6AD2]" />
+              <SettingsIcon className="w-4 h-4 text-[#3DFFA2]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Framework</h3>
             </div>
             <div className="px-4 py-2.5 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-white font-mono text-sm">

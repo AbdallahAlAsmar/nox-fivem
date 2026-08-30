@@ -7,7 +7,7 @@ import { fetchOrg } from '../api'
 
 const PLANS = [
   { tier: 'starter', name: 'Starter', price: '$0', period: '/month', actions: 100, servers: 1, color: 'text-white', border: 'border-[rgba(255,255,255,0.15)]', bg: 'bg-[rgba(255,255,255,0.04)]' },
-  { tier: 'pro', name: 'Pro', price: '$19', period: '/month', actions: 1000, servers: 5, color: 'text-[#5E6AD2]', border: 'border-[rgba(94,106,210,0.5)]', bg: 'bg-[rgba(94,106,210,0.1)]', highlighted: true },
+  { tier: 'pro', name: 'Pro', price: '$19', period: '/month', actions: 1000, servers: 5, color: 'text-[#3DFFA2]', border: 'border-[rgba(61,255,162,0.5)]', bg: 'bg-[rgba(94,106,210,0.1)]', highlighted: true },
   { tier: 'enterprise', name: 'Enterprise', price: '$49', period: '/month', actions: Infinity, servers: Infinity, color: 'text-white', border: 'border-[rgba(255,255,255,0.15)]', bg: 'bg-[rgba(255,255,255,0.04)]' },
 ]
 
@@ -56,7 +56,7 @@ export default function BillingPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`font-mono text-xs uppercase tracking-wider ${currentPlan.color}`}>{currentPlan.name}</span>
                     {currentPlan.highlighted && (
-                      <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#5E6AD2]">Current</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#3DFFA2]">Current</span>
                     )}
                   </div>
                   <div className="flex items-baseline gap-1 mt-2">
@@ -89,7 +89,7 @@ export default function BillingPage() {
                   initial={{ width: 0 }}
                   animate={{ width: `${usagePercent}%` }}
                   transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                  className={`h-full ${isNearLimit ? 'bg-[#f59e0b]' : 'bg-[#5E6AD2]'}`}
+                  className={`h-full ${isNearLimit ? 'bg-[#f59e0b]' : 'bg-[#3DFFA2]'}`}
                 />
               </div>
               {isNearLimit && (
@@ -110,7 +110,7 @@ export default function BillingPage() {
                       <div className="flex items-center gap-2">
                         <span className={`font-mono text-xs uppercase tracking-wider ${plan.color}`}>{plan.name}</span>
                         {plan.highlighted && (
-                          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#5E6AD2]">Recommended</span>
+                          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#3DFFA2]">Recommended</span>
                         )}
                       </div>
                       <div className="flex items-baseline gap-1">
