@@ -1,6 +1,6 @@
 'use client'
 
-import { ClerkProvider, useUser, useAuth } from '@clerk/clerk-react'
+import { ClerkProvider, useUser, useAuth, ClerkLoading, ClerkLoaded, SignedOut, SignedIn } from '@clerk/clerk-react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
@@ -13,25 +13,37 @@ import Players from './pages/Players'
 import Account from './pages/Account'
 import Billing from './pages/Billing'
 import SignIn from './pages/SignIn'
-import { useState } from 'react'
+import { OnboardingTour } from './components/OnboardingTour'
+import { useState, useEffect } from 'react'
 import { setTokenGetter } from './api'
 
 type Page = 'dashboard' | 'chat' | 'resources' | 'changes' | 'players' | 'settings' | 'errors' | 'account' | 'billing'
 
-const CLERK_PUBLISHABLE_KEY = 'pk_test_cmVsZXZhbnQtcmFtLTkxMjAuY2xlcmsuYWNjb3VudHMuZGV2JA'
+// Use test key for local development (allows localhost)
+// Use pk_live_Y2xlcmsubm94ZXMuZGV2JA for production
+const CLERK_PUBLISHABLE_KEY = process.env.NODE_ENV === 'production'
+  ? 'pk_live_Y2xlcmsubm94ZXMuZGV2JA'
+  : 'pk_test_cmVsZXZhbnQtcmFtLTkxMjAuY2xlcmsuYWNjb3VudHMuZGV2JA'
 
 function AppContent() {
-  const { user, isLoaded } = useUser()
+  const { user, isSignedIn, isLoaded } = useUser()
   const { getToken } = useAuth()
-  // Register Clerk's getToken with the api layer so every request resolves a
-  // FRESH short-lived JWT instead of a stale cached one.
-  setTokenGetter(async () => {
-    try {
-      return await getToken?.()
-    } catch {
-      return null
-    }
-  })
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    console.log('[AppContent] useUser result:', { user: user ? 'present' : 'null', isSignedIn, isLoaded })
+  }, [user, isSignedIn, isLoaded])
+
+  useEffect(() => {
+    setTokenGetter(async () => {
+      try {
+        return await getToken?.()
+      } catch {
+        return null
+      }
+    })
+  }, [getToken])
+
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [selectedServerId, setSelectedServerId] = useState<string | undefined>(() => {
     return localStorage.getItem('selected_server_id') || undefined
@@ -53,19 +65,6 @@ function AppContent() {
     setCurrentPage('dashboard')
   }
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-[#0F0F14] flex items-center justify-center">
-        <div className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.3)]">Loading...</div>
-      </div>
-    )
-  }
-
-  // If not authenticated, show the custom sign-in page
-  if (!user) {
-    return <SignIn />
-  }
-
   const renderPage = () => {
     const serverId = currentPage === 'chat' ? selectedServerId : undefined
     switch (currentPage) {
@@ -83,11 +82,29 @@ function AppContent() {
   }
 
   return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate} selectedServerId={selectedServerId}>
-      <div className="animate-fade-in h-full">
-        {renderPage()}
-      </div>
-    </Layout>
+    <>
+      {!isLoaded ? (
+        <div className="min-h-screen bg-[#0F0F14] flex items-center justify-center">
+          <div className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.3)]">
+            Loading Clerk... (isLoaded: {String(isLoaded)}, isSignedIn: {String(isSignedIn)})
+          </div>
+        </div>
+      ) : !isSignedIn ? (
+        <SignIn />
+      ) : (
+        <Layout currentPage={currentPage} onNavigate={handleNavigate} selectedServerId={selectedServerId}>
+          <div className="animate-fade-in h-full">
+            {renderPage()}
+            <OnboardingTour currentPage={currentPage} />
+          </div>
+        </Layout>
+      )}
+      {error && (
+        <div className="fixed bottom-4 left-4 bg-red-900/50 border border-red-500/50 text-red-200 px-4 py-2 font-mono text-xs">
+          {error}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -96,8 +113,6 @@ export default function App() {
     <ErrorBoundary>
       <ClerkProvider
         publishableKey={CLERK_PUBLISHABLE_KEY}
-        afterSignInUrl="/"
-        afterSignUpUrl="/"
       >
         <AppContent />
       </ClerkProvider>

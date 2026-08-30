@@ -17,19 +17,19 @@ export default function Layout({ children, currentPage, onNavigate, selectedServ
   const isAuthenticated = true
 
   return (
-    <div className="flex h-screen bg-[#0F0F14] text-white overflow-hidden">
-      <SidebarNav currentPage={currentPage} onNavigate={onNavigate} />
+    <div className="flex h-screen bg-[var(--bg-dark)] text-white overflow-hidden" style={{ scrollbarColor: 'rgba(128,128,128,0.3) transparent', scrollbarWidth: 'thin' }} aria-label="Main application layout">
+      <SidebarNav currentPage={currentPage} onNavigate={onNavigate} aria-label="Main navigation" />
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden" aria-label="Main content">
         {/* Top bar */}
-        <header className="h-14 border-b border-[rgba(255,255,255,0.08)] bg-[#16161E]/50 flex items-center px-6 flex-shrink-0 tauri-drag-region">
-          <img src="/nox-avatar.svg" alt="NOX" className="w-5 h-5 opacity-80 mr-3 flex-shrink-0" />
-          <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
+        <header className="h-14 border-b border-[var(--border)] bg-[var(--bg-card)] flex items-center px-6 flex-shrink-0 tauri-drag-region" aria-label="Application header">
+          <img src="/nox-avatar.svg" alt="NOXES logo" className="w-5 h-5 opacity-90 mr-3 flex-shrink-0" />
+          <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-wider text-[var(--text-secondary)]">
             <span className="text-white font-medium capitalize">{currentPage}</span>
             {selectedServerId && (
               <>
-                <span className="text-[rgba(255,255,255,0.2)]">/</span>
-                <span className="text-[rgba(255,255,255,0.5)] truncate max-w-[200px]">server_{selectedServerId.slice(0, 8)}</span>
+                <span className="text-[var(--text-muted)]">/</span>
+                <span className="text-[var(--text-secondary)] truncate max-w-[200px]">server_{selectedServerId.slice(0, 8)}</span>
               </>
             )}
           </div>
@@ -37,14 +37,15 @@ export default function Layout({ children, currentPage, onNavigate, selectedServ
           <div className="flex items-center gap-3">
             <button
               onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-              className="tauri-no-drag p-2 transition-colors duration-100"
+              className="tauri-no-drag p-2 transition-colors duration-100 hover:bg-[var(--border)]"
               title="Quick Actions"
+              aria-label="Open quick actions panel"
             >
-              <Settings className="w-4 h-4 text-[rgba(255,255,255,0.4)] hover:text-white" />
+              <Settings className="w-4 h-4 text-[var(--text-muted)] hover:text-white" aria-hidden="true" />
             </button>
             <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 ${isAuthenticated ? 'bg-[#22c55e]' : 'bg-[#ef4444]'} animate-pulse-subtle`} />
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)]">
+              <div className={`w-1.5 h-1.5 ${isAuthenticated ? 'bg-[var(--success)]' : 'bg-[var(--error)]'} animate-pulse-subtle`} />
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                 {isAuthenticated ? 'Authed' : 'Dev Mode'}
               </span>
             </div>
@@ -63,6 +64,7 @@ export default function Layout({ children, currentPage, onNavigate, selectedServ
         serverName={selectedServerId ? `Server ${selectedServerId.slice(0, 8)}...` : 'Local Server'}
         isOpen={quickActionsOpen}
         onToggle={() => setQuickActionsOpen(!quickActionsOpen)}
+        aria-label="Quick actions sidebar"
       />
     </div>
   )

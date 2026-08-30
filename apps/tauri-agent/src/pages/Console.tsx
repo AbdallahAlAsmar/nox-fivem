@@ -89,7 +89,7 @@ export default function Console({ serverId }: ConsoleProps) {
             onClick={() => setAutoScroll(!autoScroll)}
             className={`px-2 py-1 font-mono text-xs uppercase tracking-wider transition-colors border ${
               autoScroll
-                ? 'border-[rgba(94,106,210,0.4)] bg-[rgba(94,106,210,0.1)] text-[#5E6AD2]'
+                ? 'border-[rgba(94,106,210,0.4)] bg-[rgba(94,106,210,0.1)] text-[#3DFFA2]'
                 : 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.4)] hover:text-white'
             }`}
           >
@@ -140,7 +140,7 @@ export default function Console({ serverId }: ConsoleProps) {
               <div
                 key={i}
                 className={`py-0.5 ${
-                  isError ? 'text-[#ef4444]' : isWarning ? 'text-[#f59e0b]' : isInfo ? 'text-[#5E6AD2]' : 'text-[rgba(255,255,255,0.7)]'
+                  isError ? 'text-[#ef4444]' : isWarning ? 'text-[#f59e0b]' : isInfo ? 'text-[#3DFFA2]' : 'text-[rgba(255,255,255,0.7)]'
                 }`}
               >
                 {line}

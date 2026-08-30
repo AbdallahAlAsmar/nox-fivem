@@ -71,5 +71,5 @@ coverage/
 # negations below. Everything else in dist stays ignored.
 NOX-FiveM-Desktop.exe
 apps/web/public/dist/*
-!apps/web/public/dist/NOX-Setup.exe
-!apps/web/public/dist/NOX-Setup.msi
+!apps/web/public/dist/NOXES-Setup.exe
+!apps/web/public/dist/NOXES-Setup.msi

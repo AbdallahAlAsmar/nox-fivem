@@ -2,6 +2,8 @@
   "identifier": "main",
   "windows": ["main"],
   "permissions": [
-    "core:default"
+    "core:default",
+    "shell:allow-open",
+    "dialog:default"
   ]
 }

@@ -26,11 +26,11 @@ export function DesktopConnectGuide({ serverName }: DesktopConnectGuideProps) {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const res = await fetch('/dist/NOX-Setup.exe', { method: 'HEAD' });
+      const res = await fetch('/dist/NOXES-Setup.exe', { method: 'HEAD' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const a = document.createElement('a');
-      a.href = '/dist/NOX-Setup.exe';
-      a.download = 'NOX-Setup.exe';
+      a.href = '/dist/NOXES-Setup.exe';
+      a.download = 'NOXES-Setup.exe';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

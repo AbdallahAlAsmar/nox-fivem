@@ -49,8 +49,8 @@ export default function AccountPage() {
         {/* Profile Card */}
         <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 flex-shrink-0 bg-[rgba(94,106,210,0.15)] border border-[rgba(94,106,210,0.3)] flex items-center justify-center">
-              <User className="w-7 h-7 text-[#5E6AD2]" />
+            <div className="w-16 h-16 flex-shrink-0 bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)] flex items-center justify-center">
+              <User className="w-7 h-7 text-[#3DFFA2]" />
             </div>
             <div className="flex-1 min-w-0 pt-1">
               <h2 className="font-mono text-base text-white font-medium truncate">{user?.name || (isLoaded ? 'Unnamed User' : 'Loading…')}</h2>
@@ -62,7 +62,7 @@ export default function AccountPage() {
         {/* Details */}
         <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
           <div className="flex items-center gap-2 mb-4">
-            <User className="w-4 h-4 text-[#5E6AD2]" />
+            <User className="w-4 h-4 text-[#3DFFA2]" />
             <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Details</h2>
           </div>
           <div className="space-y-3">
@@ -101,7 +101,7 @@ export default function AccountPage() {
         <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-[#5E6AD2]" />
+              <CreditCard className="w-4 h-4 text-[#3DFFA2]" />
               <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Billing</h2>
             </div>
             <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)] uppercase tracking-wider">

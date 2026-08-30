@@ -1,0 +1,38 @@
+:root {
+  --brand: #3DFFA2;
+  --brand-dim: rgba(61, 255, 162, 0.15);
+  --bg-dark: #0F0F14;
+  --bg-card: #16161E;
+  --bg-input: #0A0A0F;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-muted: rgba(255, 255, 255, 0.30);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --error: #ef4444;
+  --success: #22c55e;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-dark: #f9fafb;
+    --bg-card: #ffffff;
+    --bg-input: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: rgba(17, 24, 39, 0.65);
+    --text-muted: rgba(17, 24, 39, 0.40);
+    --border: rgba(229, 231, 235, 0.8);
+    --border-hover: rgba(229, 231, 235, 1);
+  }
+}
+
+.dark {
+  --bg-dark: #0F0F14;
+  --bg-card: #16161E;
+  --bg-input: #0A0A0F;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-muted: rgba(255, 255, 255, 0.30);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.12);
+}

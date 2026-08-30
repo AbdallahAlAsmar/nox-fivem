@@ -1,7 +1,7 @@
 {
-  "productName": "NOX-FiveM",
+  "productName": "NOXES",
   "version": "0.1.0",
-  "identifier": "com.nox.fivem",
+  "identifier": "com.noxes.fivem",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "NOX-FiveM",
+        "title": "NOXES-FiveM",
         "width": 1280,
         "height": 800,
         "resizable": true,
@@ -22,12 +22,12 @@
     "security": {
       "csp": {
         "default-src": "'self'",
-        "script-src": "'self' https://cdn.clerk.com https://clerk.com https://accounts.clerk.com https://*.clerk.accounts.dev",
+        "script-src": "'self' 'unsafe-inline' https://cdn.clerk.com https://clerk.com https://accounts.clerk.com https://*.clerk.accounts.dev https://clerk.noxes.dev",
         "style-src": "'self' 'unsafe-inline'",
-        "connect-src": "'self' ipc: http://ipc.localhost ws://ipc.localhost https://*.clerk.accounts.dev https://clerk.telemetry.com https://api.cloudflare.com http://158.101.167.118:3001 ws://158.101.167.118:3001",
+        "connect-src": "'self' ipc: http://ipc.localhost ws://ipc.localhost https://*.clerk.accounts.dev https://clerk.noxes.dev https://clerk.telemetry.com https://api.cloudflare.com http://158.101.167.118:3001 ws://158.101.167.118:3001",
         "img-src": "'self' data:",
         "font-src": "'self' data:",
-        "frame-src": "https://*.clerk.accounts.dev https://accounts.clerk.com"
+        "frame-src": "https://*.clerk.accounts.dev https://accounts.clerk.com https://clerk.noxes.dev"
       }
     }
   },
@@ -42,7 +42,7 @@
   },
   "plugins": {
     "shell": {
-      "open": "^https?://"
+      "open": true
     }
   }
 }
