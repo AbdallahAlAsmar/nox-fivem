@@ -20,7 +20,13 @@ export const config = {
   port: parseInt(process.env.ORCHESTRATOR_PORT || process.env.PORT || '3001', 10),
   databaseUrl: process.env.DATABASE_URL || '',
   directUrl: process.env.DIRECT_URL || process.env.DATABASE_URL,
-  jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production-min-32-chars',
+  jwtSecret: (() => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new Error('JWT_SECRET must be set and at least 32 characters');
+    }
+    return secret;
+  })(),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   corsOrigins: (
     process.env.CORS_ORIGINS ||

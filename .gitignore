@@ -49,6 +49,11 @@ apps/web/tsconfig.tsbuildinfo
 # Claude Code design-skill scratch state
 .impeccable/
 
+# Security bot artifacts (local-only, never pushed)
+security-report-*.md
+security_audit.py
+.security-bot.config.json
+
 # Cache
 .caches/
 package-lock.json
