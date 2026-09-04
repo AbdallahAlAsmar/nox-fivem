@@ -122,12 +122,20 @@ fn spawn_reconnect_loop(mut server_id: String, mut agent_device_id: String, mut 
     tokio::spawn(async move {
         let mut delay = Duration::from_secs(2);
         for attempt in 1..=10 {
-            tokio::time::sleep(delay).await;
             // Superseded by a newer connect/disconnect? Stop.
             if RECONNECT_TOKEN.load(std::sync::atomic::Ordering::SeqCst) != my_token {
                 return;
             }
             println!("[Agent] Reconnect attempt {} for server {}", attempt, server_id);
+
+            // Refresh config at start of each attempt in case update_config changed stored ids.
+            let cfg = get_config();
+            if cfg.server_id.as_deref() == Some(server_id.as_str()) {
+                if let Some(id) = &cfg.server_id { server_id = id.clone(); }
+                if !cfg.agent_device_id.is_empty() { agent_device_id = cfg.agent_device_id.clone(); }
+                if !cfg.server_directory.is_empty() { server_directory = cfg.server_directory.clone(); }
+            }
+
             // perform_connect directly — going through the tauri command
             // would cancel_reconnect() and kill this loop on attempt 2.
             match perform_connect(server_id.clone(), agent_device_id.clone(), server_directory.clone()).await {
@@ -140,13 +148,6 @@ fn spawn_reconnect_loop(mut server_id: String, mut agent_device_id: String, mut 
                     // A rejection means credentials/state are bad — retrying
                     // with backoff is still correct; the cap bounds it.
                     delay = (delay * 2).min(Duration::from_secs(60));
-                    // Refresh config in case update_config changed stored ids.
-                    let cfg = get_config();
-                    if cfg.server_id.as_deref() == Some(server_id.as_str()) {
-                        if let Some(id) = &cfg.server_id { server_id = id.clone(); }
-                        if !cfg.agent_device_id.is_empty() { agent_device_id = cfg.agent_device_id.clone(); }
-                        if !cfg.server_directory.is_empty() { server_directory = cfg.server_directory.clone(); }
-                    }
                 }
             }
         }
@@ -170,6 +171,18 @@ fn cancel_reconnect() {
 /// is only written after a successful connect and cannot be relied on here).
 #[tauri::command]
 pub fn set_session_token_cmd(server_id: String, session_token: String) -> Result<(), String> {
+    // Validate that the server_id matches the currently configured server
+    // to prevent storing a token for one server but claiming it's for another.
+    let config = get_config();
+    if let Some(configured_server_id) = &config.server_id {
+        if server_id != *configured_server_id {
+            return Err(format!(
+                "Session token can only be set for the currently configured server ({})",
+                configured_server_id
+            ));
+        }
+    }
+
     mutate_config(|cfg| {
         cfg.session_token = Some(session_token);
         cfg.session_token_server_id = Some(server_id);
@@ -360,24 +373,15 @@ async fn perform_connect(
 
                                 println!("[Agent] Received request action: {} (requestId: {})", action, req_id);
 
-                                // D5: handler bodies do blocking fs I/O and full
-                                // directory scans. Run them on the blocking pool
-                                // so the WS reader keeps draining frames
-                                // (heartbeats/responses) while a scan runs.
+                                // Spawn handler directly on Tokio runtime — no nested runtime.
+                                // The handler is async and uses tokio::spawn_blocking internally
+                                // for any blocking fs I/O.
                                 let req_srv_id = srv_id.clone();
                                 let req_dev_id = dev_id.clone();
                                 let req_srv_dir = srv_dir.clone();
                                 let req_tx = tx_reply.clone();
-                                tokio::task::spawn_blocking(move || {
-                                    // handle_orchestrator_request is async only
-                                    // for its txAdmin HTTP calls — a small
-                                    // nested runtime here is safe (we are NOT
-                                    // inside a tokio worker thread).
-                                    let rt = tokio::runtime::Builder::new_current_thread()
-                                        .enable_all()
-                                        .build()
-                                        .expect("failed to build request-handler runtime");
-                                    rt.block_on(handle_orchestrator_request(
+                                tokio::spawn(async move {
+                                    handle_orchestrator_request(
                                         action,
                                         args,
                                         req_id,
@@ -385,7 +389,7 @@ async fn perform_connect(
                                         req_dev_id,
                                         req_srv_dir,
                                         req_tx,
-                                    ));
+                                    ).await;
                                 });
                             }
                             _ => {}
@@ -463,7 +467,7 @@ async fn perform_connect(
             return Err("WebSocket closed before authentication response".to_string());
         }
         Err(_) => {
-            println!("[Agent] Auth confirmation timed out, proceeding");
+            return Err("Auth confirmation timed out".to_string());
         }
     }
 
@@ -533,6 +537,9 @@ async fn handle_orchestrator_request(
     let agent_device_id = agent_device_id.as_str();
 
     let srv_path = PathBuf::from(&server_directory);
+
+    // Check if this is an async txAdmin call that needs await
+    // Most handlers are sync now; only txAdmin calls need async
 
     match action {
         "scan.resources" => {
@@ -867,6 +874,7 @@ async fn handle_orchestrator_request(
         "fs.write" => {
             let rel_path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
             let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
+            let expected_sha256 = args.get("expectedSha256").and_then(|v| v.as_str());
 
             // Writes are the highest-risk operation: validate scope before
             // creating parent directories or touching disk.
@@ -880,6 +888,33 @@ async fn handle_orchestrator_request(
                     return;
                 }
             };
+
+            // Optional optimistic-concurrency check against current content.
+            if let Some(expected) = expected_sha256 {
+                match fs::read_to_string(&full_path) {
+                    Ok(existing) => {
+                        let actual = sha256_hex(existing.as_bytes());
+                        if !actual.eq_ignore_ascii_case(expected) {
+                            send_error(
+                                &tx, req_id, server_id, agent_device_id,
+                                "fs.write", "FILE_CHANGED_SINCE_STAGED",
+                                &format!("{}: content changed since staged (expected sha256 {}, got {})", rel_path, expected, actual),
+                            );
+                            return;
+                        }
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                        // New file — nothing to compare yet, that is fine.
+                    }
+                    Err(e) => {
+                        send_error(
+                            &tx, req_id, server_id, agent_device_id,
+                            "fs.write", "READ_FAILED", &format!("{}: {}", rel_path, e),
+                        );
+                        return;
+                    }
+                }
+            }
 
             if let Some(parent) = full_path.parent() {
                 let _ = fs::create_dir_all(parent);
@@ -901,12 +936,34 @@ async fn handle_orchestrator_request(
                 }
             }
         }
-        "fivem.listPlayers" => {
+        // Validate txAdmin URL to prevent SSRF — only allow localhost/127.0.0.1 or the server's own LAN IP
+            fn validate_txadmin_url(url: &str) -> Result<(), String> {
+                let parsed = url::Url::parse(url).map_err(|e| format!("Invalid txAdmin URL: {}", e))?;
+                let host = parsed.host_str().ok_or("No host in URL")?;
+                // Allow localhost, 127.0.0.1, or any local LAN IP (10.x, 172.16-31.x, 192.168.x)
+                let allowed = host == "localhost"
+                    || host == "127.0.0.1"
+                    || host.starts_with("10.")
+                    || host.starts_with("172.16.") || host.starts_with("172.17.") || host.starts_with("172.18.") || host.starts_with("172.19.")
+                    || host.starts_with("172.20.") || host.starts_with("172.21.") || host.starts_with("172.22.") || host.starts_with("172.23.")
+                    || host.starts_with("172.24.") || host.starts_with("172.25.") || host.starts_with("172.26.") || host.starts_with("172.27.")
+                    || host.starts_with("172.28.") || host.starts_with("172.29.") || host.starts_with("172.30.") || host.starts_with("172.31.")
+                    || host.starts_with("192.168.");
+                if !allowed {
+                    return Err("txAdmin URL must point to localhost or a local LAN address".to_string());
+                }
+                Ok(())
+            }
+
             let use_txadmin = args.get("useTxAdmin").and_then(|v| v.as_bool()).unwrap_or(false);
             let txadmin_url = args.get("txadminUrl").and_then(|v| v.as_str()).unwrap_or("");
             let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
 
             if use_txadmin && !txadmin_url.is_empty() && !txadmin_api_key.is_empty() {
+                if let Err(e) = validate_txadmin_url(txadmin_url) {
+                    send_error(&tx, req_id, server_id, agent_device_id, "fivem.listPlayers", "INVALID_TXADMIN_URL", &e);
+                    return;
+                }
                 match call_txadmin_players(txadmin_url, txadmin_api_key).await {
                     Ok(players) => {
                         send_result(&tx, req_id, server_id, agent_device_id, "fivem.listPlayers", serde_json::json!({
@@ -916,8 +973,6 @@ async fn handle_orchestrator_request(
                         return;
                     }
                     Err(e) => {
-                        // txAdmin configured but the call failed: report it
-                        // honestly rather than silently reporting zero players.
                         send_error(&tx, req_id, server_id, agent_device_id, "fivem.listPlayers", "TXADMIN_ERROR", &e);
                         return;
                     }
@@ -959,6 +1014,11 @@ async fn handle_orchestrator_request(
                     action, "NOT_IMPLEMENTED",
                     "txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings",
                 );
+                return;
+            }
+
+            if let Err(e) = validate_txadmin_url(txadmin_url) {
+                send_error(&tx, req_id, server_id, agent_device_id, action, "INVALID_TXADMIN_URL", &e);
                 return;
             }
 
@@ -1005,6 +1065,11 @@ async fn handle_orchestrator_request(
                 return;
             }
 
+            if let Err(e) = validate_txadmin_url(txadmin_url) {
+                send_error(&tx, req_id, server_id, agent_device_id, action, "INVALID_TXADMIN_URL", &e);
+                return;
+            }
+
             match call_txadmin_restart_resource(txadmin_url, txadmin_api_key, &resource_name).await {
                 Ok(()) => {
                     send_result(&tx, req_id, server_id, agent_device_id, action, serde_json::json!({
@@ -1027,31 +1092,27 @@ async fn handle_orchestrator_request(
             let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
 
             if use_txadmin && !txadmin_url.is_empty() && !txadmin_api_key.is_empty() {
+                if let Err(e) = validate_txadmin_url(txadmin_url) {
+                    send_error(&tx, req_id, server_id, agent_device_id, "fivem.tailConsole", "INVALID_TXADMIN_URL", &e);
+                    return;
+                }
                 // Call txAdmin API for console
                 let result = call_txadmin_console(txadmin_url, txadmin_api_key, lines).await;
                 match result {
                     Ok(tail) => {
-                        let env = serde_json::json!({
-                            "protocolVersion": "2026-08-12.v1",
-                            "messageId": Uuid::new_v4().to_string(),
-                            "type": "agent.response",
-                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                            "requestId": req_id,
-                            "serverId": server_id,
-                            "agentDeviceId": agent_device_id,
-                            "payload": { "ok": true, "action": "fivem.tailConsole", "result": { "lines": tail, "count": tail.lines().count(), "via": "txadmin" } }
-                        });
-                        let _ = tx.send(Message::Text(env.to_string()));
+                        send_result(&tx, req_id, server_id, agent_device_id, "fivem.tailConsole", serde_json::json!({
+                            "lines": tail,
+                            "count": tail.lines().count(),
+                            "via": "txadmin"
+                        }));
                         return;
                     }
                     Err(e) => {
-                        let env = serde_json::json!({
-                            "protocolVersion": "2026-08-12.v1",
-                            "messageId": Uuid::new_v4().to_string(),
-                            "type": "agent.response",
-                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                            "requestId": req_id,
-                            "serverId": server_id,
+                        send_error(&tx, req_id, server_id, agent_device_id, "fivem.tailConsole", "TXADMIN_ERROR", &e);
+                        return;
+                    }
+                }
+            }
                             "agentDeviceId": agent_device_id,
                             "payload": { "ok": false, "action": "fivem.tailConsole", "error": { "code": "TXADMIN_ERROR", "message": e, "retryable": true } }
                         });
@@ -1100,50 +1161,31 @@ async fn handle_orchestrator_request(
             let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
 
             if use_txadmin && !txadmin_url.is_empty() && !txadmin_api_key.is_empty() {
+                if let Err(e) = validate_txadmin_url(txadmin_url) {
+                    send_error(&tx, req_id, server_id, agent_device_id, "fivem.restartServer", "INVALID_TXADMIN_URL", &e);
+                    return;
+                }
                 let result = call_txadmin_restart(txadmin_url, txadmin_api_key).await;
                 match result {
                     Ok(_) => {
-                        let env = serde_json::json!({
-                            "protocolVersion": "2026-08-12.v1",
-                            "messageId": Uuid::new_v4().to_string(),
-                            "type": "agent.response",
-                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                            "requestId": req_id,
-                            "serverId": server_id,
-                            "agentDeviceId": agent_device_id,
-                            "payload": { "ok": true, "action": "fivem.restartServer", "result": { "status": "restart_sent_via_txadmin" } }
-                        });
-                        let _ = tx.send(Message::Text(env.to_string()));
+                        send_result(&tx, req_id, server_id, agent_device_id, "fivem.restartServer", serde_json::json!({
+                            "status": "restart_sent_via_txadmin"
+                        }));
                         return;
                     }
                     Err(e) => {
-                        let env = serde_json::json!({
-                            "protocolVersion": "2026-08-12.v1",
-                            "messageId": Uuid::new_v4().to_string(),
-                            "type": "agent.response",
-                            "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                            "requestId": req_id,
-                            "serverId": server_id,
-                            "agentDeviceId": agent_device_id,
-                            "payload": { "ok": false, "action": "fivem.restartServer", "error": { "code": "TXADMIN_ERROR", "message": e, "retryable": true } }
-                        });
-                        let _ = tx.send(Message::Text(env.to_string()));
+                        send_error(&tx, req_id, server_id, agent_device_id, "fivem.restartServer", "TXADMIN_ERROR", &e);
                         return;
                     }
                 }
             }
 
-            let env = serde_json::json!({
-                "protocolVersion": "2026-08-12.v1",
-                "messageId": Uuid::new_v4().to_string(),
-                "type": "agent.response",
-                "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                "requestId": req_id,
-                "serverId": server_id,
-                "agentDeviceId": agent_device_id,
-                "payload": { "ok": true, "action": "fivem.restartServer", "result": { "status": "restart_sent" } }
-            });
-            let _ = tx.send(Message::Text(env.to_string()));
+            // No txAdmin configured — return an honest error instead of a fake success
+            send_error(
+                &tx, req_id, server_id, agent_device_id,
+                "fivem.restartServer", "NOT_IMPLEMENTED",
+                "txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings",
+            );
         }
         _ => {
             // Unknown action — reply with an error result so the orchestrator's
@@ -1168,9 +1210,15 @@ async fn handle_orchestrator_request(
 }
 
 #[tauri::command]
-pub fn scan_server_resources_cmd(server_directory: String) -> Result<ScanResult, String> {
-    let path = PathBuf::from(&server_directory);
-    let scanner = Scanner::new(path);
+pub fn scan_server_resources_cmd() -> Result<ScanResult, String> {
+    // Read server directory from config, not from caller — prevents path spoofing.
+    let config = crate::config::get_config();
+    let base_path = PathBuf::from(&config.server_directory);
+    if base_path.as_os_str().is_empty() {
+        return Err("Server directory not configured".to_string());
+    }
+
+    let scanner = Scanner::new(base_path);
     scanner.scan_all()
 }
 
@@ -1320,9 +1368,10 @@ pub fn start_heartbeat() {
         }
     };
 
-    std::thread::spawn(move || {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(30));
         loop {
-            std::thread::sleep(Duration::from_secs(30));
+            interval.tick().await;
 
             // A newer connection exists → this loop is obsolete. Exit.
             if CONNECTION_GENERATION.load(std::sync::atomic::Ordering::SeqCst) != generation {
@@ -1339,6 +1388,11 @@ pub fn start_heartbeat() {
                 Some(connection) if connection.generation == generation => {
                     // REAL uptime since this connection was established.
                     let uptime = connected_at.elapsed().as_secs();
+                    // Create heartbeat payload without currentRootHash when it's null
+                    let mut payload = serde_json::Map::new();
+                    payload.insert("uptimeSeconds".to_string(), serde_json::json!(uptime));
+                    payload.insert("activeFxServer".to_string(), serde_json::json!(false));
+
                     let heartbeat_env = serde_json::json!({
                         "protocolVersion": "2026-08-12.v1",
                         "messageId": Uuid::new_v4().to_string(),
@@ -1346,11 +1400,7 @@ pub fn start_heartbeat() {
                         "sentAt": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
                         "serverId": connection.server_id,
                         "agentDeviceId": connection.agent_device_id,
-                        "payload": {
-                            "uptimeSeconds": uptime,
-                            "currentRootHash": null,
-                            "activeFxServer": false
-                        }
+                        "payload": payload
                     });
 
                     if connection.sender.send(Message::Text(heartbeat_env.to_string())).is_err() {

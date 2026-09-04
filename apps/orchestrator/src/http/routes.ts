@@ -1578,7 +1578,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
     '/api/pairing/claim',
     {
       config: {
-        rateLimit: { max: 10, timeWindow: '1 minute' }, // default keyGenerator = req.ip
+        rateLimit: { max: 5, timeWindow: '1 minute' }, // Reduced from 10 to 5 for better security
       },
     },
     async (request, reply) => {
@@ -1709,31 +1709,42 @@ export async function registerRoutes(fastify: FastifyInstance) {
     if (!gateway.isConnected(params.serverId)) {
       return reply.status(400).send({ error: 'Agent is not connected' });
     }
-    if (!player.isBanned) {
-      try {
-        // Surface agent errors honestly — agents always reply now. txAdmin
-        // config is relayed from Server.settings; when it's absent the agent
-        // replies NOT_IMPLEMENTED naming exactly what is missing.
-        await gateway.sendCommand(params.serverId, 'fivem.banPlayer', {
-          identifier: player.playerId,
-          reason: body.reason || 'Banned via NOX',
-          ...txAdminArgs(server.settings),
-        }, 10000);
-      } catch (e: any) {
-        const agentMsg = e?.message || (typeof e === 'string' ? e : JSON.stringify(e));
-        if (e?.code === 'NOT_IMPLEMENTED') {
-          return reply.status(502).send({
-            error: 'txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings to enable bans',
-          });
-        }
-        return reply.status(502).send({ error: `Ban failed on agent: ${agentMsg}` });
-      }
-    }
 
     const now = new Date();
-    const updated = await prisma.player.update({
-      where: { id: player.id },
-      data: { isBanned: true, banReason: body.reason || 'Banned via NOX', bannedAt: now },
+    const updated = await prisma.$transaction(async (tx) => {
+      // Re-fetch player to ensure we have the latest state
+      const currentPlayer = await tx.player.findFirst({
+        where: { id: player.id },
+      });
+
+      if (!currentPlayer) {
+        throw new Error('Player not found');
+      }
+
+      if (!currentPlayer.isBanned) {
+        try {
+          // Surface agent errors honestly — agents always reply now. txAdmin
+          // config is relayed from Server.settings; when it's absent the agent
+          // replies NOT_IMPLEMENTED naming exactly what is missing.
+          await gateway.sendCommand(params.serverId, 'fivem.banPlayer', {
+            identifier: currentPlayer.playerId,
+            reason: body.reason || 'Banned via NOX',
+            ...txAdminArgs(server.settings),
+          }, 10000);
+        } catch (e: any) {
+          const agentMsg = e?.message || (typeof e === 'string' ? e : JSON.stringify(e));
+          if (e?.code === 'NOT_IMPLEMENTED') {
+            throw new Error('txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings to enable bans');
+          }
+          throw new Error(`Ban failed on agent: ${agentMsg}`);
+        }
+      }
+
+      // Update player with ban data
+      return tx.player.update({
+        where: { id: currentPlayer.id },
+        data: { isBanned: true, banReason: body.reason || 'Banned via NOX', bannedAt: now },
+      });
     });
 
     cache.invalidate(`players:${params.serverId}`);
@@ -1768,29 +1779,40 @@ export async function registerRoutes(fastify: FastifyInstance) {
     if (!gateway.isConnected(params.serverId)) {
       return reply.status(400).send({ error: 'Agent is not connected' });
     }
-    // Mirror the ban route's guard: don't ask the agent to lift a ban that
-    // isn't recorded as active.
-    if (player.isBanned) {
-      try {
-        // Surface agent errors honestly — agents always reply now. txAdmin
-        // config is relayed from Server.settings.
-        await gateway.sendCommand(params.serverId, 'fivem.unbanPlayer', {
-          identifier: player.playerId,
-          ...txAdminArgs(server.settings),
-        }, 10000);
-      } catch (e: any) {
-        if (e?.code === 'NOT_IMPLEMENTED') {
-          return reply.status(502).send({
-            error: 'txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings to enable unbans',
-          });
-        }
-        return reply.status(502).send({ error: `Unban failed on agent: ${e?.message || JSON.stringify(e)}` });
-      }
-    }
 
-    const updated = await prisma.player.update({
-      where: { id: player.id },
-      data: { isBanned: false, banReason: null, bannedAt: null },
+    const updated = await prisma.$transaction(async (tx) => {
+      // Re-fetch player to ensure we have the latest state
+      const currentPlayer = await tx.player.findFirst({
+        where: { id: player.id },
+      });
+
+      if (!currentPlayer) {
+        throw new Error('Player not found');
+      }
+
+      // Mirror the ban route's guard: don't ask the agent to lift a ban that
+      // isn't recorded as active.
+      if (currentPlayer.isBanned) {
+        try {
+          // Surface agent errors honestly — agents always reply now. txAdmin
+          // config is relayed from Server.settings.
+          await gateway.sendCommand(params.serverId, 'fivem.unbanPlayer', {
+            identifier: currentPlayer.playerId,
+            ...txAdminArgs(server.settings),
+          }, 10000);
+        } catch (e: any) {
+          if (e?.code === 'NOT_IMPLEMENTED') {
+            throw new Error('txAdmin not configured for this server — set useTxAdmin/txadminUrl/txadminApiKey in server settings to enable unbans');
+          }
+          throw new Error(`Unban failed on agent: ${e?.message || JSON.stringify(e)}`);
+        }
+      }
+
+      // Update player with unban data
+      return tx.player.update({
+        where: { id: currentPlayer.id },
+        data: { isBanned: false, banReason: null, bannedAt: null },
+      });
     });
 
     cache.invalidate(`players:${params.serverId}`);

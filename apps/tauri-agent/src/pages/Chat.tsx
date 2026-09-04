@@ -244,12 +244,10 @@ export default function Chat({ serverId }: ChatProps) {
         serverDirectory: directory,
       })
 
-      // Scan and sync
+      // Scan and sync (server directory read from config)
       let count = 0
       try {
-        const scan = (await invoke('scan_server_resources_cmd', {
-          serverDirectory: directory,
-        })) as { resources: any[]; framework: string }
+        const scan = (await invoke('scan_server_resources_cmd')) as { resources: any[]; framework: string }
         count = scan?.resources?.length ?? 0
         await syncResources(currentServerId, scan)
       } catch (scanErr) {

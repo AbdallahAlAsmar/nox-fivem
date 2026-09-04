@@ -25,6 +25,10 @@ export const config = {
     if (!secret || secret.length < 32) {
       throw new Error('JWT_SECRET must be set and at least 32 characters');
     }
+    // Add complexity check
+    if (!/[A-Z]/.test(secret) || !/[a-z]/.test(secret) || !/[0-9]/.test(secret) || !/[^A-Za-z0-9]/.test(secret)) {
+      throw new Error('JWT_SECRET must contain uppercase, lowercase, numbers, and special characters');
+    }
     return secret;
   })(),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',

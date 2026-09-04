@@ -487,7 +487,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
         })
       }
 
-      // Connect agent WebSocket via Tauri
+      // Connect agent WebSocket via Tauri (server directory read from config)
       await invoke('connect_agent_cmd', {
         serverId: result.id,
         agentDeviceId: result.agentDeviceId,
@@ -631,19 +631,17 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
         })
       }
 
-      // Connect WebSocket directly using the stored agentDeviceId
+      // Connect WebSocket directly using the stored agentDeviceId (server directory read from config)
       await invoke('connect_agent_cmd', {
         serverId: server.id,
         agentDeviceId,
         serverDirectory: directory,
       })
 
-      // Run local scan
+      // Run local scan (server directory read from config)
       let resourceCount = 0
       try {
-        const localScan = (await invoke('scan_server_resources_cmd', {
-          serverDirectory: directory,
-        })) as { resources: any[]; framework: string }
+        const localScan = (await invoke('scan_server_resources_cmd')) as { resources: any[]; framework: string }
         resourceCount = localScan?.resources?.length ?? 0
       } catch (lErr) {
         console.warn('Local scan notice:', lErr)
