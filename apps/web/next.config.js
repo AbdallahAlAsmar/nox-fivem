@@ -4,7 +4,7 @@ const nextConfig = {
     return [
       {
         source: '/api/orchestrator/:path*',
-        destination: `${process.env.ORCHESTRATOR_BACKEND_URL || 'http://158.101.167.118:3001'}/:path*`,
+        destination: `${(process.env.ORCHESTRATOR_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '')}/:path*`,
       },
       {
         source: '/clerk.browser.js',
