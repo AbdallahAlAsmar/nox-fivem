@@ -45,4 +45,18 @@ if (config.nodeEnv === 'production') {
     console.error('Invalid configuration:', result.error.flatten());
     process.exit(1);
   }
+
+  if (!config.jwtSecret) {
+    console.error('CRITICAL: JWT_SECRET must be set in production');
+    process.exit(1);
+  }
+
+  if (!process.env.CLERK_SECRET_KEY) {
+    console.error('CRITICAL: CLERK_SECRET_KEY must be set in production');
+    process.exit(1);
+  }
+
+  if (process.env.AUTH_ALLOW_ANON !== 'true' && process.env.AUTH_ALLOW_ANON !== '1') {
+    console.log('auth: Anonymous access disabled (AUTH_ALLOW_ANON not set)');
+  }
 }
