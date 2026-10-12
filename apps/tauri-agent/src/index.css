@@ -2,34 +2,142 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── NOX Design Tokens ─────────────────────────────────────────── */
+/* ─── NOXES Design Tokens ───────────────────────────────────────── */
 :root {
-  --nox-bg-primary:      #0F0F14;
-  --nox-bg-elevated:     #16161E;
-  --nox-bg-inset:        #0A0A0F;
+  /* Dark theme (default) */
+  --noxes-bg-primary:      #0F0F14;
+  --noxes-bg-elevated:     #16161E;
+  --noxes-bg-inset:        #0A0A0F;
 
-  --nox-fg-primary:      #FFFFFF;
-  --nox-fg-secondary:    rgba(255,255,255,0.7);
-  --nox-fg-muted:        rgba(255,255,255,0.4);
-  --nox-fg-disabled:     rgba(255,255,255,0.2);
+  --noxes-fg-primary:      #FFFFFF;
+  --noxes-fg-secondary:    rgba(255,255,255,0.7);
+  --noxes-fg-muted:        rgba(255,255,255,0.4);
+  --noxes-fg-disabled:     rgba(255,255,255,0.2);
 
-  --nox-border-default:  rgba(255,255,255,0.08);
-  --nox-border-strong:   rgba(255,255,255,0.18);
-  --nox-accent:          #5E6AD2;
-  --nox-accent-muted:    rgba(94,106,210,0.15);
+  --noxes-border-default:  rgba(255,255,255,0.08);
+  --noxes-border-strong:   rgba(255,255,255,0.18);
+  --noxes-accent:          #3DFFA2;
+  --noxes-accent-muted:    rgba(61,255,162,0.15);
+
+  /* Semantic colors (used in both themes) */
+  --success: #22c55e;
+  --error: #ef4444;
+  --warning: #f59e0b;
+}
+
+/* Light theme (overrides when html is not .dark) */
+html:not(.dark) {
+  --noxes-bg-primary:      #f9fafb;
+  --noxes-bg-elevated:     #ffffff;
+  --noxes-bg-inset:        #f3f4f6;
+
+  --noxes-fg-primary:      #111827;
+  --noxes-fg-secondary:    rgba(17, 24, 39, 0.7);
+  --noxes-fg-muted:        rgba(17, 24, 39, 0.4);
+  --noxes-fg-disabled:     rgba(17, 24, 39, 0.2);
+
+  --noxes-border-default:  rgba(229, 231, 235, 0.08);
+  --noxes-border-strong:   rgba(229, 231, 235, 0.18);
+}
+
+/* Alias variables for easier use in components */
+:root {
+  --bg-dark: var(--noxes-bg-primary);
+  --bg-card: var(--noxes-bg-elevated);
+  --bg-inset: var(--noxes-bg-inset);
+  --text-primary: var(--noxes-fg-primary);
+  --text-secondary: var(--noxes-fg-secondary);
+  --text-muted: var(--noxes-fg-muted);
+  --text-disabled: var(--noxes-fg-disabled);
+  --border: var(--noxes-border-default);
+  --border-strong: var(--noxes-border-strong);
+  --accent: var(--noxes-accent);
+  --accent-muted: var(--noxes-accent-muted);
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.15s ease, color 0.1s ease, border-color 0.15s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--noxes-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--noxes-border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--noxes-fg-muted);
+}
+
+/* Text selection */
+::selection {
+  background: rgba(61, 255, 162, 0.4);
+  color: white;
+}
+
+/* Focus */
+:focus-visible {
+  outline: 2px solid rgba(0, 255, 148, 0.5);
+  outline-offset: 2px;
 }
 
 * {
-  border-color: var(--nox-border-default);
+  border-color: var(--noxes-border-default);
 }
 
 body {
-  background-color: var(--nox-bg-primary);
-  color: var(--nox-fg-primary);
+  background-color: var(--noxes-bg-primary);
+  color: var(--noxes-fg-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.15s ease, color 0.1s ease, border-color 0.15s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--noxes-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--noxes-border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--noxes-fg-muted);
+}
+
+/* Text selection */
+::selection {
+  background: rgba(61, 255, 162, 0.4);
+  color: white;
+}
+
+/* Focus */
+:focus-visible {
+  outline: 2px solid rgba(0, 255, 148, 0.5);
+  outline-offset: 2px;
 }
 
 /* ─── Text selection policy ───────────────────────────────────────── */
@@ -77,21 +185,21 @@ pre, code, textarea, input,
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--nox-bg-primary);
+  background: var(--noxes-bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--nox-border-strong);
+  background: var(--noxes-border-strong);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--nox-fg-muted);
+  background: var(--noxes-fg-muted);
 }
 
 /* ─── Selection ─────────────────────────────────────────────────── */
 ::selection {
-  background: rgba(94, 106, 210, 0.4);
+  background: rgba(61, 255, 162, 0.4);
   color: white;
 }
 

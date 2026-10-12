@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/nox-avatar.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NOX // FiveM</title>
+    <title>NOXES // FiveM</title>
     <style>
       body {
         margin: 0;
@@ -12,12 +12,20 @@
         overflow: hidden;
       }
     </style>
-    <!-- Publishable key must be set before ClerkJS loads -->
+    <!-- Theme setup -->
     <script>
-      window.__clerk_publishable_key = 'pk_test_cmVsZXZhbnQtcmFtLTkxMjAuY2xlcmsuYWNjb3VudHMuZGV2JA';
+      function updateTheme() {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      updateTheme();
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        updateTheme();
+      });
     </script>
-    <!-- Clerk JS SDK -->
-    <script src="https://cdn.clerk.com/clerk@5.25.2.browser.min.js" crossorigin="anonymous"></script>
   </head>
   <body>
     <div id="root"></div>

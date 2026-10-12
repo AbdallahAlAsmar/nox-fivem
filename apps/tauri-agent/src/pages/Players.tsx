@@ -156,7 +156,7 @@ export default function Players({ serverId }: { serverId?: string }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search players..."
-            className="w-full pl-10 pr-4 py-2 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
+            className="w-full pl-10 pr-4 py-2 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
           />
         </div>
 
@@ -167,7 +167,7 @@ export default function Players({ serverId }: { serverId?: string }) {
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                 filter === f
-                  ? 'bg-[rgba(94,106,210,0.2)] text-[#5E6AD2]'
+                  ? 'bg-[rgba(61,255,162,0.2)] text-[#3DFFA2]'
                   : 'text-[rgba(255,255,255,0.4)] hover:text-white'
               }`}
             >
@@ -219,7 +219,7 @@ export default function Players({ serverId }: { serverId?: string }) {
       {/* Player List */}
       {loading ? (
         <div className="text-center py-20">
-          <div className="w-8 h-8 border-2 border-[#5E6AD2] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-2 border-[#3DFFA2] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="font-mono text-xs text-[rgba(255,255,255,0.4)] uppercase tracking-wider">Loading players…</p>
         </div>
       ) : !error && effectiveServerId && filteredPlayers.length === 0 ? (
@@ -243,9 +243,9 @@ export default function Players({ serverId }: { serverId?: string }) {
               } transition-colors duration-100`}
             >
               <div className={`w-10 h-10 flex items-center justify-center flex-shrink-0 ${
-                player.isBanned ? 'bg-[rgba(239,68,68,0.15)]' : 'bg-[rgba(94,106,210,0.15)]'
+                player.isBanned ? 'bg-[rgba(239,68,68,0.15)]' : 'bg-[rgba(61,255,162,0.15)]'
               }`}>
-                <User className={`w-5 h-5 ${player.isBanned ? 'text-[#ef4444]' : 'text-[#5E6AD2]'}`} />
+                <User className={`w-5 h-5 ${player.isBanned ? 'text-[#ef4444]' : 'text-[#3DFFA2]'}`} />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -257,7 +257,7 @@ export default function Players({ serverId }: { serverId?: string }) {
                     </span>
                   )}
                   {player.permissions.includes('moderator') && (
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-[#5E6AD2] bg-[rgba(94,106,210,0.1)] px-2 py-0.5 flex items-center gap-1">
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-[#3DFFA2] bg-[rgba(61,255,162,0.1)] px-2 py-0.5 flex items-center gap-1">
                       <Shield className="w-3 h-3" /> Mod
                     </span>
                   )}

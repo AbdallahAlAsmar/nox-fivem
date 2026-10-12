@@ -49,7 +49,7 @@ function constantTimeHashCompare(aHex: string, bHex: string): boolean {
  */
 function agentLegacyOk(): boolean {
   const raw = process.env.AGENT_LEGACY_OK;
-  if (raw === undefined || raw === '') return true;
+  if (raw === undefined || raw === '') return process.env.NODE_ENV !== 'production';
   return raw === 'true' || raw === '1';
 }
 

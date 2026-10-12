@@ -2,6 +2,6 @@
   <rect width="64" height="64" fill="none"/>
   <!-- Terminal cursor -->
   <rect x="20" y="12" width="4" height="24" fill="currentColor"/>
-  <!-- NOX text -->
-  <text x="32" y="52" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="currentColor" text-anchor="middle" letter-spacing="2">NOX</text>
+  <!-- NOXES text -->
+  <text x="32" y="52" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="currentColor" text-anchor="middle" letter-spacing="2">NOXES</text>
 </svg>

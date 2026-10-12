@@ -165,7 +165,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
                 <div className={`absolute left-2.5 top-6 w-3 h-3 rounded-full border-2 ${
                   change.status === 'applied' ? 'bg-[#22c55e] border-[#22c55e]' :
                   change.status === 'rolled_back' ? 'bg-[rgba(255,255,255,0.2)] border-[rgba(255,255,255,0.3)]' :
-                  'bg-[#5E6AD2] border-[#5E6AD2]'
+                  'bg-[#3DFFA2] border-[#3DFFA2]'
                 }`} />
 
                 {/* Content */}
@@ -177,7 +177,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <GitCommit className="w-4 h-4 text-[rgba(255,255,255,0.4)]" />
-                      <code className="font-mono text-xs text-[#5E6AD2]">{change.commit ? change.commit.slice(0, 7) : 'pending'}</code>
+                      <code className="font-mono text-xs text-[#3DFFA2]">{change.commit ? change.commit.slice(0, 7) : 'pending'}</code>
                       <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
                         AI
                       </span>
@@ -230,14 +230,14 @@ export default function Changes({ serverId }: { serverId?: string }) {
           <div className="flex border border-[rgba(255,255,255,0.08)]">
             <button
               onClick={() => setViewMode('unified')}
-              className={`p-2 transition-colors duration-100 ${viewMode === 'unified' ? 'bg-[rgba(94,106,210,0.2)] text-[#5E6AD2]' : 'text-[rgba(255,255,255,0.4)] hover:text-white'}`}
+              className={`p-2 transition-colors duration-100 ${viewMode === 'unified' ? 'bg-[rgba(61,255,162,0.2)] text-[#3DFFA2]' : 'text-[rgba(255,255,255,0.4)] hover:text-white'}`}
               title="Unified diff"
             >
               <Eye className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('split')}
-              className={`p-2 transition-colors duration-100 ${viewMode === 'split' ? 'bg-[rgba(94,106,210,0.2)] text-[#5E6AD2]' : 'text-[rgba(255,255,255,0.4)] hover:text-white'}`}
+              className={`p-2 transition-colors duration-100 ${viewMode === 'split' ? 'bg-[rgba(61,255,162,0.2)] text-[#3DFFA2]' : 'text-[rgba(255,255,255,0.4)] hover:text-white'}`}
               title="Split diff"
             >
               <Split className="w-4 h-4" />
@@ -258,7 +258,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
             <button
               onClick={handleApplyAll}
               disabled={applyingAll}
-              className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white bg-[#5E6AD2] hover:bg-[#4a55b0] transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white bg-[#3DFFA2] hover:bg-[#36d98c] transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {applyingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
               {applyingAll ? 'Applying…' : 'Apply All'}
@@ -301,7 +301,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <FileDiff className="w-4 h-4 text-[#5E6AD2]" />
+                    <FileDiff className="w-4 h-4 text-[#3DFFA2]" />
                     <code className="font-mono text-xs uppercase tracking-wider text-white">{change.file}</code>
                     {change.commit && (
                       <code className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">

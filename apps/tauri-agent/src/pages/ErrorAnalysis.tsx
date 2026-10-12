@@ -88,7 +88,7 @@ export default function ErrorAnalysis({ serverId }: ErrorAnalysisProps) {
     switch (severity) {
       case 'error': return <XCircle className="w-4 h-4 text-[#ef4444]" />
       case 'warning': return <AlertTriangle className="w-4 h-4 text-[#f59e0b]" />
-      default: return <Info className="w-4 h-4 text-[#5E6AD2]" />
+      default: return <Info className="w-4 h-4 text-[#3DFFA2]" />
     }
   }
 
@@ -96,7 +96,7 @@ export default function ErrorAnalysis({ serverId }: ErrorAnalysisProps) {
     switch (severity) {
       case 'error': return 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)]'
       case 'warning': return 'border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.05)]'
-      default: return 'border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.05)]'
+      default: return 'border-[rgba(61,255,162,0.3)] bg-[rgba(61,255,162,0.05)]'
     }
   }
 
@@ -127,7 +127,7 @@ export default function ErrorAnalysis({ serverId }: ErrorAnalysisProps) {
           value={consoleLog}
           onChange={(e) => setConsoleLog(e.target.value)}
           placeholder="Paste your FiveM console output here…"
-          className="w-full h-48 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] p-3 font-mono text-xs text-[rgba(255,255,255,0.7)] resize-none focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
+          className="w-full h-48 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] p-3 font-mono text-xs text-[rgba(255,255,255,0.7)] resize-none focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
         />
       </div>
 
@@ -135,7 +135,7 @@ export default function ErrorAnalysis({ serverId }: ErrorAnalysisProps) {
       {errors.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-[#5E6AD2]" />
+            <CheckCircle className="w-4 h-4 text-[#3DFFA2]" />
             <span className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)]">
               {errors.length} error{errors.length > 1 ? 's' : ''} found
             </span>
@@ -159,7 +159,7 @@ export default function ErrorAnalysis({ serverId }: ErrorAnalysisProps) {
                   {error.fixCommand && (
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)]">Try:</span>
-                      <code className="font-mono text-xs text-[#5E6AD2] bg-[rgba(94,106,210,0.1)] px-2 py-1">
+                      <code className="font-mono text-xs text-[#3DFFA2] bg-[rgba(94,106,210,0.1)] px-2 py-1">
                         {error.fixCommand}
                       </code>
                     </div>

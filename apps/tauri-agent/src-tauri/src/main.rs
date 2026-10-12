@@ -11,6 +11,7 @@ use commands::{
     filesystem::{list_files_cmd, read_file_cmd, find_server_data_cmd},
     git::{git_init_cmd, git_add_all_cmd, git_commit_cmd, git_rollback_cmd, git_log_cmd, git_checkpoint_cmd},
     agent::{connect_agent_cmd, disconnect_agent_cmd, send_chat_message_cmd, get_agent_state_cmd, set_session_token_cmd, scan_server_resources_cmd},
+    oauth::{start_oauth_server_cmd, stop_oauth_server_cmd},
 };
 use config::AgentState;
 
@@ -111,6 +112,8 @@ fn main() {
             set_session_token_cmd,
             send_chat_message_cmd,
             get_agent_state_cmd,
+            start_oauth_server_cmd,
+            stop_oauth_server_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

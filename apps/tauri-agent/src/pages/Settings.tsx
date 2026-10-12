@@ -69,13 +69,13 @@ export default function Settings() {
     <div className="max-w-4xl space-y-6">
       <div>
         <h2 className="font-mono text-sm uppercase tracking-[0.2em] text-white">Settings</h2>
-        <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-1">Configure your NOX // FiveM experience</p>
+        <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-1">Configure your NOXES // FiveM experience</p>
       </div>
 
       {/* Server */}
       <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Server className="w-4 h-4 text-[#5E6AD2]" />
+          <Server className="w-4 h-4 text-[#3DFFA2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server</h3>
         </div>
         <div className="space-y-3">
@@ -88,7 +88,7 @@ export default function Settings() {
               value={settings.serverDirectory}
               onChange={(e) => setSettings(s => ({ ...s, serverDirectory: e.target.value }))}
               placeholder="C:/FXServer/server-data"
-              className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white focus:outline-none focus:border-[#5E6AD2] transition-colors duration-100"
+              className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
             />
           </div>
           <p className="font-mono text-[10px] text-[rgba(255,255,255,0.35)] leading-relaxed">
@@ -100,7 +100,7 @@ export default function Settings() {
       {/* Behavior */}
       <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-[#5E6AD2]" />
+          <Shield className="w-4 h-4 text-[#3DFFA2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Behavior</h3>
         </div>
         <div className="space-y-3">
@@ -108,13 +108,13 @@ export default function Settings() {
             <div>
               <span className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)]">Auto-connect on launch</span>
               <p className="font-sans text-xs text-[rgba(255,255,255,0.35)] mt-0.5">
-                Connect the agent to your last paired server when NOX starts.
+                Connect the agent to your last paired server when NOXES starts.
               </p>
             </div>
             <button
               onClick={() => setSettings(s => ({ ...s, autoConnect: !s.autoConnect }))}
               aria-label="Toggle auto-connect on launch"
-              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.autoConnect ? 'bg-[#5E6AD2]' : 'bg-[rgba(255,255,255,0.15)]'}`}
+              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.autoConnect ? 'bg-[#3DFFA2]' : 'bg-[rgba(61,255,162,0.15)]'}`}
             >
               <div className={`w-3 h-3 bg-white transition-transform duration-100 ${settings.autoConnect ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>

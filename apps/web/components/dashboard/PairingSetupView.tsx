@@ -47,7 +47,7 @@ export function PairingSetupView({
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const res = await fetch('/dist/NOX-Setup.exe', { method: 'HEAD' });
+      const res = await fetch('/dist/NOXES-Setup.exe', { method: 'HEAD' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const a = document.createElement('a');
       a.href = '/dist/NOX-Setup.exe';
@@ -118,7 +118,7 @@ export function PairingSetupView({
             ) : (
               <Download className="w-3.5 h-3.5" />
             )}
-            {downloading ? 'Checking…' : 'Download NOX-Setup.exe'}
+            {downloading ? 'Checking…' : 'Download NOXES-Setup.exe'}
           </button>
         )}
       </div>

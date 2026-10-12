@@ -46,6 +46,7 @@ if (config.nodeEnv === 'production') {
     process.exit(1);
   }
 
+  // Additional production-only checks
   if (!config.jwtSecret) {
     console.error('CRITICAL: JWT_SECRET must be set in production');
     process.exit(1);
@@ -56,6 +57,7 @@ if (config.nodeEnv === 'production') {
     process.exit(1);
   }
 
+  // Deny anonymous access in production unless explicitly allowed
   if (process.env.AUTH_ALLOW_ANON !== 'true' && process.env.AUTH_ALLOW_ANON !== '1') {
     console.log('auth: Anonymous access disabled (AUTH_ALLOW_ANON not set)');
   }
