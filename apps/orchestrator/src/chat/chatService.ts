@@ -260,18 +260,24 @@ async function handleToolCall(gateway: AgentGateway, serverId: string, threadId:
     return { error: `Agent is not connected for server ${serverId}. Pair your server first to enable file operations.`, toolName, status: 'disconnected' };
   }
 
+  // Add argument validation based on tool type
   switch (toolName) {
     case 'read_remote_file': {
       const safe = sanitizeRelativePath(String(args.path ?? ''));
       if (!safe) return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
-      return gateway.sendCommand(serverId, 'fs.read', { path: safe }, 30000);
+      // Add reasonable size limit for file reads (100KB)
+      return gateway.sendCommand(serverId, 'fs.read', { path: safe, maxBytes: 102400 }, 30000);
     }
     case 'list_remote_directory': {
       const safe = sanitizeRelativePath(String(args.path ?? ''));
       if (!safe) return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
-      return gateway.sendCommand(serverId, 'fs.list', { path: safe, recursive: false }, 30000);
+      // Limit maxEntries to prevent excessive memory usage
+      return gateway.sendCommand(serverId, 'fs.list', { path: safe, recursive: false, maxEntries: 1000 }, 30000);
     }
     case 'get_resource_index': {
+      if (typeof args.resourceName !== 'string' || args.resourceName.length > 100) {
+        return { error: 'Invalid resource name', toolName, status: 'rejected' };
+      }
       const resource = await prisma.resourceIndex.findFirst({ where: { serverId, resourceName: args.resourceName } });
       if (!resource) throw new Error(`Resource not found: ${args.resourceName}`);
       return { name: resource.resourceName, path: resource.relativePath, dependencies: resource.dependencies as string[], files: resource.files as string[] };
@@ -281,7 +287,15 @@ async function handleToolCall(gateway: AgentGateway, serverId: string, threadId:
       if (!safe) {
         return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
       }
-      const currentFile = await gateway.sendCommand(serverId, 'fs.read', { path: safe }, 30000);
+      // Validate path length
+      if (safe.length > 1024) {
+        return { error: 'Path too long', toolName, status: 'rejected' };
+      }
+      // Limit newContent size to prevent excessive memory usage
+      if (typeof args.newContent !== 'string' || args.newContent.length > 1024 * 1024) { // 1MB limit
+        return { error: 'Content too large', toolName, status: 'rejected' };
+      }
+      const currentFile = await gateway.sendCommand(serverId, 'fs.read', { path: safe, maxBytes: 102400 }, 30000);
       const change = await prisma.change.create({
         data: {
           serverId,

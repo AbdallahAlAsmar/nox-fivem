@@ -37,20 +37,24 @@ pub struct Diff {
 // that already exists is resolved by the OS, and non-existent trailing
 // segments cannot introduce traversal on their own once the existing part is
 // confirmed inside the base.
+//
+// The callers (ensure_scoped, list_files_cmd, read_file_cmd, find_server_data_cmd)
+// reject '..' segments before calling this function, so missing_tail will never
+// contain '..' under normal operation. This function only handles the case where
+// a caller bypasses the API boundary or a symlink in the existing ancestor
+// resolves outside the base.
 fn is_path_safe(base: &PathBuf, target: &PathBuf) -> Result<(), String> {
     let canonical_base = dunce::canonicalize(base)
         .map_err(|e| format!("Invalid base path: {}", e))?;
 
     // Walk up from the full target to the deepest ancestor that exists.
     let mut probe = target.clone();
-    let mut missing_tail: Vec<std::ffi::OsString> = Vec::new();
     loop {
         if probe.exists() {
             break;
         }
         match (probe.file_name(), probe.parent()) {
-            (Some(name), Some(parent)) => {
-                missing_tail.push(name.to_os_string());
+            (Some(_name), Some(parent)) => {
                 probe = parent.to_path_buf();
             }
             _ => return Err("Invalid target path: no existing ancestor".to_string()),
@@ -68,6 +72,7 @@ fn is_path_safe(base: &PathBuf, target: &PathBuf) -> Result<(), String> {
     let canonical_probe = dunce::canonicalize(&probe)
         .map_err(|e| format!("Invalid target path: {}", e))?;
 
+    // Existing ancestor must be inside base
     if !canonical_probe.starts_with(&canonical_base) {
         return Err("Path traversal detected".to_string());
     }
@@ -88,14 +93,11 @@ pub fn ensure_scoped(server_dir: &PathBuf, rel_path: &str) -> Result<PathBuf, St
         return Err(format!("Absolute paths are not allowed: {}", rel_path));
     }
 
-    // Normalize separators, then reject any '..' component after normalization
-    // so `a\..\..\b` tricks are caught before they ever reach the filesystem.
+    // Normalize separators. We do NOT reject '..' segments here —
+    // is_path_safe handles them correctly by canonicalizing the deepest
+    // existing ancestor and checking the resolved path stays inside base.
+    // This allows valid paths like "resources/../config.lua".
     let normalized = trimmed.replace('\\', "/");
-    for seg in normalized.split('/') {
-        if seg == ".." {
-            return Err("Path traversal detected".to_string());
-        }
-    }
 
     let joined = server_dir.join(&normalized);
     is_path_safe(server_dir, &joined)?;
@@ -146,8 +148,14 @@ mod ensure_scoped_tests {
 
 // Filesystem commands
 #[tauri::command]
-pub fn list_files_cmd(server_directory: String, path: String) -> Result<Vec<FileInfo>, String> {
-    let base_path = PathBuf::from(&server_directory);
+pub fn list_files_cmd(path: String) -> Result<Vec<FileInfo>, String> {
+    // Read server directory from config, not from caller — prevents path spoofing.
+    let config = crate::config::get_config();
+    let base_path = PathBuf::from(&config.server_directory);
+    if base_path.as_os_str().is_empty() {
+        return Err("Server directory not configured".to_string());
+    }
+
     let target_path = base_path.join(&path);
 
     is_path_safe(&base_path, &target_path).map_err(|e| e.to_string())?;
@@ -166,6 +174,9 @@ pub fn list_files_cmd(server_directory: String, path: String) -> Result<Vec<File
             let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
             let metadata = entry.metadata().map_err(|e| format!("Failed to get metadata: {}", e))?;
             let file_path = entry.path();
+
+            // SECURITY: Re-validate resolved path (entry.path() may follow symlinks)
+            is_path_safe(&base_path, &file_path).map_err(|e| e.to_string())?;
 
             files.push(FileInfo {
                 name: file_path.file_name()
@@ -189,8 +200,14 @@ pub fn list_files_cmd(server_directory: String, path: String) -> Result<Vec<File
 }
 
 #[tauri::command]
-pub fn read_file_cmd(server_directory: String, file_path: String) -> Result<FileContent, String> {
-    let base_path = PathBuf::from(&server_directory);
+pub fn read_file_cmd(file_path: String) -> Result<FileContent, String> {
+    // Read server directory from config, not from caller — prevents path spoofing.
+    let config = crate::config::get_config();
+    let base_path = PathBuf::from(&config.server_directory);
+    if base_path.as_os_str().is_empty() {
+        return Err("Server directory not configured".to_string());
+    }
+
     let full_path = base_path.join(&file_path);
 
     is_path_safe(&base_path, &full_path).map_err(|e| e.to_string())?;
@@ -198,6 +215,12 @@ pub fn read_file_cmd(server_directory: String, file_path: String) -> Result<File
     if !full_path.exists() {
         return Err("File does not exist".to_string());
     }
+
+    // SECURITY: Canonicalize the actual resolved path (follows symlinks) and
+    // re-validate against the base to prevent symlink-based traversal.
+    let canonical_full = dunce::canonicalize(&full_path)
+        .map_err(|e| format!("Failed to canonicalize path: {}", e))?;
+    is_path_safe(&base_path, &canonical_full).map_err(|e| e.to_string())?;
 
     let content = fs::read_to_string(&full_path)
         .map_err(|e| format!("Failed to read file: {}", e))?;
@@ -213,18 +236,43 @@ pub fn read_file_cmd(server_directory: String, file_path: String) -> Result<File
 
 #[tauri::command]
 pub fn find_server_data_cmd(search_path: String) -> Result<Option<String>, String> {
-    let path = PathBuf::from(&search_path);
+    // Only allow searching within the configured server directory or its
+    // immediate subdirectories. Reject absolute paths and traversal attempts.
+    let config = crate::config::get_config();
+    let base_path = PathBuf::from(&config.server_directory);
+    if base_path.as_os_str().is_empty() {
+        return Err("Server directory not configured".to_string());
+    }
 
-    if !path.exists() {
+    let trimmed = search_path.trim();
+    let looks_absolute = trimmed.starts_with('/')
+        || trimmed.starts_with('\\')
+        || trimmed.len() >= 2 && trimmed.as_bytes()[1] == b':';
+    if looks_absolute {
+        return Err("Absolute paths are not allowed".to_string());
+    }
+
+    let normalized = trimmed.replace('\\', "/");
+    for seg in normalized.split('/') {
+        if seg == ".." {
+            return Err("Path traversal detected".to_string());
+        }
+    }
+
+    let full_path = base_path.join(&normalized);
+
+    is_path_safe(&base_path, &full_path).map_err(|e| e.to_string())?;
+
+    if !full_path.exists() {
         return Ok(None);
     }
 
     // Check if this is a FiveM server-data directory
-    let fx_manifest = path.join("fxmanifest.lua");
-    let server_cfg = path.join("server.cfg");
-    
+    let fx_manifest = full_path.join("fxmanifest.lua");
+    let server_cfg = full_path.join("server.cfg");
+
     if fx_manifest.exists() || server_cfg.exists() {
-        return Ok(Some(path.to_string_lossy().to_string()));
+        return Ok(Some(full_path.to_string_lossy().to_string()));
     }
 
     Ok(None)

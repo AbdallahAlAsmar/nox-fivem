@@ -4,16 +4,6 @@ import React, { useEffect, useState, createContext, useMemo } from 'react';
 
 type Theme = 'dark' | 'light';
 
-function getInitialTheme(): Theme {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('nox-theme') as Theme | null;
-    if (saved === 'dark' || saved === 'light') return saved;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    if (mediaQuery.matches) return 'dark';
-  }
-  return 'dark';
-}
-
 const ThemeContext = createContext<{
   theme: Theme;
   toggleTheme: () => void;
@@ -21,10 +11,22 @@ const ThemeContext = createContext<{
 }>({ theme: 'dark', toggleTheme: () => {}, mounted: false });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  // Keep the server and first client render identical; browser preferences are
+  // applied after hydration to avoid a theme hydration mismatch.
+  const [theme, setTheme] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('nox-theme');
+      if (saved === 'dark' || saved === 'light') {
+        setTheme(saved);
+      } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        setTheme('light');
+      }
+    } catch {
+      // Storage can be unavailable in restricted browser contexts.
+    }
     setMounted(true);
     document.documentElement.classList.toggle('dark', theme === 'dark');
     document.documentElement.classList.toggle('light', theme === 'light');
@@ -33,7 +35,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     const next: Theme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    localStorage.setItem('nox-theme', next);
+    try {
+      localStorage.setItem('nox-theme', next);
+    } catch {
+      // Theme still changes for this session when storage is unavailable.
+    }
     document.documentElement.classList.toggle('dark', next === 'dark');
     document.documentElement.classList.toggle('light', next === 'light');
   };

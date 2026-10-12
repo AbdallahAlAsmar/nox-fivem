@@ -34,6 +34,11 @@ pub struct Scanner {
 /// make the scan run unbounded.
 const MAX_RESOURCES: usize = 500;
 
+/// Maximum recursion depth for category folders (`[category]/`). FiveM conventions
+/// use at most one level of bracketed folders (e.g., `[standalone]/resource/`).
+/// This prevents stack overflow from maliciously deep nesting.
+const MAX_SCAN_DEPTH: usize = 3;
+
 impl Scanner {
     pub fn new(server_path: PathBuf) -> Self {
         Self { server_path }
@@ -63,7 +68,7 @@ impl Scanner {
             return Ok(resources);
         }
 
-        self.scan_dir_children(&resources_dir, &mut resources)?;
+        self.scan_dir_children(&resources_dir, &mut resources, 0)?;
         Ok(resources)
     }
 
@@ -74,11 +79,49 @@ impl Scanner {
     ///
     /// A single unreadable manifest skips that resource (logged) instead of
     /// aborting the whole scan.
+    ///
+    /// `depth` tracks recursion depth into bracketed category folders to prevent
+    /// infinite recursion on maliciously nested directories.
     fn scan_dir_children(
         &self,
         dir: &std::path::Path,
         resources: &mut Vec<ResourceInfo>,
+        depth: usize,
     ) -> Result<(), String> {
+        // Prevent unbounded recursion
+        if depth > MAX_SCAN_DEPTH {
+            return Ok(());
+        }
+
+        let dir_entries = fs::read_dir(dir)
+            .map_err(|e| format!("Failed to read {}: {}", dir.display(), e))?;
+
+        for entry in dir_entries.flatten() {
+            if resources.len() >= MAX_RESOURCES {
+                break;
+            }
+            let dir_path = entry.path();
+
+            if !dir_path.is_dir() {
+                continue;
+            }
+
+            let resource_name = dir_path.file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+
+            let manifest_path = self.find_manifest(&dir_path);
+            let manifest_path = match manifest_path {
+                Some(p) => p,
+                None => {
+                    // No manifest directly inside. If this is a bracketed
+                    // category folder ([category]/), look one level deeper.
+                    if resource_name.starts_with('[') && resource_name.ends_with(']') {
+                        self.scan_dir_children(&dir_path, resources, depth + 1)?;
+                    }
+                    continue;
+                }
+            };
         let dir_entries = fs::read_dir(dir)
             .map_err(|e| format!("Failed to read {}: {}", dir.display(), e))?;
 

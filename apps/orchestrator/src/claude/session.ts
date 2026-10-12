@@ -4,7 +4,7 @@ import { estimateCostUsd } from './pricing';
 import type { ChatMessage, ResourceIndex } from '@prisma/client';
 
 const openai = new OpenAI({
-  apiKey: process.env.OMNIROUTE_API_KEY || 'omni-key',
+  apiKey: process.env.OMNI_KEY,
   baseURL: process.env.OMNIROUTE_BASE_URL || 'http://localhost:20128/v1',
 });
 

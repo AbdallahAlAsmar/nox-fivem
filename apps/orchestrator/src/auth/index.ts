@@ -63,7 +63,10 @@ function isPublicPath(method: string, pathname: string): boolean {
  */
 export function authAllowAnon(): boolean {
   const raw = process.env.AUTH_ALLOW_ANON;
-  if (raw === undefined || raw === '') return true;
+  if (raw === undefined || raw === '') {
+    // Safe default: only allow anon in non-production (opt-in for dev).
+    return process.env.NODE_ENV !== 'production';
+  }
   return raw === 'true' || raw === '1';
 }
 

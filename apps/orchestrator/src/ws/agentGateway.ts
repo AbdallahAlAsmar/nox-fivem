@@ -36,8 +36,8 @@ interface PendingRequest {
 function constantTimeHashCompare(aHex: string, bHex: string): boolean {
   const a = Buffer.from(aHex, 'hex');
   const b = Buffer.from(bHex, 'hex');
-  // Guard length mismatch first — timingSafeEqual throws on unequal lengths.
-  if (a.length !== b.length || a.length === 0) return false;
+  // Use constant-time comparison for both length and content
+  if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
 
@@ -146,9 +146,12 @@ export class AgentGateway {
         // which this connection still owns the slot for).
         for (const [requestId, pending] of this.pendingRequests) {
           if (pending.serverId !== connection.serverId) continue;
-          clearTimeout(pending.timeout);
-          pending.reject(new Error('Agent disconnected'));
-          this.pendingRequests.delete(requestId);
+          // Check if request is still pending before rejecting
+          if (this.pendingRequests.has(requestId)) {
+            clearTimeout(pending.timeout);
+            pending.reject(new Error('Agent disconnected'));
+            this.pendingRequests.delete(requestId);
+          }
         }
 
         // Update server status to offline

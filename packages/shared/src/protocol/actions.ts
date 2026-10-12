@@ -101,6 +101,18 @@ export const FsReadResultSchema = z.object({
   truncated: z.boolean().optional(),
 });
 
+export const FsWriteArgsSchema = z.object({
+  path: z.string(),
+  content: z.string(),
+  expectedSha256: z.string().optional(),
+});
+
+export const FsWriteResultSchema = z.object({
+  path: z.string(),
+  success: z.boolean(),
+  sha256: z.string(),
+});
+
 export const FsApplyPatchArgsSchema = z.object({
   // Change.id is minted by Prisma as a cuid (@default(cuid()) on the Change
   // model), while some clients/fixtures mint UUIDs. changeId is an opaque
@@ -291,6 +303,8 @@ export type FsListArgs = z.infer<typeof FsListArgsSchema>;
 export type FsListResult = z.infer<typeof FsListResultSchema>;
 export type FsReadArgs = z.infer<typeof FsReadArgsSchema>;
 export type FsReadResult = z.infer<typeof FsReadResultSchema>;
+export type FsWriteArgs = z.infer<typeof FsWriteArgsSchema>;
+export type FsWriteResult = z.infer<typeof FsWriteResultSchema>;
 export type FsApplyPatchArgs = z.infer<typeof FsApplyPatchArgsSchema>;
 export type FsApplyPatchResult = z.infer<typeof FsApplyPatchResultSchema>;
 export type GitStatusResult = z.infer<typeof GitStatusResultSchema>;

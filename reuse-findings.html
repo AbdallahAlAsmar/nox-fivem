@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Security Review - Reuse Findings</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+  h1 { font-size: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem; }
+  .finding { border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; margin: 1rem 0; background: #fafafa; }
+  .finding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+  .finding-file { font-family: monospace; font-size: 0.9rem; color: #555; }
+  .finding-line { font-family: monospace; font-size: 0.85rem; background: #eee; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  .finding-summary { font-weight: 600; margin: 0.5rem 0; }
+  .finding-scenario { color: #666; font-size: 0.95rem; }
+  .severity-high { border-left: 4px solid #dc2626; }
+  .severity-medium { border-left: 4px solid #f59e0b; }
+  .severity-low { border-left: 4px solid #3b82f6; }
+  code { background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>Reuse Findings — Security Fix Diff</h1>
+
+<div class="finding severity-high">
+  <div class="finding-header">
+    <span class="finding-file">apps/tauri-agent/src-tauri/src/commands/filesystem.rs</span>
+    <span class="finding-line">lines 45–109</span>
+  </div>
+  <div class="finding-summary">Path traversal protection (`is_path_safe`) re-implements logic that exists in Node agent as `validatePath` but with different approach</div>
+  <div class="finding-scenario">
+    <strong>Duplication:</strong> Two agents implement path safety independently with different algorithms. Tauri uses canonicalization + depth counting against <code>..</code> segments in missing tail; Node agent uses <code>path.resolve(base, requested).startsWith(base)</code>. Both solve the same problem but neither reuses a shared utility. Any fix/improvement must be applied in two places. <strong>Cost:</strong> Maintenance burden ×2, risk of drift, no single source of truth for path safety.
+  </div>
+</div>
+
+<div class="finding severity-medium">
+  <div class="finding-header">
+    <span class="finding-file">apps/orchestrator/src/auth/index.ts</span>
+    <span class="finding-line">lines 64–71</span>
+  </div>
+  <div class="finding-summary"><code>authAllowAnon()</code> reads <code>process.env.NODE_ENV</code> directly instead of using centralized <code>config.nodeEnv</code></div>
+  <div class="finding-scenario">
+    <strong>Duplication:</strong> The orchestrator config (<code>apps/orchestrator/src/config/index.ts</code>) already parses and exports <code>nodeEnv</code> from <code>NODE_ENV</code> (line 19). The auth module re-reads the same env var directly. <strong>Cost:</strong> Two places read <code>NODE_ENV</code>; if config parsing changes (e.g., default, validation), auth logic silently diverges. Should import <code>config.nodeEnv</code> instead.
+  </div>
+</div>
+
+<div class="finding severity-medium">
+  <div class="finding-header">
+    <span class="finding-file">apps/orchestrator/src/config/index.ts</span>
+    <span class="finding-line">lines 23–29</span>
+  </div>
+  <div class="finding-summary">JWT_SECRET validation via IIFE duplicates the zod schema's <code>z.string().min(32)</code> constraint</div>
+  <div class="finding-scenario">
+    <strong>Duplication:</strong> The <code>configSchema</code> (line 8) defines <code>jwtSecret: z.string().min(32)</code>. The runtime config then has an IIFE (lines 23–29) that throws if <code>!secret || secret.length < 32</code>. The schema validation runs again at line 39–42 in production. <strong>Cost:</strong> Same rule encoded in two places (zod schema + imperative IIFE). If min length changes, both must be updated. Could use <code>configSchema.shape.jwtSecret._def.checks</code> or validate once via schema at startup.
+  </div>
+</div>
+
+<div class="finding severity-low">
+  <div class="finding-header">
+    <span class="finding-file">apps/orchestrator/src/auth/index.ts</span>
+    <span class="finding-line">line 68</span>
+  </div>
+  <div class="finding-summary">Anonymous user object (<code>ANONYMOUS_USER</code>) has hardcoded <code>dev-org</code> orgId not sourced from config</div>
+  <div class="finding-scenario">
+    <strong>Duplication:</strong> The <code>dev-org</code> string is hardcoded in auth (line 30) while other default org identifiers may exist elsewhere. <strong>Cost:</strong> If dev org naming changes, auth module won't reflect it. Could reference a shared constant or config value.
+  </div>
+</div>
+
+<div class="finding severity-high">
+  <div class="finding-header">
+    <span class="finding-file">apps/tauri-agent/src-tauri/src/commands/filesystem.rs</span>
+    <span class="finding-line">lines 114–136</span>
+  </div>
+  <div class="finding-summary"><code>ensure_scoped</code> does its own <code>..</code> segment check before calling <code>is_path_safe</code>, duplicating traversal logic</div>
+  <div class="finding-scenario">
+    <strong>Duplication:</strong> <code>ensure_scoped</code> (lines 126–131) explicitly rejects any <code>..</code> segment in the normalized path <em>before</em> calling <code>is_path_safe</code>, which then <em>again</em> counts <code>..</code> in the missing tail (lines 100–102). The same traversal check runs twice in sequence. <strong>Cost:</strong> Wasted computation, confusing control flow, two places to update if traversal rules change.
+  </div>
+</div>
+
+<div class="finding severity-low">
+  <div class="finding-header">
+    <span class="finding-file">apps/orchestrator/src/config/index.ts</span>
+    <span class="finding-line">lines 31–34</span>
+  </div>
+  <div class="finding-summary"><code>corsOrigins</code> parsing logic duplicates default list from schema</div>
+  <div class="finding-scenario">
+    <strong>Duplication:</strong> The zod schema (lines 10–15) defines default CORS origins. The runtime config (lines 31–34) repeats the same default list as a fallback string. <strong>Cost:</strong> Two copies of the same default array; must stay in sync manually.
+  </div>
+</div>
+
+</body>
+</html>

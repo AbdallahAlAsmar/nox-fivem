@@ -31,7 +31,7 @@ export default function Hero() {
         {/* Copy */}
         <div>
           <motion.p
-            initial={{ opacity: 0, y: 12 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="font-mono text-xs uppercase tracking-[0.25em] text-white/40 mb-6"
@@ -43,7 +43,7 @@ export default function Hero() {
             {['YOUR SERVER.', 'YOUR RULES.'].map((line, i) => (
               <motion.span
                 key={line}
-                initial={{ opacity: 0, y: 24 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
                 className="block"
@@ -54,7 +54,7 @@ export default function Hero() {
           </h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 16 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="font-sans text-base md:text-lg text-white/60 mt-6 max-w-md leading-relaxed"
@@ -65,7 +65,7 @@ export default function Hero() {
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="flex flex-wrap gap-4 mt-10"
@@ -79,7 +79,7 @@ export default function Hero() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.8 }}
             className="flex items-center gap-3 mt-10 font-mono text-[11px] uppercase tracking-wider text-white/30"
@@ -91,7 +91,7 @@ export default function Hero() {
 
         {/* Mark */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.94 }}
+          initial={false}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           className="hidden lg:block h-[520px]"
@@ -102,7 +102,7 @@ export default function Hero() {
 
       {/* Scroll cue */}
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={false}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.4 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.3em] text-white/25"
