@@ -2,44 +2,79 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
+
+const LINKS = [
+  { href: '/projects', label: 'Projects' },
+  { href: '/#demo', label: 'How it works' },
+  { href: '/#about', label: 'About NOXES' },
+];
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   return (
-    <motion.header
-      initial={false}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-200 ${
-        scrolled ? 'bg-[#0F0F14]/95 border-b border-[rgba(255,255,255,0.08)]' : 'bg-transparent'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-6 md:px-12 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <img src="/noxes-logo.svg" alt="NOXES" className="h-7" />
+    <header className={`brand-nav fixed inset-x-0 top-0 z-50 border-b ${scrolled ? 'is-scrolled' : ''}`}>
+      <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-5 md:px-12">
+        <Link href="/" className="inline-flex items-center rounded-md" aria-label="NOXES home">
+          <img src="/brand/noxes-logo.svg" alt="NOXES" className="h-8 w-auto" />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8 font-mono text-xs uppercase tracking-[0.15em] text-white/50">
-          <a href="#demo" className="hover:text-white transition-colors">Demo</a>
-          <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-          <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+        <nav className="hidden items-center gap-8 md:flex" aria-label="Main navigation">
+          {LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="brand-link text-sm">{link.label}</Link>
+          ))}
         </nav>
 
-        <Link
-          href="/sign-up"
-          className="font-mono text-xs uppercase tracking-[0.15em] bg-white text-[#0F0F14] px-4 py-2 hover:opacity-85 transition-opacity"
+        <div className="hidden items-center gap-5 md:flex">
+          <Link href="/sign-in" className="brand-link text-sm">Sign in</Link>
+          <Link href="/sign-up" className="brand-button-primary min-h-10 px-4 py-2 text-sm">
+            Get started <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white md:hidden"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-navigation"
+          onClick={() => setMenuOpen((open) => !open)}
         >
-          Get started
-        </Link>
+          {menuOpen ? <X aria-hidden="true" className="h-5 w-5" /> : <Menu aria-hidden="true" className="h-5 w-5" />}
+        </button>
       </div>
-    </motion.header>
+
+      {menuOpen && (
+        <nav id="mobile-navigation" className="border-t border-white/10 bg-[#101426]/[0.98] px-5 py-4 shadow-2xl backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
+          <div className="mx-auto flex max-w-7xl flex-col gap-1">
+            {LINKS.map((link) => (
+              <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-3 text-sm text-[#D8DCEF] hover:bg-white/[0.06]">
+                {link.label}
+              </Link>
+            ))}
+            <div className="mt-2 flex gap-3 border-t border-white/10 pt-4">
+              <Link href="/sign-in" onClick={() => setMenuOpen(false)} className="brand-button-secondary flex-1">Sign in</Link>
+              <Link href="/sign-up" onClick={() => setMenuOpen(false)} className="brand-button-primary flex-1">Get started</Link>
+            </div>
+          </div>
+        </nav>
+      )}
+    </header>
   );
 }

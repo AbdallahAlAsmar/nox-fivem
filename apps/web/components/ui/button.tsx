@@ -7,13 +7,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-white text-[#0F0F14] hover:opacity-85',
+        default: 'bg-white text-[#101426] hover:opacity-85',
         destructive: 'bg-[#ef4444] text-white hover:opacity-85',
         outline: 'border border-[rgba(255,255,255,0.2)] bg-transparent text-white hover:border-[rgba(255,255,255,0.4)]',
-        secondary: 'bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.04)]',
+        secondary: 'bg-[#20294A] border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.04)]',
         ghost: 'bg-transparent text-[rgba(255,255,255,0.6)] hover:text-white hover:bg-[rgba(255,255,255,0.04)]',
-        accent: 'bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)] text-[#3DFFA2] hover:bg-[rgba(61,255,162,0.2)]',
-        link: 'text-[#3DFFA2] underline-offset-4 hover:underline',
+        accent: 'bg-[rgba(91, 114, 242,0.15)] border border-[rgba(91, 114, 242,0.3)] text-[#5B72F2] hover:bg-[rgba(91, 114, 242,0.2)]',
+        link: 'text-[#5B72F2] underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-10 px-4 py-2',

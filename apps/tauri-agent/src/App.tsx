@@ -84,7 +84,7 @@ function AppContent() {
   return (
     <>
       {!isLoaded ? (
-        <div className="min-h-screen bg-[#0F0F14] flex items-center justify-center">
+        <div className="min-h-screen bg-[#101426] flex items-center justify-center">
           <div className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.3)]">
             Loading Clerk... (isLoaded: {String(isLoaded)}, isSignedIn: {String(isSignedIn)})
           </div>

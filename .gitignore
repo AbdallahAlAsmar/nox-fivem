@@ -7,7 +7,7 @@ out/
 dist/
 build/
 .turbo/
-
+.pnpm-store/
 # Environment
 .env
 .env.local

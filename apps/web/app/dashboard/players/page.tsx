@@ -75,7 +75,7 @@ export default function PlayersPage() {
 
   return (
     <ErrorBoundary>
-      <div className="flex-1 overflow-y-auto bg-[#0a0a0f] p-6">
+      <div className="flex-1 overflow-y-auto bg-[#0B1020] p-6">
         {/* Toast notifications */}
         <div className="fixed top-4 right-4 z-50 space-y-2">
           <AnimatePresence>
@@ -84,7 +84,7 @@ export default function PlayersPage() {
                 initial={{ opacity: 0, y: -12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
-                className="font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(61,255,162,0.4)] text-white"
+                className="font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#20294A] border border-[rgba(91, 114, 242,0.4)] text-white"
               >
                 {toastMsg}
               </motion.div>
@@ -121,7 +121,7 @@ export default function PlayersPage() {
               <select
                 value={selectedServer}
                 onChange={(e) => { setSelectedServer(e.target.value); setSearch(''); setFilterBanned('all'); }}
-                className="w-full appearance-none bg-[#16161E] border border-white/10 text-white font-mono text-xs uppercase tracking-wider px-4 py-2.5 pr-8 focus:outline-none focus:border-[#3DFFA2] transition-colors"
+                className="w-full appearance-none bg-[#20294A] border border-white/10 text-white font-mono text-xs uppercase tracking-wider px-4 py-2.5 pr-8 focus:outline-none focus:border-[#5B72F2] transition-colors"
               >
                 <option value="">Select a server...</option>
                 {servers?.map((s: any) => (
@@ -155,7 +155,7 @@ export default function PlayersPage() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search by name or ID..."
-                    className="w-full pl-9 pr-4 py-2 bg-transparent border border-white/10 text-sm text-white font-sans placeholder:text-white/25 focus:outline-none focus:border-[#3DFFA2] transition-colors"
+                    className="w-full pl-9 pr-4 py-2 bg-transparent border border-white/10 text-sm text-white font-sans placeholder:text-white/25 focus:outline-none focus:border-[#5B72F2] transition-colors"
                   />
                 </div>
                 <div className="flex gap-1">
@@ -165,7 +165,7 @@ export default function PlayersPage() {
                       onClick={() => setFilterBanned(f)}
                       className={`font-mono text-[10px] uppercase tracking-wider px-3 py-2 transition-colors ${
                         filterBanned === f
-                          ? 'bg-[rgba(61,255,162,0.15)] text-[#3DFFA2]'
+                          ? 'bg-[rgba(91, 114, 242,0.15)] text-[#5B72F2]'
                           : 'text-white/40 hover:text-white hover:bg-white/5'
                       }`}
                     >
@@ -179,7 +179,7 @@ export default function PlayersPage() {
               {loadingPlayers ? (
                 <div className="space-y-1">
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="bg-[#16161E] px-5 py-3.5 flex items-center gap-4">
+                    <div key={i} className="bg-[#20294A] px-5 py-3.5 flex items-center gap-4">
                       <div className="w-8 h-8 bg-white/5 rounded-full animate-pulse flex-shrink-0" />
                       <div className="flex-1 space-y-2">
                         <div className="w-32 h-3 bg-white/5 rounded animate-pulse" />
@@ -190,7 +190,7 @@ export default function PlayersPage() {
                   ))}
                 </div>
               ) : filtered.length === 0 ? (
-                <div className="text-center py-16 bg-[#16161E]">
+                <div className="text-center py-16 bg-[#20294A]">
                   <Users className="w-10 h-10 text-white/20 mx-auto mb-4" />
                   <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">
                     {search ? 'No matches' : 'No players yet'}
@@ -218,13 +218,13 @@ export default function PlayersPage() {
           )}
 
           {!selectedServer && !loadingServers && serversError && (
-            <div className="text-center py-16 bg-[#16161E]">
+            <div className="text-center py-16 bg-[#20294A]">
               <AlertCircle className="w-10 h-10 text-white/20 mx-auto mb-4" />
               <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white/60 mb-2">Failed to load servers</h3>
               <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
               <button
                 onClick={() => mutateServers()}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#5B72F2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4962E4] transition-colors"
               >
                 Retry
               </button>
@@ -232,7 +232,7 @@ export default function PlayersPage() {
           )}
 
           {!selectedServer && !loadingServers && !serversError && (
-            <div className="text-center py-20 bg-[#16161E]">
+            <div className="text-center py-20 bg-[#20294A]">
               <Users className="w-12 h-12 text-white/15 mx-auto mb-4" />
               <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">Select a server</h3>
               <p className="font-sans text-xs text-white/40 max-w-sm mx-auto leading-[1.6]">
@@ -244,7 +244,7 @@ export default function PlayersPage() {
           {loadingServers && (
             <div className="space-y-1">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="bg-[#16161E] px-5 py-3.5 flex items-center gap-4">
+                <div key={i} className="bg-[#20294A] px-5 py-3.5 flex items-center gap-4">
                   <div className="w-8 h-8 bg-white/5 rounded-full animate-pulse flex-shrink-0" />
                   <div className="flex-1 space-y-2">
                     <div className="w-32 h-3 bg-white/5 rounded animate-pulse" />
@@ -257,13 +257,13 @@ export default function PlayersPage() {
           )}
 
           {selectedServer && !loadingPlayers && !players && (
-            <div className="text-center py-16 bg-[#16161E]">
+            <div className="text-center py-16 bg-[#20294A]">
               <AlertCircle className="w-10 h-10 text-white/20 mx-auto mb-4" />
               <h3 className="font-mono text-sm text-white/60 mb-2">Failed to load players</h3>
               <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
               <button
                 onClick={() => mutate()}
-                className="flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-[#5B72F2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4962E4] transition-colors"
               >
                 <span className="w-3.5 h-3.5">↻</span>
                 Retry
@@ -297,10 +297,10 @@ function PlayerRow({
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-[#16161E] transition-colors duration-100 ${
+      className={`bg-[#20294A] transition-colors duration-100 ${
         player.isBanned
           ? 'border-l-2 border-l-[#ef4444]'
-          : 'border-l-2 border-l-[rgba(61,255,162,0.5)] hover:border-l-[#3DFFA2]'
+          : 'border-l-2 border-l-[rgba(91, 114, 242,0.5)] hover:border-l-[#5B72F2]'
       }`}
     >
       <div className="flex items-center gap-4 px-5 py-3.5">
@@ -366,7 +366,7 @@ function PlayerRow({
             value={banReason}
             onChange={(e) => onBanReasonChange(e.target.value)}
             placeholder="Reason for ban..."
-            className="w-full bg-[#0a0a0f] border border-white/10 px-3 py-2 text-white font-mono text-xs placeholder:text-white/20 focus:outline-none focus:border-[#ef4444]"
+            className="w-full bg-[#0B1020] border border-white/10 px-3 py-2 text-white font-mono text-xs placeholder:text-white/20 focus:outline-none focus:border-[#ef4444]"
           />
           <div className="flex gap-2 mt-2">
             <button

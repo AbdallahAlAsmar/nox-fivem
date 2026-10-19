@@ -7,7 +7,7 @@ import { fetchOrg } from '../api'
 
 const PLANS = [
   { tier: 'starter', name: 'Starter', price: '$0', period: '/month', actions: 100, servers: 1, color: 'text-white', border: 'border-[rgba(255,255,255,0.15)]', bg: 'bg-[rgba(255,255,255,0.04)]' },
-  { tier: 'pro', name: 'Pro', price: '$19', period: '/month', actions: 1000, servers: 5, color: 'text-[#3DFFA2]', border: 'border-[rgba(61,255,162,0.5)]', bg: 'bg-[rgba(94,106,210,0.1)]', highlighted: true },
+  { tier: 'pro', name: 'Pro', price: '$19', period: '/month', actions: 1000, servers: 5, color: 'text-[#5B72F2]', border: 'border-[rgba(91,114,242,0.5)]', bg: 'bg-[rgba(91,114,242,0.1)]', highlighted: true },
   { tier: 'enterprise', name: 'Enterprise', price: '$49', period: '/month', actions: Infinity, servers: Infinity, color: 'text-white', border: 'border-[rgba(255,255,255,0.15)]', bg: 'bg-[rgba(255,255,255,0.04)]' },
 ]
 
@@ -35,7 +35,7 @@ export default function BillingPage() {
   const isNearLimit = usagePercent >= 80
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0F0F14] p-6">
+    <div className="flex-1 overflow-y-auto bg-[#101426] p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div>
@@ -45,18 +45,18 @@ export default function BillingPage() {
 
         {isLoading ? (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => <div key={i} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] h-24 animate-pulse" />)}
+            {[1, 2, 3].map((i) => <div key={i} className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] h-24 animate-pulse" />)}
           </div>
         ) : org ? (
           <>
             {/* Current plan card */}
-            <div className={`bg-[#16161E] border ${currentPlan.border} p-6`}>
+            <div className={`bg-[#20294A] border ${currentPlan.border} p-6`}>
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`font-mono text-xs uppercase tracking-wider ${currentPlan.color}`}>{currentPlan.name}</span>
                     {currentPlan.highlighted && (
-                      <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#3DFFA2]">Current</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(91,114,242,0.2)] border border-[rgba(91,114,242,0.4)] text-[#5B72F2]">Current</span>
                     )}
                   </div>
                   <div className="flex items-baseline gap-1 mt-2">
@@ -74,7 +74,7 @@ export default function BillingPage() {
             </div>
 
             {/* Usage */}
-            <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
+            <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-[rgba(255,255,255,0.4)]" />
@@ -89,7 +89,7 @@ export default function BillingPage() {
                   initial={{ width: 0 }}
                   animate={{ width: `${usagePercent}%` }}
                   transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                  className={`h-full ${isNearLimit ? 'bg-[#f59e0b]' : 'bg-[#3DFFA2]'}`}
+                  className={`h-full ${isNearLimit ? 'bg-[#f59e0b]' : 'bg-[#5B72F2]'}`}
                 />
               </div>
               {isNearLimit && (
@@ -105,12 +105,12 @@ export default function BillingPage() {
               <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[rgba(255,255,255,0.4)] mb-3">All Plans</h2>
               <div className="grid gap-3">
                 {PLANS.map((plan) => (
-                  <div key={plan.tier} className={`bg-[#16161E] border p-5 ${plan.highlighted ? plan.border : 'border-[rgba(255,255,255,0.08)]'}`}>
+                  <div key={plan.tier} className={`bg-[#20294A] border p-5 ${plan.highlighted ? plan.border : 'border-[rgba(255,255,255,0.08)]'}`}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className={`font-mono text-xs uppercase tracking-wider ${plan.color}`}>{plan.name}</span>
                         {plan.highlighted && (
-                          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(94,106,210,0.2)] border border-[rgba(94,106,210,0.4)] text-[#3DFFA2]">Recommended</span>
+                          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(91,114,242,0.2)] border border-[rgba(91,114,242,0.4)] text-[#5B72F2]">Recommended</span>
                         )}
                       </div>
                       <div className="flex items-baseline gap-1">
@@ -147,7 +147,7 @@ export default function BillingPage() {
             </div>
           </>
         ) : (
-          <div className="text-center py-20 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
+          <div className="text-center py-20 bg-[#20294A] border border-[rgba(255,255,255,0.08)]">
             <AlertCircle className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-4" />
             <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">No billing data</h3>
             <p className="font-sans text-xs text-[rgba(255,255,255,0.4)]">Contact support to set up your billing account.</p>

@@ -2,7 +2,7 @@ import { SignIn } from '@clerk/nextjs';
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen bg-[#0F0F14] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#101426] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -21,7 +21,7 @@ export default function SignInPage() {
           appearance={{
             elements: {
               root: 'w-full',
-              card: 'bg-[#16161E] border border-[rgba(255,255,255,0.08)] shadow-none',
+              card: 'bg-[#20294A] border border-[rgba(255,255,255,0.08)] shadow-none',
               headerTitle: 'hidden',
               headerSubtitle: 'hidden',
               socialButtonsBlockButton:
@@ -31,8 +31,8 @@ export default function SignInPage() {
                 'bg-transparent border border-[rgba(255,255,255,0.1)] text-white placeholder:text-[rgba(255,255,255,0.25)] rounded-none',
               formFieldLabel: 'text-[rgba(255,255,255,0.6)] font-mono text-xs uppercase tracking-wider',
               formButtonPrimary:
-                'bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-[1.4px] hover:opacity-85 rounded-none',
-              footerActionLink: 'text-[#3DFFA2] hover:underline font-mono text-xs',
+                'bg-white text-[#101426] font-mono text-xs uppercase tracking-[1.4px] hover:opacity-85 rounded-none',
+              footerActionLink: 'text-[#5B72F2] hover:underline font-mono text-xs',
             },
           }}
         />

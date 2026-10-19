@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">NOXES signal mark</title>
+  <desc id="desc">An open cobalt frame around a citrus N signal.</desc>
+  <g fill="none" stroke="#5B72F2" stroke-linecap="round" stroke-width="7">
+    <path d="M42 17H27a10 10 0 0 0-10 10v15M86 17h15a10 10 0 0 1 10 10v15M111 86v15a10 10 0 0 1-10 10H86M42 111H27a10 10 0 0 1-10-10V86"/>
+  </g>
+  <path d="M39 87V41l50 46V41" fill="none" stroke="#D8F36A" stroke-linecap="round" stroke-linejoin="round" stroke-width="9"/>
+  <circle cx="89" cy="41" r="5" fill="#D8F36A"/>
+</svg>

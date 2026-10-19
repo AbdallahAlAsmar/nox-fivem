@@ -113,9 +113,9 @@ export function InteractiveDemo() {
   return (
     <div className="w-full max-w-3xl mx-auto">
       {/* Terminal window */}
-      <div className="bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-[#0B1020] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden shadow-2xl">
         {/* Top bar */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[#16161E] border-b border-[rgba(255,255,255,0.08)]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[#20294A] border-b border-[rgba(255,255,255,0.08)]">
           <div className="flex items-center gap-2">
             <div className="flex gap-1.5">
               <div className="w-2.5 h-2.5 bg-[rgba(255,255,255,0.15)] rounded-full" />
@@ -128,7 +128,7 @@ export function InteractiveDemo() {
           </div>
           <button
             onClick={isPlaying ? resetDemo : startDemo}
-            className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)] text-[#3DFFA2] hover:bg-[rgba(61,255,162,0.25)] transition-colors rounded"
+            className="font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 bg-[rgba(91, 114, 242,0.15)] border border-[rgba(91, 114, 242,0.3)] text-[#5B72F2] hover:bg-[rgba(91, 114, 242,0.25)] transition-colors rounded"
           >
             {isPlaying ? 'Reset' : 'Play Demo'}
           </button>
@@ -138,7 +138,7 @@ export function InteractiveDemo() {
         <div className="p-6 min-h-[320px] max-h-[400px] overflow-y-auto space-y-4">
           {!isPlaying && !isApplied && (
             <div className="flex flex-col items-center justify-center h-[240px] text-center">
-              <Bot className="w-12 h-12 text-[rgba(61,255,162,0.4)] mb-4" />
+              <Bot className="w-12 h-12 text-[rgba(91, 114, 242,0.4)] mb-4" />
               <p className="font-mono text-sm text-[rgba(255,255,255,0.5)] mb-2">
                 Watch NOXES process a real request
               </p>
@@ -147,7 +147,7 @@ export function InteractiveDemo() {
               </p>
               <button
                 onClick={startDemo}
-                className="mt-6 font-mono text-xs uppercase tracking-wider px-5 py-2.5 bg-white text-[#0F0F14] font-medium hover:opacity-85 transition-opacity inline-flex items-center gap-2"
+                className="mt-6 font-mono text-xs uppercase tracking-wider px-5 py-2.5 bg-white text-[#101426] font-medium hover:opacity-85 transition-opacity inline-flex items-center gap-2"
               >
                 Start Demo
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -172,7 +172,7 @@ export function InteractiveDemo() {
                     <div className="bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] px-3 py-2.5 rounded-r-lg rounded-bl-lg min-w-[200px]">
                       <p className="font-sans text-sm text-[rgba(255,255,255,0.8)] leading-[1.5]">
                         {typedText}
-                        <span className="inline-block w-0.5 h-4 bg-[#3DFFA2] ml-0.5 animate-pulse" />
+                        <span className="inline-block w-0.5 h-4 bg-[#5B72F2] ml-0.5 animate-pulse" />
                       </p>
                     </div>
                   </motion.div>
@@ -186,11 +186,11 @@ export function InteractiveDemo() {
                     exit={{ opacity: 0, y: -8 }}
                     className="flex items-start gap-3"
                   >
-                    <div className="w-7 h-7 bg-[rgba(61,255,162,0.2)] border border-[rgba(61,255,162,0.4)] rounded flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-3.5 h-3.5 text-[#3DFFA2]" />
+                    <div className="w-7 h-7 bg-[rgba(91, 114, 242,0.2)] border border-[rgba(91, 114, 242,0.4)] rounded flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-3.5 h-3.5 text-[#5B72F2]" />
                     </div>
                     <div className="flex-1 space-y-3">
-                      <div className="bg-[rgba(61,255,162,0.08)] border border-[rgba(61,255,162,0.2)] px-3 py-2.5 rounded-r-lg rounded-bl-lg">
+                      <div className="bg-[rgba(91, 114, 242,0.08)] border border-[rgba(91, 114, 242,0.2)] px-3 py-2.5 rounded-r-lg rounded-bl-lg">
                         <p className="font-sans text-sm text-[rgba(255,255,255,0.7)] leading-[1.5]">
                           {typedText}
                         </p>
@@ -201,9 +201,9 @@ export function InteractiveDemo() {
                         <motion.div
                           initial={{ opacity: 0, scale: 0.98 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          className="bg-[#0F0F14] border border-[rgba(255,255,255,0.08)] rounded-lg overflow-hidden"
+                          className="bg-[#101426] border border-[rgba(255,255,255,0.08)] rounded-lg overflow-hidden"
                         >
-                          <div className="flex items-center justify-between px-3 py-2 bg-[#16161E] border-b border-[rgba(255,255,255,0.08)]">
+                          <div className="flex items-center justify-between px-3 py-2 bg-[#20294A] border-b border-[rgba(255,255,255,0.08)]">
                             <div className="flex items-center gap-2">
                               <FileCode className="w-3.5 h-3.5 text-[rgba(255,255,255,0.4)]" />
                               <span className="font-mono text-[11px] text-[rgba(255,255,255,0.5)]">spawns.lua</span>
@@ -258,13 +258,13 @@ export function InteractiveDemo() {
 
         {/* Progress indicator */}
         {isPlaying && (
-          <div className="px-6 py-3 bg-[#16161E] border-t border-[rgba(255,255,255,0.08)]">
+          <div className="px-6 py-3 bg-[#20294A] border-t border-[rgba(255,255,255,0.08)]">
             <div className="flex items-center gap-2">
               {demoSteps.map((_, i) => (
                 <div
                   key={i}
                   className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
-                    i <= step ? 'bg-[#3DFFA2]' : 'bg-[rgba(255,255,255,0.1)]'
+                    i <= step ? 'bg-[#5B72F2]' : 'bg-[rgba(255,255,255,0.1)]'
                   }`}
                 />
               ))}

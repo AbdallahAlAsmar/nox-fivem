@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20294A"/><stop offset=".5" stop-color="#101426"/><stop offset="1" stop-color="#0B1020"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#5B72F2" stop-opacity=".34"/><stop offset="1" stop-color="#5B72F2" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="72" height="72" patternUnits="userSpaceOnUse"><path d="M72 0H0V72" fill="none" stroke="#D5DBFF" stroke-opacity=".05"/></pattern>
+    <symbol id="mark" viewBox="0 0 128 128"><g fill="none" stroke="#5B72F2" stroke-linecap="round" stroke-width="7"><path d="M42 17H27a10 10 0 0 0-10 10v15M86 17h15a10 10 0 0 1 10 10v15M111 86v15a10 10 0 0 1-10 10H86M42 111H27a10 10 0 0 1-10-10V86"/></g><path d="M39 87V41l50 46V41" fill="none" stroke="#D8F36A" stroke-linecap="round" stroke-linejoin="round" stroke-width="9"/><circle cx="89" cy="41" r="5" fill="#D8F36A"/></symbol>
+  </defs>
+  <rect width="1080" height="1350" fill="url(#bg)"/><rect width="1080" height="1350" fill="url(#grid)"/><circle cx="762" cy="614" r="420" fill="url(#glow)"/>
+  <path d="M-75 945C223 724 361 1114 644 842s331-480 576-502" fill="none" stroke="#D8F36A" stroke-opacity=".62" stroke-width="3"/>
+  <use href="#mark" x="78" y="82" width="78" height="78"/><text x="176" y="138" fill="#F4F5FB" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="2">NOXES</text>
+  <text x="82" y="332" fill="#D8F36A" font-family="IBM Plex Mono, monospace" font-size="18" letter-spacing="4">INDEPENDENT SOFTWARE STUDIO</text>
+  <text x="72" y="537" fill="#F4F5FB" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="116" font-weight="700" letter-spacing="-5">BUILD WHAT</text>
+  <text x="72" y="663" fill="#F4F5FB" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="116" font-weight="700" letter-spacing="-5">COMES</text>
+  <text x="72" y="789" fill="#D8F36A" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="116" font-weight="700" letter-spacing="-5">NEXT.</text>
+  <text x="80" y="910" fill="#BBC3DF" font-family="Inter, Arial, sans-serif" font-size="28">Thoughtful software for people shaping</text>
+  <text x="80" y="953" fill="#BBC3DF" font-family="Inter, Arial, sans-serif" font-size="28">their own digital worlds.</text>
+  <rect x="78" y="1080" width="414" height="58" rx="29" fill="#D8F36A"/><text x="108" y="1118" fill="#151A27" font-family="IBM Plex Mono, monospace" font-size="17" font-weight="600" letter-spacing="1.4">STARTING WITH FIVEM</text>
+  <path d="M80 1206H1000" stroke="#FFFFFF" stroke-opacity=".15"/><text x="80" y="1266" fill="#929BB9" font-family="IBM Plex Mono, monospace" font-size="14" letter-spacing="2">TOOLS FOR THE PEOPLE WHO BUILD.</text>
+</svg>

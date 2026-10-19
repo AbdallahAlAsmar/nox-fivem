@@ -73,9 +73,9 @@ export default function Settings() {
       </div>
 
       {/* Server */}
-      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Server className="w-4 h-4 text-[#3DFFA2]" />
+          <Server className="w-4 h-4 text-[#5B72F2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server</h3>
         </div>
         <div className="space-y-3">
@@ -88,7 +88,7 @@ export default function Settings() {
               value={settings.serverDirectory}
               onChange={(e) => setSettings(s => ({ ...s, serverDirectory: e.target.value }))}
               placeholder="C:/FXServer/server-data"
-              className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
+              className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white focus:outline-none focus:border-[#5B72F2] transition-colors duration-100"
             />
           </div>
           <p className="font-mono text-[10px] text-[rgba(255,255,255,0.35)] leading-relaxed">
@@ -98,9 +98,9 @@ export default function Settings() {
       </div>
 
       {/* Behavior */}
-      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-[#3DFFA2]" />
+          <Shield className="w-4 h-4 text-[#5B72F2]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Behavior</h3>
         </div>
         <div className="space-y-3">
@@ -114,7 +114,7 @@ export default function Settings() {
             <button
               onClick={() => setSettings(s => ({ ...s, autoConnect: !s.autoConnect }))}
               aria-label="Toggle auto-connect on launch"
-              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.autoConnect ? 'bg-[#3DFFA2]' : 'bg-[rgba(61,255,162,0.15)]'}`}
+              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.autoConnect ? 'bg-[#5B72F2]' : 'bg-[rgba(91, 114, 242,0.15)]'}`}
             >
               <div className={`w-3 h-3 bg-white transition-transform duration-100 ${settings.autoConnect ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
@@ -129,7 +129,7 @@ export default function Settings() {
           disabled={saving}
           whileHover={{ opacity: 0.85 }}
           whileTap={{ scale: 0.98 }}
-          className="font-mono text-xs uppercase tracking-[1.4px] px-6 py-2.5 bg-white text-[#0F0F14] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100"
+          className="font-mono text-xs uppercase tracking-[1.4px] px-6 py-2.5 bg-white text-[#101426] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100"
         >
           {saving ? 'Saving…' : 'Save Settings'}
         </motion.button>

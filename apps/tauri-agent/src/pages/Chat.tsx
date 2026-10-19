@@ -333,16 +333,16 @@ export default function Chat({ serverId }: ChatProps) {
   return (
     <div className="flex flex-col h-full gap-3">
       {/* Header Controls */}
-      <div className="flex items-center justify-between bg-[#16161E] border border-[rgba(255,255,255,0.08)] px-4 py-2.5">
+      <div className="flex items-center justify-between bg-[#20294A] border border-[rgba(255,255,255,0.08)] px-4 py-2.5">
         <div className="flex items-center gap-3">
-          <ServerIcon className="w-4 h-4 text-[#3DFFA2]" />
+          <ServerIcon className="w-4 h-4 text-[#5B72F2]" />
           <select
             value={currentServerId}
             onChange={(e) => {
               setCurrentServerId(e.target.value)
               localStorage.setItem('selected_server_id', e.target.value)
             }}
-            className="bg-[#0A0A0F] border border-[rgba(255,255,255,0.12)] text-white text-xs font-mono px-3 py-1.5 focus:outline-none focus:border-[#3DFFA2]"
+            className="bg-[#0B1020] border border-[rgba(255,255,255,0.12)] text-white text-xs font-mono px-3 py-1.5 focus:outline-none focus:border-[#5B72F2]"
           >
             {servers.length === 0 && <option value="">Loading servers...</option>}
             {servers.map((srv) => (
@@ -364,7 +364,7 @@ export default function Chat({ serverId }: ChatProps) {
             <button
               onClick={handleConnectAgent}
               disabled={isConnectingAgent}
-              className="flex items-center gap-1 px-2.5 py-1 bg-[rgba(61,255,162,0.15)] text-[#3DFFA2] border border-[rgba(61,255,162,0.3)] font-mono text-[10px] uppercase tracking-wider hover:bg-[rgba(61,255,162,0.25)] transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 bg-[rgba(91, 114, 242,0.15)] text-[#5B72F2] border border-[rgba(91, 114, 242,0.3)] font-mono text-[10px] uppercase tracking-wider hover:bg-[rgba(91, 114, 242,0.25)] transition-colors"
             >
               <Zap className="w-3 h-3" />
               {isConnectingAgent ? 'Connecting...' : 'Connect Agent'}
@@ -391,7 +391,7 @@ export default function Chat({ serverId }: ChatProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-[#16161E] border border-[rgba(255,255,255,0.08)] px-4 py-2 overflow-x-auto">
+      <div className="flex items-center gap-1 bg-[#20294A] border border-[rgba(255,255,255,0.08)] px-4 py-2 overflow-x-auto">
         {TABS.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -401,7 +401,7 @@ export default function Chat({ serverId }: ChatProps) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                 isActive
-                  ? 'text-white bg-[rgba(61,255,162,0.15)] border-b-2 border-[#3DFFA2]'
+                  ? 'text-white bg-[rgba(91, 114, 242,0.15)] border-b-2 border-[#5B72F2]'
                   : 'text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)]'
               }`}
             >
@@ -451,7 +451,7 @@ export default function Chat({ serverId }: ChatProps) {
                 <button
                   key={skillId}
                   onClick={() => toggleSkill(skillId)}
-                  className="flex items-center gap-1 px-2 py-1 font-mono text-xs uppercase tracking-wider bg-[rgba(61,255,162,0.15)] text-[#3DFFA2] border border-[rgba(61,255,162,0.3)] hover:bg-[rgba(61,255,162,0.2)] transition-colors duration-100"
+                  className="flex items-center gap-1 px-2 py-1 font-mono text-xs uppercase tracking-wider bg-[rgba(91, 114, 242,0.15)] text-[#5B72F2] border border-[rgba(91, 114, 242,0.3)] hover:bg-[rgba(91, 114, 242,0.2)] transition-colors duration-100"
                 >
                   <IconComponent className="w-3 h-3" />
                   {skill.name}
@@ -463,8 +463,8 @@ export default function Chat({ serverId }: ChatProps) {
 
           {/* Skill Picker Modal */}
           {showSkillPicker && (
-            <div className="fixed inset-0 bg-[#0F0F14]/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-              <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto animate-slide-up">
+            <div className="fixed inset-0 bg-[#101426]/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+              <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto animate-slide-up">
                 <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-4">Select AI Skills</h3>
                 <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mb-4">Choose which specialized skills the AI should use</p>
 
@@ -477,12 +477,12 @@ export default function Chat({ serverId }: ChatProps) {
                         onClick={() => { toggleSkill(skill.id); setShowSkillPicker(false) }}
                         className={`p-3 border text-left transition-colors duration-100 ${
                           selectedSkills.includes(skill.id)
-                            ? 'border-[rgba(61,255,162,0.4)] bg-[rgba(61,255,162,0.1)]'
+                            ? 'border-[rgba(91, 114, 242,0.4)] bg-[rgba(91, 114, 242,0.1)]'
                             : 'border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)]'
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          {IconComponent && <IconComponent className="w-5 h-5 text-[#3DFFA2]" />}
+                          {IconComponent && <IconComponent className="w-5 h-5 text-[#5B72F2]" />}
                           <span className="font-mono text-xs uppercase tracking-wider text-white">{skill.name}</span>
                         </div>
                         <p className="font-sans text-[11px] text-[rgba(255,255,255,0.4)]">{skill.description}</p>
@@ -494,7 +494,7 @@ export default function Chat({ serverId }: ChatProps) {
                 <div className="flex justify-end mt-4">
                   <button
                     onClick={() => setShowSkillPicker(false)}
-                    className="font-mono text-xs uppercase tracking-[1.4px] px-4 py-2.5 bg-white text-[#0F0F14] font-medium hover:opacity-85 transition-opacity duration-100"
+                    className="font-mono text-xs uppercase tracking-[1.4px] px-4 py-2.5 bg-white text-[#101426] font-medium hover:opacity-85 transition-opacity duration-100"
                   >
                     Done
                   </button>
@@ -507,8 +507,8 @@ export default function Chat({ serverId }: ChatProps) {
           <div className="flex-1 overflow-y-auto space-y-4 pb-4">
             {messages.length === 0 && !isLoading && (
               <div className="text-center py-16">
-                <div className="w-12 h-12 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] flex items-center justify-center mx-auto mb-4">
-                  <Bot className="w-6 h-6 text-[#3DFFA2]" />
+                <div className="w-12 h-12 bg-[rgba(91, 114, 242,0.1)] border border-[rgba(91, 114, 242,0.2)] flex items-center justify-center mx-auto mb-4">
+                  <Bot className="w-6 h-6 text-[#5B72F2]" />
                 </div>
                 <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">Start a Conversation</h3>
                 <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mb-4 max-w-sm mx-auto leading-[1.6]">
@@ -529,25 +529,25 @@ export default function Chat({ serverId }: ChatProps) {
               >
                 <div className={`w-8 h-8 flex items-center justify-center flex-shrink-0 ${
                   message.role === 'user'
-                    ? 'bg-[#3DFFA2]'
+                    ? 'bg-[#5B72F2]'
                     : message.isError
                     ? 'bg-[rgba(239,68,68,0.2)] border border-[rgba(239,68,68,0.3)]'
-                    : 'bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)]'
+                    : 'bg-[rgba(91, 114, 242,0.15)] border border-[rgba(91, 114, 242,0.3)]'
                 }`}>
                   {message.role === 'user' ? (
                     <MessageSquare className="w-4 h-4 text-white" />
                   ) : message.isError ? (
                     <span className="text-[#ef4444] text-xs font-mono">!</span>
                   ) : (
-                    <Bot className="w-4 h-4 text-[#3DFFA2]" />
+                    <Bot className="w-4 h-4 text-[#5B72F2]" />
                   )}
                 </div>
                 <div className={`max-w-[70%] px-4 py-2.5 ${
                   message.role === 'user'
-                    ? 'bg-[#3DFFA2] text-[#0F0F14]'
+                    ? 'bg-[#5B72F2] text-[#101426]'
                     : message.isError
                     ? 'bg-[rgba(239,68,68,0.05)] border border-[rgba(239,68,68,0.2)] text-[#ef4444]'
-                    : 'bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.85)]'
+                    : 'bg-[#20294A] border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.85)]'
                 }`}>
                   <p className="font-sans text-sm whitespace-pre-wrap">{message.content}</p>
                   <p className="font-mono text-[10px] text-[rgba(255,255,255,0.25)] mt-1.5">
@@ -559,10 +559,10 @@ export default function Chat({ serverId }: ChatProps) {
 
             {isLoading && (
               <div className="flex gap-3 animate-fade-in">
-                <div className="w-8 h-8 bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)] flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-[#3DFFA2]" />
+                <div className="w-8 h-8 bg-[rgba(91, 114, 242,0.15)] border border-[rgba(91, 114, 242,0.3)] flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-[#5B72F2]" />
                 </div>
-                <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] px-4 py-2.5 flex items-center gap-2">
+                <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] px-4 py-2.5 flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-[rgba(255,255,255,0.3)]" />
                   <span className="font-mono text-xs text-[rgba(255,255,255,0.4)] uppercase tracking-wider">Thinking…</span>
                 </div>
@@ -581,13 +581,13 @@ export default function Chat({ serverId }: ChatProps) {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                 placeholder="Ask about your server…"
-                className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
+                className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors duration-100"
                 disabled={isLoading}
               />
               <button
                 onClick={handleSend}
                 disabled={isLoading || !input.trim()}
-                className="px-4 py-2.5 bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-[1.4px] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100"
+                className="px-4 py-2.5 bg-white text-[#101426] font-mono text-xs uppercase tracking-[1.4px] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100"
               >
                 <Send className="w-4 h-4" />
               </button>

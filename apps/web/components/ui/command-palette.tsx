@@ -106,7 +106,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-[#16161E] rounded-lg shadow-2xl z-50 overflow-hidden"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-[#20294A] rounded-lg shadow-2xl z-50 overflow-hidden"
           >
             {/* Search input */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
@@ -134,10 +134,10 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                       key={server.id}
                       onClick={() => navigateTo(`/dashboard/servers/${server.id}`)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded text-left transition-colors ${
-                        idx === selectedIndex ? 'bg-[rgba(61,255,162,0.15)]' : 'hover:bg-white/5'
+                        idx === selectedIndex ? 'bg-[rgba(91, 114, 242,0.15)]' : 'hover:bg-white/5'
                       }`}
                     >
-                      <Server className={`w-4 h-4 flex-shrink-0 ${idx === selectedIndex ? 'text-[#3DFFA2]' : 'text-white/30'}`} />
+                      <Server className={`w-4 h-4 flex-shrink-0 ${idx === selectedIndex ? 'text-[#5B72F2]' : 'text-white/30'}`} />
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-mono truncate ${idx === selectedIndex ? 'text-white' : 'text-white/70'}`}>
                           {server.name}
@@ -165,10 +165,10 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                       key={cmd.label}
                       onClick={() => navigateTo(cmd.href)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded text-left transition-colors ${
-                        actualIdx === selectedIndex ? 'bg-[rgba(61,255,162,0.15)]' : 'hover:bg-white/5'
+                        actualIdx === selectedIndex ? 'bg-[rgba(91, 114, 242,0.15)]' : 'hover:bg-white/5'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 flex-shrink-0 ${actualIdx === selectedIndex ? 'text-[#3DFFA2]' : 'text-white/30'}`} />
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${actualIdx === selectedIndex ? 'text-[#5B72F2]' : 'text-white/30'}`} />
                       <span className={`text-sm font-mono ${actualIdx === selectedIndex ? 'text-white' : 'text-white/70'}`}>
                         {cmd.label}
                       </span>
@@ -189,7 +189,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-4 py-2 border-t border-white/5 bg-[#0f0f14]">
+            <div className="flex items-center justify-between px-4 py-2 border-t border-white/5 bg-[#101426]">
               <div className="flex items-center gap-3 text-[10px] text-white/30 font-mono">
                 <span><kbd className="px-1 py-0.5 bg-white/5 rounded">↑↓</kbd> Navigate</span>
                 <span><kbd className="px-1 py-0.5 bg-white/5 rounded">↵</kbd> Select</span>

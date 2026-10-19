@@ -36,7 +36,7 @@ const FRAMEWORKS = [
     id: 'qbcore' as const,
     name: 'QBCore',
     desc: 'Popular FRP framework with jobs, inventory, and housing',
-    color: 'from-[#3DFFA2] to-[#36d98c]',
+    color: 'from-[#5B72F2] to-[#4962E4]',
   },
   {
     id: 'esx' as const,
@@ -120,7 +120,7 @@ export default function OnboardingPage() {
 
   if (step === 'welcome') {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0B1020] flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -137,7 +137,7 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-center gap-2 mb-10">
             {STEPS.map((s, i) => (
               <div key={s.key} className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-[#3DFFA2]' : 'bg-white/15'}`} />
+                <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-[#5B72F2]' : 'bg-white/15'}`} />
                 {i < STEPS.length - 1 && <div className="w-6 h-px bg-white/10" />}
               </div>
             ))}
@@ -165,10 +165,10 @@ export default function OnboardingPage() {
                 initial={{ opacity: 0, x: -12 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * i }}
-                className="flex items-center gap-3 px-4 py-3 bg-[#16161E] border border-[rgba(255,255,255,0.06)]"
+                className="flex items-center gap-3 px-4 py-3 bg-[#20294A] border border-[rgba(255,255,255,0.06)]"
               >
-                <div className="w-8 h-8 rounded-lg bg-[rgba(61,255,162,0.12)] flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-[#3DFFA2]" />
+                <div className="w-8 h-8 rounded-lg bg-[rgba(91, 114, 242,0.12)] flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-[#5B72F2]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-xs text-white">{label}</div>
@@ -180,7 +180,7 @@ export default function OnboardingPage() {
 
           <button
             onClick={() => setStep('config')}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-[1.4px] hover:opacity-85 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-[#101426] font-mono text-xs uppercase tracking-[1.4px] hover:opacity-85 transition-opacity"
           >
             Get Started
             <ArrowRight className="w-4 h-4" />
@@ -193,7 +193,7 @@ export default function OnboardingPage() {
   // ─── Complete Step ───────────────────────────────────────────────────────────
   if (step === 'complete') {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0B1020] flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -217,7 +217,7 @@ export default function OnboardingPage() {
               { label: 'Framework', value: FRAMEWORKS.find(f => f.id === data.framework)?.name },
               { label: 'Server', value: data.hasServer ? 'Connected' : 'Will connect later' },
             ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between px-4 py-2.5 bg-[#16161E] border border-[rgba(255,255,255,0.06)]">
+              <div key={label} className="flex items-center justify-between px-4 py-2.5 bg-[#20294A] border border-[rgba(255,255,255,0.06)]">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-white/35">{label}</span>
                 <span className="font-mono text-xs text-white">{value}</span>
               </div>
@@ -226,7 +226,7 @@ export default function OnboardingPage() {
 
           <Link
             href="/dashboard"
-            className="block w-full text-center px-4 py-3 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-[1.4px] hover:bg-[#36d98c] transition-colors"
+            className="block w-full text-center px-4 py-3 bg-[#5B72F2] text-white font-mono text-xs uppercase tracking-[1.4px] hover:bg-[#4962E4] transition-colors"
           >
             Go to Dashboard
           </Link>
@@ -238,7 +238,7 @@ export default function OnboardingPage() {
   // ─── Config Step (Server Name) ───────────────────────────────────────────────
   if (step === 'config') {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0B1020] flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -250,7 +250,7 @@ export default function OnboardingPage() {
               const currentIdx = STEPS.findIndex(st => st.key === step);
               return (
                 <div key={s.key} className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#3DFFA2]' : 'bg-white/15'}`} />
+                  <div className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#5B72F2]' : 'bg-white/15'}`} />
                   {i < STEPS.length - 1 && <div className="w-6 h-px bg-white/10" />}
                 </div>
               );
@@ -266,7 +266,7 @@ export default function OnboardingPage() {
             onChange={(e) => update({ name: e.target.value })}
             placeholder="e.g. My RP Server"
             autoFocus
-            className="w-full px-4 py-3 bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#3DFFA2] mb-6"
+            className="w-full px-4 py-3 bg-[#20294A] border border-[rgba(255,255,255,0.08)] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#5B72F2] mb-6"
             onKeyDown={(e) => e.key === 'Enter' && setStep('framework')}
           />
 
@@ -280,7 +280,7 @@ export default function OnboardingPage() {
             <button
               onClick={() => setStep('framework')}
               disabled={!data.name.trim()}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#5B72F2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4962E4] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               Continue
               <ChevronRight className="w-3.5 h-3.5" />
@@ -294,7 +294,7 @@ export default function OnboardingPage() {
   // ─── Framework Step ──────────────────────────────────────────────────────────
   if (step === 'framework') {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0B1020] flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -306,7 +306,7 @@ export default function OnboardingPage() {
               const currentIdx = STEPS.findIndex(st => st.key === step);
               return (
                 <div key={s.key} className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#3DFFA2]' : 'bg-white/15'}`} />
+                  <div className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#5B72F2]' : 'bg-white/15'}`} />
                   {i < STEPS.length - 1 && <div className="w-6 h-px bg-white/10" />}
                 </div>
               );
@@ -323,8 +323,8 @@ export default function OnboardingPage() {
                 onClick={() => update({ framework: fw.id })}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                   data.framework === fw.id
-                    ? 'bg-[rgba(61,255,162,0.12)] border border-[rgba(61,255,162,0.4)]'
-                    : 'bg-[#16161E] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
+                    ? 'bg-[rgba(91, 114, 242,0.12)] border border-[rgba(91, 114, 242,0.4)]'
+                    : 'bg-[#20294A] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${fw.color} flex items-center justify-center flex-shrink-0`}>
@@ -335,7 +335,7 @@ export default function OnboardingPage() {
                   <div className="font-sans text-[10px] text-white/35 mt-0.5">{fw.desc}</div>
                 </div>
                 {data.framework === fw.id && (
-                  <CheckCircle2 className="w-4 h-4 text-[#3DFFA2] flex-shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-[#5B72F2] flex-shrink-0" />
                 )}
               </button>
             ))}
@@ -345,9 +345,9 @@ export default function OnboardingPage() {
           <div className="mb-6">
             <button
               onClick={() => update({ hasServer: !data.hasServer })}
-              className={`w-full flex items-center justify-between px-4 py-3 bg-[#16161E] border transition-colors ${
+              className={`w-full flex items-center justify-between px-4 py-3 bg-[#20294A] border transition-colors ${
                 data.hasServer
-                  ? 'border-[rgba(61,255,162,0.4)]'
+                  ? 'border-[rgba(91, 114, 242,0.4)]'
                   : 'border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.12)]'
               }`}
             >
@@ -370,7 +370,7 @@ export default function OnboardingPage() {
             value={data.goal}
             onChange={(e) => update({ goal: e.target.value })}
             placeholder="What do you want to build? (optional)"
-            className="w-full px-4 py-3 bg-[#16161E] border border-[rgba(255,255,255,0.06)] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#3DFFA2] mb-6"
+            className="w-full px-4 py-3 bg-[#20294A] border border-[rgba(255,255,255,0.06)] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#5B72F2] mb-6"
           />
 
           <div className="flex items-center justify-between">
@@ -383,7 +383,7 @@ export default function OnboardingPage() {
             <button
               onClick={handleComplete}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#5B72F2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4962E4] disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving...' : 'Finish Setup'}
             </button>

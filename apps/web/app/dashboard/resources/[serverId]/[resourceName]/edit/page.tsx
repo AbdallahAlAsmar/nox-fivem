@@ -138,9 +138,9 @@ export default function ResourceEditorPage() {
   );
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-[#0a0a0f] text-white' : 'bg-[#f3f4f6] text-gray-900'}`}>
+    <div className={`min-h-screen ${isDark ? 'bg-[#0B1020] text-white' : 'bg-[#f3f4f6] text-gray-900'}`}>
       {/* Top bar */}
-      <div className={`h-14 border-b flex items-center px-4 gap-4 flex-shrink-0 transition-colors duration-150 ${isDark ? 'border-white/5 bg-[#16161E]/30' : 'border-gray-200 bg-white'}`}>
+      <div className={`h-14 border-b flex items-center px-4 gap-4 flex-shrink-0 transition-colors duration-150 ${isDark ? 'border-white/5 bg-[#20294A]/30' : 'border-gray-200 bg-white'}`}>
         <Link
           href={`/dashboard/servers/${serverId}`}
           className={`flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${isDark ? 'text-white/40 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
@@ -189,7 +189,7 @@ export default function ResourceEditorPage() {
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
-                    className={`absolute right-0 top-full mt-2 w-80 z-50 shadow-2xl rounded-lg border overflow-hidden ${isDark ? 'bg-[#16161E] border-white/10' : 'bg-white border-gray-200'}`}
+                    className={`absolute right-0 top-full mt-2 w-80 z-50 shadow-2xl rounded-lg border overflow-hidden ${isDark ? 'bg-[#20294A] border-white/10' : 'bg-white border-gray-200'}`}
                   >
                     <div className={`p-3 border-b ${isDark ? 'border-white/5' : 'border-gray-100'}`}>
                       <div className="relative">
@@ -198,7 +198,7 @@ export default function ResourceEditorPage() {
                           placeholder="Search resources..."
                           value={pickerSearch}
                           onChange={(e) => setPickerSearch(e.target.value)}
-                          className={`w-full pl-8 pr-3 py-1.5 text-xs font-mono focus:outline-none ${isDark ? 'bg-[#0a0a0f] border border-white/10 text-white placeholder:text-white/20' : 'bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400'}`}
+                          className={`w-full pl-8 pr-3 py-1.5 text-xs font-mono focus:outline-none ${isDark ? 'bg-[#0B1020] border border-white/10 text-white placeholder:text-white/20' : 'bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400'}`}
                         />
                         <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/20" />
                       </div>
@@ -222,7 +222,7 @@ export default function ResourceEditorPage() {
                             <FileText className="w-3.5 h-3.5 flex-shrink-0" />
                             <span className="truncate">{r.name}</span>
                             {r.name === resourceName && (
-                              <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${isDark ? 'bg-[#3DFFA2]/20 text-[#3DFFA2]' : 'bg-indigo-50 text-indigo-600'}`}>
+                              <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${isDark ? 'bg-[#5B72F2]/20 text-[#5B72F2]' : 'bg-indigo-50 text-indigo-600'}`}>
                                 current
                               </span>
                             )}
@@ -256,7 +256,7 @@ export default function ResourceEditorPage() {
           <button
             onClick={handleSave}
             disabled={saving || !content}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#5B72F2] hover:bg-[#4962E4] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {saving ? (
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -276,7 +276,7 @@ export default function ResourceEditorPage() {
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
-              className={`font-mono text-xs uppercase tracking-wider px-4 py-2.5 border ${isDark ? 'bg-[#16161E] border-[rgba(61,255,162,0.4)] text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+              className={`font-mono text-xs uppercase tracking-wider px-4 py-2.5 border ${isDark ? 'bg-[#20294A] border-[rgba(91, 114, 242,0.4)] text-white' : 'bg-white border-gray-200 text-gray-900'}`}
             >
               <CheckCircle2 className="w-3.5 h-3.5 inline mr-1.5 text-[#22c55e]" />
               {saveMsg}
@@ -310,7 +310,7 @@ export default function ResourceEditorPage() {
               </p>
               <button
                 onClick={() => router.push(`/dashboard/servers/${serverId}`)}
-                className="flex items-center gap-1.5 mx-auto px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
+                className="flex items-center gap-1.5 mx-auto px-4 py-2 bg-[#5B72F2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4962E4] transition-colors"
               >
                 <ArrowLeft className="w-3 h-3" />
                 Back to Server
@@ -322,7 +322,7 @@ export default function ResourceEditorPage() {
         {!errorMsg && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Editor toolbar */}
-            <div className={`h-9 border-b flex items-center px-3 gap-3 flex-shrink-0 transition-colors duration-150 ${isDark ? 'border-white/5 bg-[#16161E]/30' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`h-9 border-b flex items-center px-3 gap-3 flex-shrink-0 transition-colors duration-150 ${isDark ? 'border-white/5 bg-[#20294A]/30' : 'border-gray-200 bg-gray-50'}`}>
               <span className={`font-mono text-[10px] uppercase tracking-wider ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
                 {resourceName}
               </span>
@@ -371,7 +371,7 @@ export default function ResourceEditorPage() {
                 spellCheck={false}
                 className={`w-full h-full p-4 font-mono text-xs resize-none focus:outline-none overflow-auto transition-colors duration-150 ${
                   isDark
-                    ? 'bg-[#0a0a0f] text-[#e2e8f0] selection:bg-[#3DFFA2]/30 selection:text-white'
+                    ? 'bg-[#0B1020] text-[#e2e8f0] selection:bg-[#5B72F2]/30 selection:text-white'
                     : 'bg-white text-gray-800 selection:bg-indigo-100 selection:text-indigo-900'
                 }`}
                 style={{
@@ -384,7 +384,7 @@ export default function ResourceEditorPage() {
               {/* Line number gutter (visual only, absolute positioned) */}
               <div
                 className={`absolute left-0 top-0 bottom-0 w-12 pointer-events-none font-mono text-xs overflow-hidden select-none transition-colors duration-150 ${
-                  isDark ? 'bg-[#0f0f14] text-white/15' : 'bg-gray-50 text-gray-300'
+                  isDark ? 'bg-[#101426] text-white/15' : 'bg-gray-50 text-gray-300'
                 }`}
                 style={{ padding: '1rem 0.5rem', lineHeight: '1.6' }}
               >
@@ -407,7 +407,7 @@ export default function ResourceEditorPage() {
             </div>
 
             {/* Bottom status bar */}
-            <div className={`h-7 border-t flex items-center px-3 gap-4 flex-shrink-0 transition-colors duration-150 ${isDark ? 'border-white/5 bg-[#16161E]/50' : 'border-gray-200 bg-white'}`}>
+            <div className={`h-7 border-t flex items-center px-3 gap-4 flex-shrink-0 transition-colors duration-150 ${isDark ? 'border-white/5 bg-[#20294A]/50' : 'border-gray-200 bg-white'}`}>
               <span className={`font-mono text-[10px] ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
                 Ln {currentLine}, Col {currentCol}
               </span>

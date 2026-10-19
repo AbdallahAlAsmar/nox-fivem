@@ -12,28 +12,27 @@ import { useEffect, useRef, useState } from 'react';
 type Line = { kind: 'cmd' | 'sys' | 'file' | 'diff-add' | 'diff-del' | 'ok' | 'wait'; text: string };
 
 const SCRIPT: Line[] = [
-  { kind: 'cmd', text: '$ make the vehicle shop give 20% cash back on weekends' },
-  { kind: 'wait', text: 'reading resources…' },
-  { kind: 'sys', text: '→ scan complete · 143 resources indexed' },
-  { kind: 'file', text: 'READ resources/[shops]/qb-vehicleshop/client/main.lua' },
-  { kind: 'sys', text: 'proposed change — 1 file (+6 −1)' },
+  { kind: 'cmd', text: '$ help me adjust my vehicle shop' },
+  { kind: 'wait', text: 'scanning connected server resources…' },
+  { kind: 'sys', text: '→ mapping relevant files and manifests' },
+  { kind: 'file', text: 'READ resources/[shops]/fxmanifest.lua' },
+  { kind: 'sys', text: 'proposed change · ready for review' },
   { kind: 'diff-del', text: '- local discount = 0' },
-  { kind: 'diff-add', text: '+ local function weekendBonus()' },
-  { kind: 'diff-add', text: '+   return os.date("%A"):match("Saturday|Sunday") and 0.2 or 0' },
-  { kind: 'diff-add', text: '+ end' },
-  { kind: 'diff-add', text: '+ local discount = weekendBonus()' },
+  { kind: 'diff-add', text: '+ local discount = weekendEnabled and 0.2 or 0' },
+  { kind: 'diff-add', text: '+ -- staged for your review' },
+  { kind: 'wait', text: 'change staged · no files touched' },
   { kind: 'wait', text: 'awaiting your approval…' },
-  { kind: 'ok', text: 'APPROVED ✓ git checkpoint c8a41f2 created' },
-  { kind: 'ok', text: 'applied to qb-vehicleshop/client/main.lua · rollback available' },
+  { kind: 'ok', text: 'APPROVED · git checkpoint created' },
+  { kind: 'ok', text: 'change applied · rollback available' },
 ];
 
 const KIND_STYLE: Record<Line['kind'], string> = {
   cmd: 'text-white',
   sys: 'text-white/40',
   file: 'text-white/70',
-  'diff-add': 'text-[#3DFFA2]',
+  'diff-add': 'text-[#5B72F2]',
   'diff-del': 'text-white/30 line-through decoration-white/30',
-  ok: 'text-[#3DFFA2]',
+  ok: 'text-[#5B72F2]',
   wait: 'text-white/30',
 };
 
@@ -45,6 +44,10 @@ export default function TerminalDemo() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setStarted(true);
+      return;
+    }
     const obs = new IntersectionObserver(
       ([e]) => e.isIntersecting && setStarted(true),
       { threshold: 0.35 },
@@ -55,15 +58,22 @@ export default function TerminalDemo() {
 
   useEffect(() => {
     if (!started) return;
-    let i = 0;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      setLines(SCRIPT);
+      return;
+    }
+    let i = 4;
+    let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
 
     const step = () => {
+      if (cancelled) return;
       if (i >= SCRIPT.length) {
         // hold the completed transcript, then restart the loop
         timer = setTimeout(() => {
-          setLines([]);
-          i = 0;
+          setLines(SCRIPT.slice(0, 4));
+          i = 4;
           step();
         }, 6000);
         return;
@@ -74,20 +84,24 @@ export default function TerminalDemo() {
       const isCmd = line.kind === 'cmd';
       timer = setTimeout(step, isCmd ? 900 : 480);
     };
+    setLines(SCRIPT.slice(0, 4));
     step();
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [started]);
 
   return (
     <div ref={ref} className="noxes-card !p-0 overflow-hidden">
       {/* Title bar */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8 bg-[#0F0F14]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8 bg-[#101426]">
         <span className="w-2 h-2 bg-white/15" />
         <span className="w-2 h-2 bg-white/15" />
-        <span className="w-2 h-2 bg-[#3DFFA2]/60" />
+        <span className="w-2 h-2 bg-[#5B72F2]/60" />
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/30 ml-2">
-          noxes — live session
+          NOXES · workflow preview
         </span>
       </div>
 
@@ -98,7 +112,7 @@ export default function TerminalDemo() {
             {idx === lines.length - 1 && (
               <span
                 aria-hidden
-                className="inline-block w-[7px] h-[13px] bg-[#3DFFA2] align-middle ml-1"
+                className="inline-block w-[7px] h-[13px] bg-[#5B72F2] align-middle ml-1"
                 style={{ animation: 'cursor-blink 1.06s steps(1) infinite' }}
               />
             )}

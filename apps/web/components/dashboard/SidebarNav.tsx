@@ -71,7 +71,7 @@ export default function SidebarNav() {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-0 left-0 z-50 w-10 h-10 flex items-center justify-center bg-[#16161E] border-r border-b border-white/10 text-white"
+        className="lg:hidden fixed top-0 left-0 z-50 w-10 h-10 flex items-center justify-center bg-[#20294A] border-r border-b border-white/10 text-white"
         aria-label="Open menu"
       >
         <Menu className="w-5 h-5" />
@@ -95,13 +95,13 @@ export default function SidebarNav() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className={`lg:hidden fixed top-0 left-0 z-50 w-64 border-r flex flex-col transition-colors duration-150 ${
                 isDark
-                  ? 'bg-[#16161E] border-white/10'
+                  ? 'bg-[#20294A] border-white/10'
                   : 'bg-white border-gray-200'
               }`}
             >
               <div className={`flex items-center justify-between px-5 h-14 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`} data-tour="dashboard-header">
                 <div className="flex items-center gap-2 font-mono">
-                  <img src="/noxes-logo.svg" alt="NOXES" className="w-8 h-8 text-white" />
+                  <img src="/noxes-avatar.svg" alt="NOXES" className="w-8 h-8 text-white" />
                   <span className="text-white font-mono text-sm font-bold tracking-[0.2em]">NOXES</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -130,14 +130,14 @@ export default function SidebarNav() {
                       className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                         active
                           ? isDark
-                            ? 'text-white bg-[rgba(61,255,162,0.15)] border-l-2 border-[#3DFFA2]'
-                            : 'text-[#3DFFA2] bg-[rgba(61,255,162,0.08)] border-l-2 border-[#3DFFA2]'
+                            ? 'text-white bg-[rgba(91, 114, 242,0.15)] border-l-2 border-[#5B72F2]'
+                            : 'text-[#5B72F2] bg-[rgba(91, 114, 242,0.08)] border-l-2 border-[#5B72F2]'
                           : isDark
                             ? 'text-white/40 hover:text-white hover:bg-white/5'
                             : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#3DFFA2]' : isDark ? 'text-white/40' : 'text-gray-400'}`} />
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#5B72F2]' : isDark ? 'text-white/40' : 'text-gray-400'}`} />
                       <span className="flex-1">{item.label}</span>
                       {active && <ChevronRight className={`w-3 h-3 opacity-50 ${isDark ? 'text-white/50' : 'text-gray-400'}`} />}
                     </Link>
@@ -151,7 +151,7 @@ export default function SidebarNav() {
                       {userAvatar ? (
                         <img src={userAvatar} alt="avatar" className="w-7 h-7 rounded flex-shrink-0 opacity-90" />
                       ) : (
-                        <div className="w-7 h-7 rounded bg-[#3DFFA2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        <div className="w-7 h-7 rounded bg-[#5B72F2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                           {userInitial}
                         </div>
                       )}
@@ -186,7 +186,7 @@ export default function SidebarNav() {
       {/* Desktop sidebar */}
       <aside
         className={`hidden lg:block h-full border-r border-white/10 flex flex-col overflow-hidden transition-colors duration-150 ${
-          isDark ? 'bg-[#16161E]' : 'bg-white'
+          isDark ? 'bg-[#20294A]' : 'bg-white'
         }`}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -200,7 +200,7 @@ export default function SidebarNav() {
           <div className="h-14 flex items-center border-b border-white/10 flex-shrink-0">
             <div className="flex items-center justify-between w-full px-5" data-tour="dashboard-header">
               <div className="flex items-center gap-3">
-                <img src="/noxes-logo.svg" alt="NOXES" className="w-8 h-8 text-white flex-shrink-0" />
+                <img src="/noxes-avatar.svg" alt="NOXES" className="w-8 h-8 text-white flex-shrink-0" />
                 <motion.span
                   initial={false}
                   animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
@@ -238,14 +238,14 @@ export default function SidebarNav() {
                   className={`flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                     active
                       ? isDark
-                        ? 'text-white bg-[rgba(61,255,162,0.15)] border-l-2 border-[#3DFFA2]'
-                        : 'text-[#3DFFA2] bg-[rgba(61,255,162,0.08)] border-l-2 border-[#3DFFA2]'
+                        ? 'text-white bg-[rgba(91, 114, 242,0.15)] border-l-2 border-[#5B72F2]'
+                        : 'text-[#5B72F2] bg-[rgba(91, 114, 242,0.08)] border-l-2 border-[#5B72F2]'
                       : isDark
                         ? 'text-white/40 hover:text-white hover:bg-white/5'
                         : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 flex-shrink-0 ${active ? (isDark ? 'text-[#3DFFA2]' : 'text-[#3DFFA2]') : isDark ? 'text-white/40' : 'text-gray-400'}`} />
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${active ? (isDark ? 'text-[#5B72F2]' : 'text-[#5B72F2]') : isDark ? 'text-white/40' : 'text-gray-400'}`} />
                   <motion.span
                     initial={false}
                     animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
@@ -271,7 +271,7 @@ export default function SidebarNav() {
                   {userAvatar ? (
                     <img src={userAvatar} alt="avatar" className="w-7 h-7 rounded flex-shrink-0 opacity-90" />
                   ) : (
-                    <div className="w-7 h-7 rounded bg-[#3DFFA2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    <div className="w-7 h-7 rounded bg-[#5B72F2] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                       {userInitial}
                     </div>
                   )}

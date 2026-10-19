@@ -1,35 +1,34 @@
-import Hero from '@/components/landing/Hero';
-import TerminalDemo from '@/components/landing/TerminalDemo';
+import AboutNoxes from '@/components/landing/AboutNoxes';
 import Features from '@/components/landing/Features';
-import Pricing from '@/components/landing/Pricing';
-import Testimonials from '@/components/landing/Testimonials';
-import LandingNav from '@/components/landing/LandingNav';
+import GetStarted from '@/components/landing/GetStarted';
+import Hero from '@/components/landing/Hero';
 import LandingFooter from '@/components/landing/LandingFooter';
+import LandingNav from '@/components/landing/LandingNav';
+import Projects from '@/components/landing/Projects';
+import TerminalDemo from '@/components/landing/TerminalDemo';
 
 export default function LandingPage() {
   return (
-    <div className="bg-[#0F0F14] min-h-screen">
+    <div className="min-h-screen bg-[#101426] text-[#F4F5FB]">
       <LandingNav />
       <main>
         <Hero />
+        <Projects />
 
-        {/* Live product demo */}
-        <section id="demo" className="bg-[#16161E] py-24 md:py-32 border-y border-[rgba(255,255,255,0.08)]">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 grid lg:grid-cols-2 gap-16 items-center">
+        <section id="demo" className="border-y border-white/[0.08] bg-[#151B33] py-24 md:py-32">
+          <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 md:px-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.25em] text-white/40 mb-4">
-                How it works
-              </p>
-              <h2 className="font-mono font-medium text-white text-3xl md:text-5xl tracking-tight leading-tight mb-6">
-                Watch a change
+              <p className="brand-eyebrow">How the flagship works</p>
+              <h2 className="brand-display mt-5 text-4xl font-semibold leading-tight text-[#F4F5FB] md:text-6xl">
+                Ask clearly.
                 <br />
-                earn its commit.
+                Review calmly.
               </h2>
-              <p className="font-sans text-base text-white/60 leading-relaxed max-w-md">
-                You ask in plain language. NOXES scans your resources, reads the
-                relevant files, and proposes a diff. Nothing touches disk until
-                you approve — then it applies under a git checkpoint, reversible
-                at any time.
+              <p className="mt-6 max-w-lg text-base leading-relaxed text-[#AEB5D0] md:text-lg">
+                Describe the change you want. NOXES reads the relevant server resources and prepares a diff. You review and approve it; a Git checkpoint is made before the change is applied.
+              </p>
+              <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#8D96B7]">
+                No approval, no file change.
               </p>
             </div>
             <TerminalDemo />
@@ -37,8 +36,8 @@ export default function LandingPage() {
         </section>
 
         <Features />
-        <Pricing />
-        <Testimonials />
+        <AboutNoxes />
+        <GetStarted />
       </main>
       <LandingFooter />
     </div>

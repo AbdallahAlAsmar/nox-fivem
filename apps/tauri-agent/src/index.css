@@ -2,46 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── NOXES Design Tokens ───────────────────────────────────────── */
 :root {
-  /* Dark theme (default) */
-  --noxes-bg-primary:      #0F0F14;
-  --noxes-bg-elevated:     #16161E;
-  --noxes-bg-inset:        #0A0A0F;
+  color-scheme: dark;
+  --noxes-bg-primary: #101426;
+  --noxes-bg-elevated: #1a2140;
+  --noxes-bg-inset: #0b1020;
+  --noxes-fg-primary: #f4f5fb;
+  --noxes-fg-secondary: rgba(244, 245, 251, 0.72);
+  --noxes-fg-muted: rgba(204, 210, 232, 0.58);
+  --noxes-fg-disabled: rgba(204, 210, 232, 0.3);
+  --noxes-border-default: rgba(190, 200, 245, 0.13);
+  --noxes-border-strong: rgba(190, 200, 245, 0.25);
+  --noxes-accent: #5b72f2;
+  --noxes-accent-muted: rgba(91, 114, 242, 0.16);
+  --noxes-citrus: #d8f36a;
+  --noxes-citrus-muted: rgba(216, 243, 106, 0.13);
+  --success: #42cc8d;
+  --error: #f07187;
+  --warning: #efb45e;
 
-  --noxes-fg-primary:      #FFFFFF;
-  --noxes-fg-secondary:    rgba(255,255,255,0.7);
-  --noxes-fg-muted:        rgba(255,255,255,0.4);
-  --noxes-fg-disabled:     rgba(255,255,255,0.2);
-
-  --noxes-border-default:  rgba(255,255,255,0.08);
-  --noxes-border-strong:   rgba(255,255,255,0.18);
-  --noxes-accent:          #3DFFA2;
-  --noxes-accent-muted:    rgba(61,255,162,0.15);
-
-  /* Semantic colors (used in both themes) */
-  --success: #22c55e;
-  --error: #ef4444;
-  --warning: #f59e0b;
-}
-
-/* Light theme (overrides when html is not .dark) */
-html:not(.dark) {
-  --noxes-bg-primary:      #f9fafb;
-  --noxes-bg-elevated:     #ffffff;
-  --noxes-bg-inset:        #f3f4f6;
-
-  --noxes-fg-primary:      #111827;
-  --noxes-fg-secondary:    rgba(17, 24, 39, 0.7);
-  --noxes-fg-muted:        rgba(17, 24, 39, 0.4);
-  --noxes-fg-disabled:     rgba(17, 24, 39, 0.2);
-
-  --noxes-border-default:  rgba(229, 231, 235, 0.08);
-  --noxes-border-strong:   rgba(229, 231, 235, 0.18);
-}
-
-/* Alias variables for easier use in components */
-:root {
   --bg-dark: var(--noxes-bg-primary);
   --bg-card: var(--noxes-bg-elevated);
   --bg-inset: var(--noxes-bg-inset);
@@ -55,175 +34,54 @@ html:not(.dark) {
   --accent-muted: var(--noxes-accent-muted);
 }
 
-/* Smooth transitions for theme changes */
-* {
-  transition: background-color 0.15s ease, color 0.1s ease, border-color 0.15s ease;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--noxes-bg-primary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--noxes-border-strong);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--noxes-fg-muted);
-}
-
-/* Text selection */
-::selection {
-  background: rgba(61, 255, 162, 0.4);
-  color: white;
-}
-
-/* Focus */
-:focus-visible {
-  outline: 2px solid rgba(0, 255, 148, 0.5);
-  outline-offset: 2px;
-}
-
-* {
-  border-color: var(--noxes-border-default);
+html:not(.dark) {
+  color-scheme: light;
+  --noxes-bg-primary: #f4f5fb;
+  --noxes-bg-elevated: #ffffff;
+  --noxes-bg-inset: #e9ecf8;
+  --noxes-fg-primary: #171a2b;
+  --noxes-fg-secondary: rgba(23, 26, 43, 0.76);
+  --noxes-fg-muted: rgba(38, 45, 74, 0.58);
+  --noxes-fg-disabled: rgba(38, 45, 74, 0.34);
+  --noxes-border-default: rgba(40, 52, 105, 0.13);
+  --noxes-border-strong: rgba(40, 52, 105, 0.25);
 }
 
 body {
-  background-color: var(--noxes-bg-primary);
   color: var(--noxes-fg-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--noxes-bg-primary);
+  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Smooth transitions for theme changes */
-* {
-  transition: background-color 0.15s ease, color 0.1s ease, border-color 0.15s ease;
-}
+* { border-color: var(--noxes-border-default); }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+::selection { background: rgba(91, 114, 242, 0.35); color: #fff; }
+:focus-visible { outline: 2px solid var(--noxes-citrus); outline-offset: 3px; }
 
-::-webkit-scrollbar-track {
-  background: var(--noxes-bg-primary);
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--noxes-bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--noxes-border-strong); border: 2px solid var(--noxes-bg-primary); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--noxes-fg-muted); }
 
-::-webkit-scrollbar-thumb {
-  background: var(--noxes-border-strong);
-  border-radius: 3px;
-}
+aside nav button, aside, header { user-select: none; }
+pre, code, textarea, input, [class*="whitespace-pre"], .overflow-y-auto pre { user-select: text; }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--noxes-fg-muted);
-}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-subtle { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* Text selection */
-::selection {
-  background: rgba(61, 255, 162, 0.4);
-  color: white;
-}
-
-/* Focus */
-:focus-visible {
-  outline: 2px solid rgba(0, 255, 148, 0.5);
-  outline-offset: 2px;
-}
-
-/* ─── Text selection policy ───────────────────────────────────────── */
-/* App-chrome (nav/sidebar/header) is not selectable, so dragging doesn't
-   highlight labels — but real content (chat answers, diffs, console logs,
-   code) must be copyable. */
-aside nav button,
-aside,
-header {
-  user-select: none;
-}
-
-/* Content surfaces always win over the chrome rule above. */
-pre, code, textarea, input,
-[class*="whitespace-pre"],
-.overflow-y-auto pre {
-  user-select: text;
-}
-
-/* ─── Animations ─────────────────────────────────────────────────── */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* ─── Scrollbar ─────────────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--noxes-bg-primary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--noxes-border-strong);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--noxes-fg-muted);
-}
-
-/* ─── Selection ─────────────────────────────────────────────────── */
-::selection {
-  background: rgba(61, 255, 162, 0.4);
-  color: white;
-}
-
-/* ─── Font Smoothing ─────────────────────────────────────────────── */
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* ─── Focus ─────────────────────────────────────────────────────── */
-:focus-visible {
-  outline: 2px solid rgba(0, 255, 148, 0.5);
-  outline-offset: 2px;
-}
-
-/* ─── Custom Utilities ───────────────────────────────────────────── */
-.tauri-drag-region {
-  -webkit-app-region: drag;
-}
-.tauri-no-drag {
-  -webkit-app-region: no-drag;
-}
+.tauri-drag-region { -webkit-app-region: drag; }
+.tauri-no-drag { -webkit-app-region: no-drag; }
 .glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(190, 200, 245, 0.13);
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(14px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

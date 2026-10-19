@@ -25,7 +25,7 @@ export function NotificationBell() {
       case 'failure':
         return <XCircle className="w-4 h-4 text-[#ef4444]" />;
       case 'pending_approval':
-        return <Clock className="w-4 h-4 text-[#3DFFA2]" />;
+        return <Clock className="w-4 h-4 text-[#5B72F2]" />;
       case 'success':
         return <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />;
       default:
@@ -40,7 +40,7 @@ export function NotificationBell() {
       case 'failure':
         return 'text-[#ef4444]';
       case 'pending_approval':
-        return 'text-[#3DFFA2]';
+        return 'text-[#5B72F2]';
       case 'success':
         return 'text-[#22c55e]';
       default:
@@ -76,7 +76,7 @@ export function NotificationBell() {
       </button>
 
       {isDropdownOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-[#16161E] border border-[rgba(255,255,255,0.1)] rounded-lg shadow-2xl z-50 max-h-96 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-[#20294A] border border-[rgba(255,255,255,0.1)] rounded-lg shadow-2xl z-50 max-h-96 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-3 border-b border-[rgba(255,255,255,0.06)]">
             <span className="font-mono text-xs uppercase tracking-wider text-white">Notifications</span>
@@ -102,7 +102,7 @@ export function NotificationBell() {
                 <div
                   key={notification.id}
                   className={`p-3 border-b border-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.02)] transition-colors ${
-                    !notification.read ? 'bg-[rgba(61,255,162,0.05)]' : ''
+                    !notification.read ? 'bg-[rgba(91, 114, 242,0.05)]' : ''
                   }`}
                   onClick={() => markAsRead(notification.id)}
                 >
@@ -133,7 +133,7 @@ export function NotificationBell() {
                     <a
                       href={notification.action.href}
                       onClick={(e) => e.stopPropagation()}
-                      className="block mt-2 text-[11px] font-mono text-[#3DFFA2] hover:text-[#7c8aff] transition-colors"
+                      className="block mt-2 text-[11px] font-mono text-[#5B72F2] hover:text-[#7c8aff] transition-colors"
                     >
                       {notification.action.label} →
                     </a>
