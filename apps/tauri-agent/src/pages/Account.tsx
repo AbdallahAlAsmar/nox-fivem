@@ -38,7 +38,7 @@ export default function AccountPage() {
   const createdAt = '—'
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-[#0F0F14]">
+    <div className="flex-1 overflow-y-auto p-6 bg-[#101426]">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div>
@@ -47,10 +47,10 @@ export default function AccountPage() {
         </div>
 
         {/* Profile Card */}
-        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
+        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-6">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 flex-shrink-0 bg-[rgba(61,255,162,0.15)] border border-[rgba(61,255,162,0.3)] flex items-center justify-center">
-              <User className="w-7 h-7 text-[#3DFFA2]" />
+            <div className="w-16 h-16 flex-shrink-0 bg-[rgba(91, 114, 242,0.15)] border border-[rgba(91, 114, 242,0.3)] flex items-center justify-center">
+              <User className="w-7 h-7 text-[#5B72F2]" />
             </div>
             <div className="flex-1 min-w-0 pt-1">
               <h2 className="font-mono text-base text-white font-medium truncate">{user?.name || (isLoaded ? 'Unnamed User' : 'Loading…')}</h2>
@@ -60,9 +60,9 @@ export default function AccountPage() {
         </motion.section>
 
         {/* Details */}
-        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
+        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-5">
           <div className="flex items-center gap-2 mb-4">
-            <User className="w-4 h-4 text-[#3DFFA2]" />
+            <User className="w-4 h-4 text-[#5B72F2]" />
             <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Details</h2>
           </div>
           <div className="space-y-3">
@@ -98,10 +98,10 @@ export default function AccountPage() {
         </motion.section>
 
         {/* Billing Summary */}
-        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5">
+        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-[#3DFFA2]" />
+              <CreditCard className="w-4 h-4 text-[#5B72F2]" />
               <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Billing</h2>
             </div>
             <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)] uppercase tracking-wider">
@@ -133,7 +133,7 @@ export default function AccountPage() {
         </motion.section>
 
         {/* Danger Zone */}
-        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-[#16161E] border border-[rgba(255,80,80,0.15)] p-5">
+        <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-[#20294A] border border-[rgba(255,80,80,0.15)] p-5">
           <div className="flex items-center gap-2 mb-4">
             <Shield className="w-4 h-4 text-[#ff5050]" />
             <h2 className="font-mono text-xs uppercase tracking-[0.15em] text-[#ff5050]">Danger Zone</h2>

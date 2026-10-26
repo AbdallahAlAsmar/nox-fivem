@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 420" role="img" aria-labelledby="title desc">
+  <title id="title">NOXES</title>
+  <desc id="desc">Stacked NOXES logo for square and portrait layouts.</desc>
+  <g fill="none" stroke="#5B72F2" stroke-linecap="round" stroke-width="13" transform="translate(85 28) scale(1.65)">
+    <path d="M42 17H27a10 10 0 0 0-10 10v15M86 17h15a10 10 0 0 1 10 10v15M111 86v15a10 10 0 0 1-10 10H86M42 111H27a10 10 0 0 1-10-10V86"/>
+  </g>
+  <path d="M151 171V96l82 75V96" fill="none" stroke="#D8F36A" stroke-linecap="round" stroke-linejoin="round" stroke-width="15"/>
+  <circle cx="233" cy="96" r="8" fill="#D8F36A"/>
+  <text x="192" y="335" fill="#F4F5FB" text-anchor="middle" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="61" font-weight="700" letter-spacing="4">NOXES</text>
+  <text x="192" y="376" fill="#AEB5D0" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="14" letter-spacing="3">BUILD WHAT COMES NEXT</text>
+</svg>

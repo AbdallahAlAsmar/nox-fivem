@@ -58,7 +58,7 @@ export default function SidebarNav({ currentPage, onNavigate }: SidebarNavProps)
               onClick={() => onNavigate(item.id)}
               className={`w-full flex items-center gap-2.5 px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors duration-100 text-left ${
                 active
-                  ? 'text-white bg-[rgba(61,255,162,0.12)] border-l-2 border-[#3DFFA2]'
+                  ? 'text-white bg-[rgba(91, 114, 242,0.12)] border-l-2 border-[#5B72F2]'
                   : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--border)]'
               }`}
               aria-current={active ? 'page' : undefined}

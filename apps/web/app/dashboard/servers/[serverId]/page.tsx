@@ -233,9 +233,9 @@ export default function ServerDetailPage() {
   const wasConnected = !!server && (server.status === 'offline' || !!server.lastSeenAt);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#0F0F14]">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#111315]">
       {/* Top bar */}
-      <div className="h-14 border-b border-[rgba(255,255,255,0.08)] bg-[#16161E]/50 flex items-center px-4 gap-4 flex-shrink-0">
+      <div className="h-14 border-b border-[rgba(255,255,255,0.08)] bg-[#202326]/50 flex items-center px-4 gap-4 flex-shrink-0">
         <Link
           href="/dashboard"
           className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)] hover:text-white transition-colors duration-100"
@@ -311,7 +311,7 @@ export default function ServerDetailPage() {
       </div>
 
       {/* Tab navigation */}
-      <div className="h-10 border-b border-[rgba(255,255,255,0.06)] bg-[#16161E]/30 flex items-center px-4 gap-1 flex-shrink-0 overflow-x-auto">
+      <div className="h-10 border-b border-[rgba(255,255,255,0.06)] bg-[#202326]/30 flex items-center px-4 gap-1 flex-shrink-0 overflow-x-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -321,7 +321,7 @@ export default function ServerDetailPage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                 isActive
-                  ? 'text-white border-b-2 border-[#3DFFA2] -mb-px'
+                  ? 'text-white border-b-2 border-[#E83708] -mb-px'
                   : 'text-[rgba(255,255,255,0.4)] hover:text-white/70'
               }`}
             >
@@ -339,7 +339,7 @@ export default function ServerDetailPage() {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(61,255,162,0.4)] text-white"
+            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#202326] border border-[rgba(232, 55, 8,0.4)] text-white"
           >
             {headerMessage}
           </motion.div>
@@ -351,10 +351,10 @@ export default function ServerDetailPage() {
         {activeTab === 'chat' && !loading && server && server.status !== 'online' && (
           <div className="p-6 overflow-y-auto">
             <div className="max-w-lg mx-auto">
-              <div className={`flex items-start gap-3 p-4 border mb-5 ${wasConnected ? 'border-[rgba(61,255,162,0.3)] bg-[rgba(61,255,162,0.06)]' : 'border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)]'}`}>
-                <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${wasConnected ? 'text-[#3DFFA2]' : 'text-[#f59e0b]'}`} />
+              <div className={`flex items-start gap-3 p-4 border mb-5 ${wasConnected ? 'border-[rgba(232, 55, 8,0.3)] bg-[rgba(232, 55, 8,0.06)]' : 'border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)]'}`}>
+                <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${wasConnected ? 'text-[#E83708]' : 'text-[#f59e0b]'}`} />
                 <div>
-                  <p className={`font-mono text-xs uppercase tracking-wider ${wasConnected ? 'text-[#3DFFA2]' : 'text-[#f59e0b]'}`}>
+                  <p className={`font-mono text-xs uppercase tracking-wider ${wasConnected ? 'text-[#E83708]' : 'text-[#f59e0b]'}`}>
                     {wasConnected ? 'Desktop app is offline' : 'Connect the desktop app'}
                   </p>
                   <p className="font-sans text-xs text-[rgba(255,255,255,0.6)] mt-1 leading-[1.6]">
@@ -375,11 +375,11 @@ export default function ServerDetailPage() {
               {wasConnected ? (
                 <div className="space-y-2.5 font-sans text-xs text-white/60 leading-[1.6]">
                   <p className="flex gap-2.5">
-                    <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">1.</span>
+                    <span className="font-mono text-[10px] text-[#E83708] mt-0.5 flex-shrink-0">1.</span>
                     <span>Open the NOXES desktop app and sign in with the same account.</span>
                   </p>
                   <p className="flex gap-2.5">
-                    <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">2.</span>
+                    <span className="font-mono text-[10px] text-[#E83708] mt-0.5 flex-shrink-0">2.</span>
                     <span>Select this server — it reconnects automatically if the folder is already set.</span>
                   </p>
                 </div>
@@ -456,7 +456,7 @@ export default function ServerDetailPage() {
         )}
 
         {!server && !loading && (
-          <div className="flex-1 flex items-center justify-center p-6 bg-[#0F0F14]">
+          <div className="flex-1 flex items-center justify-center p-6 bg-[#111315]">
             <div className="text-center max-w-md">
               <div className="w-12 h-12 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="w-6 h-6 text-[#ef4444]" />
@@ -469,7 +469,7 @@ export default function ServerDetailPage() {
               </p>
               <Link
                 href="/dashboard"
-                className="font-mono text-xs uppercase tracking-wider text-[#3DFFA2] hover:underline"
+                className="font-mono text-xs uppercase tracking-wider text-[#E83708] hover:underline"
               >
                 ← Back to Dashboard
               </Link>
@@ -638,7 +638,7 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
             return (
               <div
                 key={playerId || player.id}
-                className={`bg-[#16161E] border p-3 flex items-center gap-3 transition-colors ${
+                className={`bg-[#202326] border p-3 flex items-center gap-3 transition-colors ${
                   isBanned
                     ? 'border-[rgba(239,68,68,0.3)] hover:border-[rgba(239,68,68,0.5)]'
                     : 'border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.16)]'
@@ -647,11 +647,11 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                   isBanned
                     ? 'bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)]'
-                    : 'bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.3)]'
+                    : 'bg-[rgba(232, 55, 8,0.1)] border border-[rgba(232, 55, 8,0.3)]'
                 }`}>
                   {isBanned
                     ? <Ban className="w-4 h-4 text-[#ef4444]" />
-                    : <Users className="w-4 h-4 text-[#3DFFA2]" />
+                    : <Users className="w-4 h-4 text-[#E83708]" />
                   }
                 </div>
                 <div className="flex-1 min-w-0">
@@ -684,7 +684,7 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative bg-[#16161E] border border-[rgba(239,68,68,0.3)] rounded-lg p-5 w-full max-w-sm shadow-2xl"
+            className="relative bg-[#202326] border border-[rgba(239,68,68,0.3)] rounded-lg p-5 w-full max-w-sm shadow-2xl"
           >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] flex items-center justify-center">
@@ -714,7 +714,7 @@ function ServerPlayersView({ serverId, orchUrl, hasAgent }: { serverId: string; 
                   if (e.key === 'Escape') setBanModal(null);
                 }}
                 placeholder="e.g. Exploiting, cheating, harassment..."
-                className="w-full bg-[#0a0a0f] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-mono text-xs text-white placeholder:text-[rgba(255,255,255,0.2)] focus:outline-none focus:border-[rgba(239,68,68,0.5)]"
+                className="w-full bg-[#111315] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 font-mono text-xs text-white placeholder:text-[rgba(255,255,255,0.2)] focus:outline-none focus:border-[rgba(239,68,68,0.5)]"
                 autoFocus
               />
             </div>
@@ -796,14 +796,14 @@ function ServerResourcesView({
             placeholder="Search resources..."
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2]"
+            className="w-full pl-9 pr-3 py-1.5 bg-[#202326] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs focus:outline-none focus:border-[#E83708]"
           />
         </div>
 
         <button
           onClick={onScan}
           disabled={scanning}
-          className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white bg-[#16161E] border border-[rgba(255,255,255,0.12)] hover:border-[rgba(255,255,255,0.25)] transition-colors disabled:opacity-40"
+          className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white bg-[#202326] border border-[rgba(255,255,255,0.12)] hover:border-[rgba(255,255,255,0.25)] transition-colors disabled:opacity-40"
         >
           <RefreshCw className={`w-3 h-3 ${scanning ? 'animate-spin' : ''}`} />
           <span>{scanning ? 'Scanning...' : 'Scan Resources'}</span>
@@ -834,10 +834,10 @@ function ServerResourcesView({
             return (
               <div
                 key={i}
-                className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-3 flex items-center gap-3 hover:border-[rgba(255,255,255,0.16)] transition-colors"
+                className="bg-[#202326] border border-[rgba(255,255,255,0.08)] p-3 flex items-center gap-3 hover:border-[rgba(255,255,255,0.16)] transition-colors"
               >
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.3)]">
-                  <Package className="w-4 h-4 text-[#3DFFA2]" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[rgba(232, 55, 8,0.1)] border border-[rgba(232, 55, 8,0.3)]">
+                  <Package className="w-4 h-4 text-[#E83708]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -909,7 +909,7 @@ function ServerConsoleView({ serverId, orchUrl, hasAgent }: { serverId: string; 
   }, [load]);
 
   return (
-    <div className="flex-1 flex flex-col p-4 bg-[#0A0A0F] font-mono text-xs overflow-hidden">
+    <div className="flex-1 flex flex-col p-4 bg-[#111315] font-mono text-xs overflow-hidden">
       {/* Static viewer — the platform has no console exec action, so command
           input would be dishonest. This is a read-only tail of the log. */}
       <div className="flex items-center justify-between mb-2 px-2">
@@ -1059,13 +1059,13 @@ function ServerSettingsView({
       </div>
 
       {msg && (
-        <div className="p-3 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] font-mono text-xs text-[#3DFFA2]">
+        <div className="p-3 bg-[rgba(232, 55, 8,0.1)] border border-[rgba(232, 55, 8,0.2)] font-mono text-xs text-[#E83708]">
           {msg}
         </div>
       )}
 
       {/* Server Info Card */}
-      <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5 space-y-4">
+      <div className="bg-[#202326] border border-[rgba(255,255,255,0.08)] p-5 space-y-4">
         <div>
           <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1">
             Server Name
@@ -1075,12 +1075,12 @@ function ServerSettingsView({
               type="text"
               value={serverName}
               onChange={(e) => onNameChange(e.target.value)}
-              className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2]"
+              className="flex-1 bg-[#111315] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#E83708]"
             />
             <button
               onClick={onSaveName}
               disabled={isSavingName || serverName === server?.name}
-              className="px-4 py-2 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#E83708] hover:bg-[#d43106] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSavingName ? 'Saving...' : 'Save'}
             </button>
@@ -1136,12 +1136,12 @@ function ServerSettingsView({
               value={serverDir}
               onChange={(e) => setServerDir(e.target.value)}
               placeholder="Enter server directory path..."
-              className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2]"
+              className="flex-1 bg-[#111315] border border-[rgba(255,255,255,0.08)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#E83708]"
             />
             <button
               onClick={handleSaveDir}
               disabled={saving}
-              className="px-4 py-2 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-[#E83708] hover:bg-[#d43106] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
@@ -1154,7 +1154,7 @@ function ServerSettingsView({
 
       {/* Pairing Card */}
       {pairing && (
-        <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-5 space-y-3">
+        <div className="bg-[#202326] border border-[rgba(255,255,255,0.08)] p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-mono text-xs uppercase tracking-wider text-white">Agent Pairing</h3>
             <button
@@ -1167,7 +1167,7 @@ function ServerSettingsView({
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-[#0A0A0F] border border-[rgba(255,255,255,0.08)] px-3 py-2 font-mono text-sm text-[#3DFFA2]">
+            <code className="flex-1 bg-[#111315] border border-[rgba(255,255,255,0.08)] px-3 py-2 font-mono text-sm text-[#E83708]">
               {pairing.code}
             </code>
             <button
@@ -1198,7 +1198,7 @@ function ServerSettingsView({
             value={deleteName}
             onChange={(e) => setDeleteName(e.target.value)}
             placeholder={`Type "${server?.name}" to confirm`}
-            className="w-full bg-[#0A0A0F] border border-[rgba(239,68,68,0.2)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#ef4444] placeholder:text-white/20"
+            className="w-full bg-[#111315] border border-[rgba(239,68,68,0.2)] px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-[#ef4444] placeholder:text-white/20"
           />
           {deleteMsg && <p className="font-mono text-xs text-[#ef4444]">{deleteMsg}</p>}
           <button
@@ -1219,8 +1219,8 @@ function ServerSettingsView({
 
 function ServerSkeleton() {
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#0F0F14]">
-      <div className="h-14 border-b border-[rgba(255,255,255,0.08)] bg-[#16161E]/50 flex items-center px-4 gap-4">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#111315]">
+      <div className="h-14 border-b border-[rgba(255,255,255,0.08)] bg-[#202326]/50 flex items-center px-4 gap-4">
         <div className="w-12 h-4 bg-[rgba(255,255,255,0.06)] animate-pulse" />
         <div className="w-px h-4 bg-[rgba(255,255,255,0.08)]" />
         <div className="flex items-center gap-3">
@@ -1231,7 +1231,7 @@ function ServerSkeleton() {
           </div>
         </div>
       </div>
-      <div className="h-10 border-b border-[rgba(255,255,255,0.08)] bg-[#16161E]/30 flex items-center px-4 gap-1">
+      <div className="h-10 border-b border-[rgba(255,255,255,0.08)] bg-[#202326]/30 flex items-center px-4 gap-1">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="w-16 h-6 bg-[rgba(255,255,255,0.04)] animate-pulse rounded-sm" />
         ))}

@@ -133,24 +133,24 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
       {!loading && (
         <div className="space-y-4">
           {/* Server Name */}
-          <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
+          <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <SettingsIcon className="w-4 h-4 text-[#3DFFA2]" />
+              <SettingsIcon className="w-4 h-4 text-[#5B72F2]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server Name</h3>
             </div>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors"
+              className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors"
               placeholder="My FiveM Server"
             />
           </div>
 
           {/* Server Directory */}
-          <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
+          <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <FolderOpen className="w-4 h-4 text-[#3DFFA2]" />
+              <FolderOpen className="w-4 h-4 text-[#5B72F2]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server Directory</h3>
             </div>
             <div className="flex gap-2">
@@ -159,7 +159,7 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
                 value={serverDir}
                 onChange={(e) => setServerDir(e.target.value)}
                 placeholder="C:/FXServer/server-data"
-                className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors"
+                className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors"
               />
               <button
                 onClick={handleBrowseDir}
@@ -172,9 +172,9 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
           </div>
 
           {/* Framework (read-only) */}
-          <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
+          <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <SettingsIcon className="w-4 h-4 text-[#3DFFA2]" />
+              <SettingsIcon className="w-4 h-4 text-[#5B72F2]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Framework</h3>
             </div>
             <div className="px-4 py-2.5 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-white font-mono text-sm">
@@ -199,7 +199,7 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2.5 bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-[1.4px] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100 flex items-center gap-2"
+              className="px-6 py-2.5 bg-white text-[#101426] font-mono text-xs uppercase tracking-[1.4px] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100 flex items-center gap-2"
             >
               {saving ? 'Saving...' : 'Save Settings'}
             </button>

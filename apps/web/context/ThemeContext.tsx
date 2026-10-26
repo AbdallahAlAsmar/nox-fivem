@@ -17,17 +17,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    let preferredTheme: Theme = 'dark';
     try {
       const saved = window.localStorage.getItem('nox-theme');
       if (saved === 'dark' || saved === 'light') {
-        setTheme(saved);
+        preferredTheme = saved;
       } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-        setTheme('light');
+        preferredTheme = 'light';
       }
     } catch {
       // Storage can be unavailable in restricted browser contexts.
     }
+    setTheme(preferredTheme);
     setMounted(true);
+    document.documentElement.classList.toggle('dark', preferredTheme === 'dark');
+    document.documentElement.classList.toggle('light', preferredTheme === 'light');
+  }, []);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     document.documentElement.classList.toggle('light', theme === 'light');
   }, [theme]);

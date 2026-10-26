@@ -96,7 +96,7 @@ function StatCard({
   sub?: string
 }) {
   return (
-    <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
+    <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
       <div className="flex items-center justify-between mb-3">
         <Icon className={`w-4 h-4 ${color}`} />
         <span className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.3)]">
@@ -118,7 +118,7 @@ function ActivityItemRow({ item }: { item: ActivityItem }) {
     heartbeat: Activity,
   }
   const colorMap: Record<string, string> = {
-    change: 'text-[#3DFFA2]',
+    change: 'text-[#5B72F2]',
     scan: 'text-[#22c55e]',
     heartbeat: 'text-[rgba(255,255,255,0.5)]',
   }
@@ -170,7 +170,7 @@ function ServerCard({
   }
 
   return (
-    <div onClick={() => onSelect(server.id)} className="group block bg-[#16161E] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] transition-colors duration-100 cursor-pointer">
+    <div onClick={() => onSelect(server.id)} className="group block bg-[#20294A] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] transition-colors duration-100 cursor-pointer">
       {/* Header row */}
       <div className="flex items-start justify-between px-5 pt-4 pb-3">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -269,9 +269,9 @@ function ServerCard({
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); onConnect(server); }}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[#3DFFA2] bg-[rgba(61,255,162,0.08)] hover:bg-[rgba(61,255,162,0.18)] transition-colors duration-100 border-r border-[rgba(255,255,255,0.06)] font-semibold"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-[#5B72F2] bg-[rgba(91, 114, 242,0.08)] hover:bg-[rgba(91, 114, 242,0.18)] transition-colors duration-100 border-r border-[rgba(255,255,255,0.06)] font-semibold"
           >
-            <Zap className="w-3 h-3 text-[#3DFFA2]" />
+            <Zap className="w-3 h-3 text-[#5B72F2]" />
             Connect
           </button>
         )}
@@ -304,7 +304,7 @@ function ServerCard({
 
 function ServerCardSkeleton() {
   return (
-    <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
+    <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)]">
       <div className="px-5 pt-4 pb-3 flex items-start justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-2 h-2 bg-[rgba(255,255,255,0.15)] animate-pulse" />
@@ -338,9 +338,9 @@ function ServerCardSkeleton() {
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="text-center py-20 bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
-      <div className="w-14 h-14 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] flex items-center justify-center mx-auto mb-4">
-        <Server className="w-7 h-7 text-[#3DFFA2]" />
+    <div className="text-center py-20 bg-[#20294A] border border-[rgba(255,255,255,0.08)]">
+      <div className="w-14 h-14 bg-[rgba(91, 114, 242,0.1)] border border-[rgba(91, 114, 242,0.2)] flex items-center justify-center mx-auto mb-4">
+        <Server className="w-7 h-7 text-[#5B72F2]" />
       </div>
       <h2 className="font-mono text-sm uppercase tracking-[0.2em] text-white mb-2">
         No servers yet
@@ -351,7 +351,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       </p>
       <button
         onClick={onAdd}
-        className="font-mono text-xs uppercase tracking-[1.4px] px-5 py-2.5 bg-white text-[#0F0F14] font-medium hover:opacity-85 transition-opacity duration-100 inline-flex items-center gap-2"
+        className="font-mono text-xs uppercase tracking-[1.4px] px-5 py-2.5 bg-white text-[#101426] font-medium hover:opacity-85 transition-opacity duration-100 inline-flex items-center gap-2"
       >
         <Plus className="w-4 h-4" />
         Add Your First Server
@@ -719,7 +719,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0F0F14]">
+    <div className="flex-1 overflow-y-auto bg-[#101426]">
       {/* Toast */}
       <AnimatePresence>
         {toast && (
@@ -727,7 +727,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#16161E] border border-[rgba(61,255,162,0.4)] text-white"
+            className="fixed top-16 right-6 z-50 font-mono text-xs uppercase tracking-wider px-4 py-2.5 bg-[#20294A] border border-[rgba(91, 114, 242,0.4)] text-white"
           >
             {toast}
           </motion.div>
@@ -735,7 +735,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
       </AnimatePresence>
 
       {/* Top bar */}
-      <header className="h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#16161E]/50 flex items-center px-6 flex-shrink-0">
+      <header className="h-12 border-b border-[rgba(255,255,255,0.08)] bg-[#20294A]/50 flex items-center px-6 flex-shrink-0">
         <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
           <span className="text-white font-medium">Servers</span>
           <span className="text-[rgba(255,255,255,0.2)]">/</span>
@@ -773,7 +773,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                   new Date().toDateString(),
               ).length}
               icon={MessageSquare}
-              color="text-[#3DFFA2]"
+              color="text-[#5B72F2]"
               sub="today"
             />
             <StatCard
@@ -792,7 +792,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
 
         {/* Activity Feed */}
         {totalServers > 0 && (
-          <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)]">
+          <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)]">
             <div className="flex items-center justify-between px-5 py-3 border-b border-[rgba(255,255,255,0.08)]">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-3.5 h-3.5 text-[rgba(255,255,255,0.4)]" />
@@ -832,7 +832,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="font-mono text-xs uppercase tracking-[1.4px] px-4 py-2.5 bg-white text-[#0F0F14] font-medium hover:opacity-85 transition-opacity duration-100 inline-flex items-center gap-2"
+            className="font-mono text-xs uppercase tracking-[1.4px] px-4 py-2.5 bg-white text-[#101426] font-medium hover:opacity-85 transition-opacity duration-100 inline-flex items-center gap-2"
           >
             <Plus className="w-3.5 h-3.5" />
             Add Server
@@ -939,7 +939,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
             className="absolute inset-0 bg-black/80"
             onClick={() => setShowAddModal(false)}
           />
-          <div className="relative w-full max-w-lg bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
+          <div className="relative w-full max-w-lg bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-mono text-sm uppercase tracking-[0.2em] text-white">
                 Add New Server
@@ -962,7 +962,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                   value={newServerName}
                   onChange={(e) => setNewServerName(e.target.value)}
                   placeholder="My FiveM Server"
-                  className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors"
+                  className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors"
                 />
               </div>
 
@@ -979,7 +979,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                       setInspectResult(null)
                     }}
                     placeholder="C:/FXServer/server-data"
-                    className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#3DFFA2] transition-colors"
+                    className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors"
                   />
                   <button
                     onClick={handlePickDirectoryFromModal}
@@ -1070,7 +1070,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                   !newServerDir.trim() ||
                   !inspectResult?.hasServerCfg
                 }
-                className="flex-1 px-4 py-2.5 bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-wider font-medium hover:opacity-85 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 bg-white text-[#101426] font-mono text-xs uppercase tracking-wider font-medium hover:opacity-85 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 {isCreating ? 'Creating…' : 'Create Server'}
               </button>

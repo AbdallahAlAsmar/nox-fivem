@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Controlled passage concept</title>
+  <desc id="desc">Three routes converge and pass through a deliberate opening into one clear path.</desc>
+  <g fill="none" stroke="#1D1F20" stroke-linecap="round" stroke-linejoin="round" stroke-width="14">
+    <path d="M24 55h38c25 0 30 42 59 66"/>
+    <path d="M24 128h97"/>
+    <path d="M24 201h38c25 0 30-42 59-66"/>
+    <path d="M121 128h109"/>
+    <path d="M151 36v49M151 171v49"/>
+  </g>
+  <circle cx="230" cy="128" r="8" fill="#1D1F20"/>
+</svg>

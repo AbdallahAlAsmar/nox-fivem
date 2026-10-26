@@ -41,10 +41,10 @@ export function ConfirmDialog({
       bg: 'bg-[rgba(245,158,11,0.05)]',
     },
     info: {
-      border: 'border-[rgba(61,255,162,0.3)]',
-      confirm: 'bg-[#3DFFA2] hover:bg-[#36d98c] text-white',
-      icon: 'text-[#3DFFA2]',
-      bg: 'bg-[rgba(61,255,162,0.05)]',
+      border: 'border-[rgba(232, 55, 8,0.3)]',
+      confirm: 'bg-[#E83708] hover:bg-[#d43106] text-white',
+      icon: 'text-[#E83708]',
+      bg: 'bg-[rgba(232, 55, 8,0.05)]',
     },
   };
 
@@ -76,7 +76,7 @@ export function ConfirmDialog({
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm z-50"
           >
-            <div className={`bg-[#16161E] ${styles.border} p-5 rounded-lg shadow-2xl`}>
+            <div className={`bg-[#202326] ${styles.border} p-5 rounded-lg shadow-2xl`}>
               <div className={`w-10 h-10 rounded-full ${styles.bg} flex items-center justify-center mx-auto mb-4`}>
                 <AlertCircle className={`w-5 h-5 ${styles.icon}`} />
               </div>

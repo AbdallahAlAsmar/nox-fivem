@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx *)",
+      "Bash(echo \"---exit:$?\")",
+      "Bash(git check-ignore *)",
+      "Bash(grep -rn \"ws://\\\\|wss://\\\\|new WebSocket\\\\|/ws/status\" /d/fivem-dev/apps/web --include=\"*.ts*\" -r)",
+      "Bash(node -e \"const s=require\\('fs'\\).readFileSync\\('src/pages/Dashboard.tsx','utf8'\\); try{require\\('typescript'\\)}\")",
+      "Bash(grep -v \"//\")",
+      "Bash(grep *)",
+      "Bash(pnpm view *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(git add *)",
+      "Bash(echo \"grep exit=$?\")",
+      "Bash(git commit -m 'chore: track middleware.ts, scrub secrets from env examples *)",
+      "Bash(git rm *)",
+      "Bash(echo \"check-ignore exit=$? \\(0 = ignored, good\\)\")",
+      "Bash(git commit -m 'chore: untrack binaries/junk, remove stale status docs *)",
+      "Bash(echo \"exit=$? \\(1 = no commits touched them\\)\")",
+      "Bash(bash \"C:\\\\Users\\\\2026\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\6.3.0\\\\skills\\\\subagent-driven-development\\\\scripts\\\\review-package\" \"C:\\\\Users\\\\2026\\\\.claude\\\\plans\\\\can-you-plan-first-peppy-yao.md\" c7d1303 HEAD)",
+      "Bash(git *)",
+      "Bash(pnpm --version)",
+      "Bash(cargo --version)",
+      "Bash(pnpm vitest *)",
+      "Bash(ssh *)",
+      "Bash(curl *)",
+      "Bash(pnpm typecheck *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p=process.argv[1];const f=require('fs');if(f.existsSync(p)){const r=require('child_process').spawnSync(process.execPath,[p],{stdio:'inherit'});process.exit(r.status===null?1:r.status);}\" \"C:\\\\Users\\\\2026\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p=process.argv[1];const f=require('fs');if(f.existsSync(p)){const r=require('child_process').spawnSync(process.execPath,[p],{stdio:'inherit'});process.exit(r.status===null?1:r.status);}\" \"C:\\\\Users\\\\2026\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write/MultiEdit on UI files, full-rule deep pass on Stop."
+}

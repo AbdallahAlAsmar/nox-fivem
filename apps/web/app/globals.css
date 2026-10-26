@@ -2,171 +2,377 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark theme (default) */
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 15, 15, 20;
-  --background-end-rgb: 15, 15, 20;
-  --surface-rgb: 22, 22, 30;
-  --border-rgb: 255, 255, 255, 0.08;
+  color-scheme: dark;
+  --noxes-bg-primary: #111315;
+  --noxes-bg-elevated: #202326;
+  --noxes-bg-inset: #181A1D;
+  --noxes-fg-primary: #F4F1E9;
+  --noxes-fg-secondary: rgba(244, 241, 233, 0.72);
+  --noxes-fg-muted: rgba(182, 176, 164, 0.65);
+  --noxes-fg-disabled: rgba(104, 102, 95, 0.6);
+  --noxes-border-default: #414548;
+  --noxes-border-strong: #68665F;
+  --noxes-accent: #E83708;
+  --noxes-accent-muted: rgba(232, 55, 8, 0.16);
+  --noxes-citrus: #E83708;
+  --noxes-citrus-muted: rgba(232, 55, 8, 0.16);
+  --noxes-font-display: var(--font-display, 'Barlow Condensed', sans-serif);
+  --noxes-font-body: var(--font-sans, 'Inter', sans-serif);
+  --noxes-font-mono: var(--font-mono, 'JetBrains Mono', monospace);
+  --noxes-radius-card: 4px;
+  --foreground-rgb: 244, 241, 233;
+  --background-rgb: 17, 19, 21;
+
+  /* HSL variables for shadcn/ui integration */
+  --background: 210 11% 7%;
+  --foreground: 43 33% 94%;
+  --card: 210 9% 14%;
+  --card-foreground: 43 33% 94%;
+  --popover: 210 9% 14%;
+  --popover-foreground: 43 33% 94%;
+  --primary: 13 93% 47%;
+  --primary-foreground: 210 11% 7%;
+  --secondary: 210 9% 18%;
+  --secondary-foreground: 43 33% 94%;
+  --muted: 210 9% 18%;
+  --muted-foreground: 40 8% 58%;
+  --accent: 13 93% 47%;
+  --accent-foreground: 210 11% 7%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 43 33% 94%;
+  --border: 206 5% 27%;
+  --input: 206 5% 27%;
+  --ring: 13 93% 47%;
+  --radius: 0.25rem;
 }
 
-/* Light theme (overrides when .dark is not present) */
 html:not(.dark) {
-  --foreground-rgb: 17, 24, 39;
-  --background-start-rgb: 249, 250, 251;
-  --background-end-rgb: 249, 250, 251;
-  --surface-rgb: 255, 255, 255;
-  --border-rgb: 229, 231, 235;
+  color-scheme: light;
+  --noxes-bg-primary: #E2DCCE;
+  --noxes-bg-elevated: #F4F1E9;
+  --noxes-bg-inset: #D5D0C5;
+  --noxes-fg-primary: #111315;
+  --noxes-fg-secondary: rgba(17, 19, 21, 0.76);
+  --noxes-fg-muted: #68665F;
+  --noxes-fg-disabled: rgba(104, 102, 95, 0.4);
+  --noxes-border-default: #B6B0A4;
+  --noxes-border-strong: #68665F;
+  --foreground-rgb: 17, 19, 21;
+  --background-rgb: 226, 220, 206;
+
+  --background: 43 23% 85%;
+  --foreground: 210 11% 7%;
+  --card: 43 33% 94%;
+  --card-foreground: 210 11% 7%;
+  --popover: 43 33% 94%;
+  --popover-foreground: 210 11% 7%;
+  --primary: 13 93% 47%;
+  --primary-foreground: 43 33% 94%;
+  --secondary: 43 14% 78%;
+  --secondary-foreground: 210 11% 7%;
+  --muted: 43 14% 78%;
+  --muted-foreground: 48 4% 39%;
+  --border: 40 10% 68%;
+  --input: 40 10% 68%;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
-}
-
-/* Smooth transitions for theme changes */
-* {
-  transition: background-color 0.15s ease, color 0.1s ease, border-color 0.15s ease;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.3);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.5);
-}
-:root {
-  /* ============================================
-     NOXES — Brand Design Tokens v2.0
-     Monospace brutalism | Zero glow | Sharp edges
-     Mark: Aegis | Accent: Signal #3DFFA2
-     ============================================ */
-
-  /* -- BACKGROUND -- */
-  --noxes-bg-primary:      #0F0F14;   /* Main page background */
-  --noxes-bg-elevated:     #16161E;   /* Card/surface backgrounds */
-  --noxes-bg-inset:        #0A0A0F;   /* Indented/pressed areas */
-
-  /* -- TEXT -- */
-  --noxes-fg-primary:      #FFFFFF;   /* Headings, primary text */
-  --noxes-fg-secondary:    rgba(255,255,255,0.7);   /* Body, descriptions */
-  --noxes-fg-muted:        rgba(255,255,255,0.4);   /* Captions, metadata */
-  --noxes-fg-disabled:     rgba(255,255,255,0.2);   /* Disabled state */
-
-  /* -- BORDERS -- */
-  --noxes-border-default:  rgba(255,255,255,0.08);   /* Standard borders */
-  --noxes-border-strong:   rgba(255,255,255,0.18);   /* Active/focus borders */
-  --noxes-border-accent:   #3DFFA2;                  /* Selected/active state */
-
-  /* -- ACCENT (use sparingly) -- */
-  --noxes-accent:          #3DFFA2;   /* Active states, links, highlights, mark core */
-  --noxes-accent-muted:    rgba(61,255,162,0.12); /* Subtle accent backgrounds */
-
-  /* -- RADIUS -- */
-  --noxes-radius-none:     0px;
-  --noxes-radius-sm:       2px;
-  --noxes-radius-md:       4px;
-
-  /* -- SHADOW (minimal — NOXES has almost none) -- */
-  --noxes-shadow-none:     none;
-  --noxes-shadow-subtle:   0 1px 0 rgba(255,255,255,0.04) inset;
-
-  /* -- FONT -- */
-  --noxes-font-display:    'Geist Mono', 'JetBrains Mono', 'Courier New', monospace;
-  --noxes-font-body:       'Inter', system-ui, -apple-system, sans-serif;
-  --noxes-font-mono:       'Geist Mono', 'JetBrains Mono', monospace;
-
-  /* -- SPACING -- */
-  --noxes-space-xs:        4px;
-  --noxes-space-sm:        8px;
-  --noxes-space-md:        16px;
-  --noxes-space-lg:        24px;
-  --noxes-space-xl:        48px;
-  --noxes-space-2xl:       80px;
-
-  /* -- TRANSITIONS -- */
-  --noxes-ease:            cubic-bezier(0.16, 1, 0.3, 1);
-  --noxes-transition-fast: 100ms var(--noxes-ease);
-  --noxes-transition-mid:  200ms var(--noxes-ease);
-}
-
-/* -- BUTTON PRIMITIVES -- */
-/* Primary: white fill, dark text */
-.noxes-btn-primary {
-  background: #FFFFFF;
-  color: #0F0F14;
-  font-family: var(--noxes-font-display);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  border: none;
-  border-radius: 0px;
-  padding: 12px 24px;
-  cursor: pointer;
-  transition: opacity var(--noxes-transition-fast);
-}
-.noxes-btn-primary:hover { opacity: 0.85; }
-
-/* Ghost: outlined */
-.noxes-btn-ghost {
-  background: transparent;
-  color: #FFFFFF;
-  font-family: var(--noxes-font-display);
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 0px;
-  padding: 12px 24px;
-  cursor: pointer;
-  transition: border-color var(--noxes-transition-fast);
-}
-.noxes-btn-ghost:hover { border-color: rgba(255,255,255,0.4); }
-
-/* -- CARD -- */
-.noxes-card {
-  background: var(--noxes-bg-elevated);
-  border: 1px solid var(--noxes-border-default);
-  border-radius: var(--noxes-radius-none);
-  padding: var(--noxes-space-lg);
-}
-
-/* -- INPUT -- */
-.noxes-input {
-  background: transparent;
-  border: 1px solid var(--noxes-border-default);
-  border-radius: var(--noxes-radius-none);
   color: var(--noxes-fg-primary);
+  background: var(--noxes-bg-primary);
   font-family: var(--noxes-font-body);
-  font-size: 16px;
-  padding: 12px 16px;
-  outline: none;
-  transition: border-color var(--noxes-transition-fast);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
-.noxes-input:focus { border-color: var(--noxes-accent); }
-.noxes-input::placeholder { color: var(--noxes-fg-disabled); }
 
-/* NOXES signature motion: the signal square blinks at cursor cadence */
-@keyframes cursor-blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0.15; }
+::selection {
+  color: #111315;
+  background: #E83708;
+}
+
+:focus-visible {
+  outline: 2px solid #E83708;
+  outline-offset: 2px;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--noxes-bg-primary); }
+::-webkit-scrollbar-thumb {
+  background: var(--noxes-border-default);
+  border: 2px solid var(--noxes-bg-primary);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--noxes-border-strong); }
+
+.brand-display {
+  font-family: var(--noxes-font-display);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.brand-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #B6B0A4;
+  font: 600 0.75rem/1.2 var(--noxes-font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.brand-eyebrow::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 1px;
+  background: #E83708;
+  content: '';
+}
+
+.brand-hero {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 70% 30%, rgba(232, 55, 8, 0.08), transparent 50%),
+    radial-gradient(ellipse at 20% 90%, rgba(65, 69, 72, 0.25), transparent 45%),
+    #111315;
+}
+
+.brand-grid {
+  background-image:
+    linear-gradient(rgba(65, 69, 72, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(65, 69, 72, 0.18) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black 30%, transparent 95%);
+}
+
+.brand-nav {
+  border-color: transparent;
+  background: rgba(17, 19, 21, 0.85);
+  backdrop-filter: blur(12px);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.brand-nav.is-scrolled {
+  border-color: #414548;
+  background: rgba(17, 19, 21, 0.96);
+}
+
+/* Primary Button according to Section 7: Vermilion #E83708 fill, Deep Ink #111315 text */
+.brand-button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: #E83708;
+  color: #111315;
+  font-family: var(--noxes-font-body);
+  font-size: 0.925rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.brand-button-primary:hover {
+  background: #d43106;
+  transform: translateY(-1px);
+}
+
+.brand-button-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary Button: Carbon surface, 1px Graphite border, Chalk text */
+.brand-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
+  border: 1px solid #414548;
+  border-radius: 4px;
+  background: #202326;
+  color: #F4F1E9;
+  font-family: var(--noxes-font-body);
+  font-size: 0.925rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.brand-button-secondary:hover {
+  border-color: #68665F;
+  background: #282C30;
+  transform: translateY(-1px);
+}
+
+.brand-button-secondary:active {
+  transform: translateY(0);
+}
+
+.brand-stage {
+  position: relative;
+  isolation: isolate;
+}
+
+.brand-stage-orbit {
+  position: absolute;
+  z-index: -1;
+  top: 8%;
+  right: 4%;
+  width: 82%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(65, 69, 72, 0.4);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 55, 8, 0.06), transparent 70%);
+  animation: brand-orbit 30s linear infinite;
+}
+
+.brand-stage-orbit::before,
+.brand-stage-orbit::after {
+  position: absolute;
+  border: 1px solid rgba(65, 69, 72, 0.3);
+  border-radius: 50%;
+  content: '';
+}
+
+.brand-stage-orbit::before { inset: 15%; }
+.brand-stage-orbit::after { inset: 30%; }
+
+.brand-product-window {
+  border: 1px solid #414548;
+  border-radius: 6px;
+  background: #181A1D;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  transform: perspective(1300px) rotateY(-5deg) rotateX(2deg);
+}
+
+.brand-window-bar { border-bottom: 1px solid #414548; }
+.brand-code-add { color: #E83708; }
+.brand-code-remove { color: #8B95A0; }
+
+.brand-surface {
+  border: 1px solid #414548;
+  border-radius: 4px;
+  background: #202326;
+}
+
+.brand-link {
+  color: #B6B0A4;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.brand-link:hover { color: #F4F1E9; }
+
+.brand-section-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #414548, transparent);
+}
+
+@keyframes brand-orbit { to { transform: rotate(360deg); } }
+@keyframes brand-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.brand-enter { animation: brand-enter 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.brand-enter-delay-1 { animation-delay: 80ms; }
+.brand-enter-delay-2 { animation-delay: 150ms; }
+.brand-enter-delay-3 { animation-delay: 220ms; }
+
+.noxes-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
+  background: #E83708;
+  color: #111315;
+  font-family: var(--noxes-font-body);
+  font-size: 0.925rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.noxes-btn-primary:hover {
+  transform: translateY(-1px);
+  background: #d43106;
+}
+
+.noxes-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #414548;
+  border-radius: 4px;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
+  background: #202326;
+  color: #F4F1E9;
+  font-family: var(--noxes-font-body);
+  font-size: 0.925rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.noxes-btn-ghost:hover {
+  border-color: #68665F;
+  background: #282C30;
+}
+
+.noxes-card {
+  border: 1px solid #414548;
+  border-radius: 4px;
+  background: #202326;
+  padding: 1.5rem;
+}
+
+.noxes-input {
+  border: 1px solid #414548;
+  border-radius: 4px;
+  background: #181A1D;
+  color: #F4F1E9;
+  font-family: var(--noxes-font-body);
+  font-size: 0.95rem;
+  padding: 0.75rem 1rem;
+  outline: none;
+  transition: border-color 160ms ease;
+}
+
+.noxes-input:focus { border-color: #E83708; }
+.noxes-input::placeholder { color: #68665F; }
+
+@media (max-width: 1023px) {
+  .brand-product-window { transform: none; }
+  .brand-stage-orbit { top: 2%; right: 7%; width: 72%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cursor-blink-anim, [style*="cursor-blink"] { animation: none !important; opacity: 1 !important; }
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

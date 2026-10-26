@@ -1,4 +1,4 @@
-import { Inter } from 'next/font/google';
+import { Inter, Barlow_Condensed, JetBrains_Mono } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AgentStatusProvider } from '@/contexts/AgentStatusContext';
@@ -18,17 +18,38 @@ const inter = Inter({
   preload: true,
 });
 
+const barlowCondensed = Barlow_Condensed({
+  subsets: ['latin'],
+  weight: ['600', '700', '800', '900'],
+  display: 'swap',
+  variable: '--font-display',
+  preload: true,
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-mono',
+  preload: true,
+});
+
 export const metadata = {
   title: {
-    default: 'NOXES.',
-    template: '%s | NOXES.',
+    default: 'NOXES — Worlds in Motion.',
+    template: '%s | NOXES',
   },
   description:
-    'NOXES. — AI-powered server development assistant that safely reads, modifies, and manages your FiveM server files.',
+    'Complexity moves. Clarity is authored. Built for creators. Not consumers. NOXES makes tools for people who shape digital worlds, starting with NOXES for FiveM.',
   openGraph: {
     type: 'website',
-    siteName: 'NOXES.',
-    description: 'AI-powered FiveM server development assistant.',
+    siteName: 'NOXES',
+    title: 'NOXES — Worlds in Motion.',
+    description: 'Complexity moves. Clarity is authored. Built for creators. Not consumers.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NOXES — Worlds in Motion.',
+    description: 'Complexity moves. Clarity is authored. Built for creators. Not consumers.',
   },
 };
 
@@ -38,22 +59,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
-      <body className={`${inter.variable} font-sans min-h-screen bg-[#0a0a0f] text-white`}>
+      <body className={`${inter.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable} min-h-screen bg-[#111315] text-[#F4F1E9] font-sans antialiased`}>
         {!hasValidClerkConfig ? (
-          <main className="min-h-screen bg-[#0F0F14] flex items-center justify-center p-6">
-            <section className="max-w-xl border border-white/10 bg-[#16161E] p-8 md:p-10">
-              <p className="font-mono text-xs uppercase tracking-[0.25em] text-[#3DFFA2] mb-5">NOXES setup required</p>
-              <h1 className="font-mono text-2xl md:text-3xl text-white mb-4">Authentication is not configured</h1>
-              <p className="font-sans text-sm leading-relaxed text-white/60 mb-6">
+          <main className="min-h-screen bg-[#111315] flex items-center justify-center p-6">
+            <section className="max-w-xl border border-[#414548] bg-[#202326] p-8 md:p-10 rounded-sm">
+              <p className="font-mono text-xs uppercase tracking-[0.25em] text-[#E83708] mb-5">NOXES setup required</p>
+              <h1 className="font-display uppercase text-2xl md:text-3xl text-[#F4F1E9] mb-4 tracking-tight">Authentication is not configured</h1>
+              <p className="font-sans text-sm leading-relaxed text-[#F4F1E9]/70 mb-6">
                 Add valid Clerk keys to the web app environment before using NOXES. Both values are required; the site is unavailable until authentication is configured.
               </p>
-              <ul className="font-mono text-xs text-white/70 space-y-2">
+              <ul className="font-mono text-xs text-[#F4F1E9]/70 space-y-2">
                 <li>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY — pk_test_… or pk_live_…</li>
                 <li>CLERK_SECRET_KEY — sk_test_… or sk_live_…</li>
               </ul>
@@ -70,10 +90,10 @@ export default function RootLayout({
                     position="bottom-right"
                     toastOptions={{
                       style: {
-                        background: '#16161E',
-                        border: '1px solid rgba(94,106,210,0.3)',
-                        color: '#FFFFFF',
-                        borderRadius: '0px',
+                        background: '#202326',
+                        border: '1px solid #414548',
+                        color: '#F4F1E9',
+                        borderRadius: '4px',
                         fontFamily: "'JetBrains Mono', monospace",
                       },
                     }}

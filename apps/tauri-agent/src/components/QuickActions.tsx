@@ -124,8 +124,8 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
         onClick={onToggle}
         className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center px-2 py-3 font-mono text-xs uppercase tracking-wider transition-all duration-100 border-l ${
           isOpen
-            ? 'bg-[#16161E] text-white border-[rgba(255,255,255,0.08)]'
-            : 'bg-[#3DFFA2] text-[#0F0F14] border-transparent hover:bg-[#36d98c]'
+            ? 'bg-[#20294A] text-white border-[rgba(255,255,255,0.08)]'
+            : 'bg-[#5B72F2] text-[#101426] border-transparent hover:bg-[#4962E4]'
         }`}
         style={{ borderRadius: '4px 0 0 4px' }}
       >
@@ -252,7 +252,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
                     className={`mt-3 p-3 font-mono text-xs border ${
                       result.type === 'success' ? 'border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.05)] text-[#22c55e]' :
                       result.type === 'error' ? 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)] text-[#ef4444]' :
-                      'border-[rgba(94,106,210,0.3)] bg-[rgba(94,106,210,0.05)] text-[#3DFFA2]'
+                      'border-[rgba(91,114,242,0.3)] bg-[rgba(91,114,242,0.05)] text-[#5B72F2]'
                     }`}
                   >
                     <div className="flex items-center gap-2">

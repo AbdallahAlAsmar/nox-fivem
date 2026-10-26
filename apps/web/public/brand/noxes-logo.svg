@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 128" role="img" aria-labelledby="title desc">
+  <title id="title">NOXES</title>
+  <desc id="desc">The NOXES logo, with a signal mark and wordmark.</desc>
+  <g fill="none" stroke="#414548" stroke-linecap="square" stroke-width="6" transform="translate(3 3)">
+    <path d="M42 17H27a4 4 0 0 0-4 4v15M86 17h15a4 4 0 0 1 4 4v15M105 86v15a4 4 0 0 1-4 4H86M42 105H27a4 4 0 0 1-4-4V86"/>
+  </g>
+  <path d="M42 90V44l50 46V44" fill="none" stroke="#E83708" stroke-linecap="square" stroke-linejoin="miter" stroke-width="9" transform="translate(3 3)"/>
+  <circle cx="95" cy="47" r="5" fill="#E83708"/>
+  <text x="145" y="91" fill="#F4F1E9" font-family="'Barlow Condensed', Inter, sans-serif" font-size="80" font-weight="900" letter-spacing="3">NOXES</text>
+</svg>

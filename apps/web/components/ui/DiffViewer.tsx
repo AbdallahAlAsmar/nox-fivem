@@ -100,7 +100,7 @@ export function DiffViewer({ diff, maxLines = 200, compact = false }: DiffViewer
           {files.map((file, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] rounded font-mono text-[10px] text-[#3DFFA2]"
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-[rgba(232, 55, 8,0.1)] border border-[rgba(232, 55, 8,0.2)] rounded font-mono text-[10px] text-[#E83708]"
             >
               {file}
             </span>
@@ -166,7 +166,7 @@ interface InlineDiffPreviewProps {
 
 export function InlineDiffPreview({ diff, className = '' }: InlineDiffPreviewProps) {
   return (
-    <div className={`bg-[#0a0a0f] border border-[rgba(255,255,255,0.06)] rounded-lg overflow-hidden ${className}`}>
+    <div className={`bg-[#111315] border border-[rgba(255,255,255,0.06)] rounded-lg overflow-hidden ${className}`}>
       <DiffViewer diff={diff} compact />
     </div>
   );

@@ -5,19 +5,21 @@ export default {
     extend: {
       colors: {
         nox: {
-          bg: '#0F0F14',
-          surface: '#16161E',
-          inset: '#0A0A0F',
-          white: '#FFFFFF',
+          bg: '#101426',
+          surface: '#1A2140',
+          inset: '#0B1020',
+          white: '#F4F5FB',
           muted: 'rgba(255,255,255,0.4)',
           dim: 'rgba(255,255,255,0.2)',
-          accent: '#5E6AD2',
-          accentMuted: 'rgba(94,106,210,0.15)',
+          accent: '#5B72F2',
+          accentMuted: 'rgba(91,114,242,0.16)',
+          citrus: '#D8F36A',
         },
       },
       fontFamily: {
-        mono: ['"JetBrains Mono"', 'Courier New', 'monospace'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['"Space Grotesk"', 'Inter', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', '"JetBrains Mono"', 'monospace'],
+        sans: ['Inter', '"Segoe UI"', 'system-ui', 'sans-serif'],
       },
       letterSpacing: {
         ultra: '0.2em',

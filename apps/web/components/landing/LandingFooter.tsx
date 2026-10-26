@@ -1,22 +1,21 @@
 import Link from 'next/link';
 
+const YEAR = new Date().getFullYear();
+
 export default function LandingFooter() {
   return (
-    <footer className="bg-[#0A0A0F] border-t border-[rgba(255,255,255,0.08)]">
-      <div className="max-w-7xl mx-auto px-6 md:px-12 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-2.5">
-          <img src="/noxes-logo.svg" alt="NOXES" className="h-6 opacity-80" />
-        </div>
-
-        <nav className="flex items-center gap-8 font-mono text-[11px] uppercase tracking-[0.15em] text-white/40">
-          <a href="#demo" className="hover:text-white transition-colors">Demo</a>
-          <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-          <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+    <footer className="border-t border-[#414548] bg-[#111315]">
+      <div className="mx-auto grid max-w-7xl gap-9 px-6 py-11 md:grid-cols-[1fr_auto_1fr] md:items-center md:px-12">
+        <Link href="/" aria-label="NOXES home" className="inline-flex w-fit rounded-sm">
+          <img src="/brand/noxes-logo.svg" alt="NOXES" className="h-7 w-auto" />
+        </Link>
+        <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
+          <Link href="/projects" className="text-sm font-medium text-[#B6B0A4] hover:text-[#F4F1E9] transition-colors">Projects</Link>
+          <Link href="/#about" className="text-sm font-medium text-[#B6B0A4] hover:text-[#F4F1E9] transition-colors">About</Link>
+          <Link href="/sign-in" className="text-sm font-medium text-[#B6B0A4] hover:text-[#F4F1E9] transition-colors">Sign in</Link>
+          <Link href="/sign-up" className="text-sm font-medium text-[#B6B0A4] hover:text-[#F4F1E9] transition-colors">Get started</Link>
         </nav>
-
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/25">
-          NOXES<span className="text-[#3DFFA2]">.</span> — approval-gated AI ops
-        </p>
+        <p className="font-mono text-xs text-[#68665F] md:text-right">© {YEAR} NOXES · Worlds in Motion.</p>
       </div>
     </footer>
   );

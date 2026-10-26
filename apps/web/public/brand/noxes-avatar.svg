@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">NOXES avatar</title>
+  <desc id="desc">The NOXES signal mark on a midnight background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1B2446"/><stop offset="1" stop-color="#101426"/></linearGradient>
+    <radialGradient id="aura"><stop stop-color="#5B72F2" stop-opacity=".24"/><stop offset="1" stop-color="#5B72F2" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="248" r="208" fill="url(#aura)"/>
+  <g fill="none" stroke="#7184FF" stroke-linecap="round" stroke-width="23" transform="translate(100 100) scale(2.44)">
+    <path d="M42 17H27a10 10 0 0 0-10 10v15M86 17h15a10 10 0 0 1 10 10v15M111 86v15a10 10 0 0 1-10 10H86M42 111H27a10 10 0 0 1-10-10V86"/>
+  </g>
+  <path d="M195 312V200l122 112V200" fill="none" stroke="#D8F36A" stroke-linecap="round" stroke-linejoin="round" stroke-width="26"/>
+  <circle cx="317" cy="200" r="14" fill="#D8F36A"/>
+</svg>

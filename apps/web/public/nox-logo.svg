@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 64">
-  <rect width="256" height="64" fill="none"/>
-  <!-- Terminal cursor -->
-  <rect x="4" y="16" width="6" height="32" fill="currentColor"/>
-  <!-- NOX text -->
-  <text x="24" y="46" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" fill="currentColor" letter-spacing="4">NOX</text>
-  <!-- Period -->
-  <text x="78" y="46" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="300" fill="currentColor" opacity="0.5">.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 128" role="img" aria-labelledby="title">
+  <title id="title">NOXES</title>
+  <g fill="none" stroke="#5B72F2" stroke-linecap="round" stroke-width="7" transform="translate(3 3)">
+    <path d="M42 17H27a10 10 0 0 0-10 10v15M86 17h15a10 10 0 0 1 10 10v15M111 86v15a10 10 0 0 1-10 10H86M42 111H27a10 10 0 0 1-10-10V86"/>
+  </g>
+  <path d="M42 90V44l50 46V44" fill="none" stroke="#D8F36A" stroke-linecap="round" stroke-linejoin="round" stroke-width="9" transform="translate(3 3)"/>
+  <circle cx="95" cy="47" r="5" fill="#D8F36A"/>
+  <text x="151" y="91" fill="#F4F5FB" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="76" font-weight="700" letter-spacing="1">NOXES</text>
 </svg>

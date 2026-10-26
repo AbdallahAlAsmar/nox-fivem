@@ -104,7 +104,7 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F0F14] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#101426] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -124,7 +124,7 @@ export default function SignIn() {
         </div>
 
         {/* Card */}
-        <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6 space-y-5">
+        <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-6 space-y-5">
           {/* Email/password form — stays in-app */}
           <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div>
@@ -156,7 +156,7 @@ export default function SignIn() {
             <button
               type="submit"
               disabled={loading || !signInLoaded}
-              className="w-full bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-[1.4px] py-2.5 hover:opacity-85 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-white text-[#101426] font-mono text-xs uppercase tracking-[1.4px] py-2.5 hover:opacity-85 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-2" />
@@ -171,7 +171,7 @@ export default function SignIn() {
               <div className="w-full border-t border-[rgba(255,255,255,0.08)]" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="px-2 bg-[#16161E] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wider">
+              <span className="px-2 bg-[#20294A] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wider">
                 or
               </span>
             </div>
@@ -185,7 +185,7 @@ export default function SignIn() {
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[rgba(255,255,255,0.08)] text-white hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)] transition-colors disabled:opacity-50 font-mono text-xs uppercase tracking-[1.4px]"
             >
               {socialLoading === 'oauth_google' ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3DFFA2]" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5B72F2]" />
               ) : (
                 <ExternalLink className="w-3.5 h-3.5 text-[rgba(255,255,255,0.4)]" />
               )}
@@ -197,7 +197,7 @@ export default function SignIn() {
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[rgba(255,255,255,0.08)] text-white hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)] transition-colors disabled:opacity-50 font-mono text-xs uppercase tracking-[1.4px]"
             >
               {socialLoading === 'oauth_discord' ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#3DFFA2]" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5B72F2]" />
               ) : (
                 <ExternalLink className="w-3.5 h-3.5 text-[rgba(255,255,255,0.4)]" />
               )}

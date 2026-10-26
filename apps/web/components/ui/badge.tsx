@@ -3,15 +3,15 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center border px-2.5 py-0.5 text-xs font-mono uppercase tracking-wider transition-colors focus:outline-none',
+  'inline-flex items-center border px-2.5 py-0.5 text-xs font-mono uppercase tracking-wider transition-colors focus:outline-none rounded-sm',
   {
     variants: {
       variant: {
-        default: 'border-[rgba(255,255,255,0.15)] bg-transparent text-[rgba(255,255,255,0.6)]',
-        secondary: 'border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.04)] text-[rgba(255,255,255,0.5)]',
-        destructive: 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] text-[#ef4444]',
-        outline: 'border-[rgba(255,255,255,0.15)] bg-transparent text-[rgba(255,255,255,0.6)]',
-        accent: 'border-[rgba(61,255,162,0.4)] bg-[rgba(61,255,162,0.1)] text-[#3DFFA2]',
+        default: 'border-[#414548] bg-[#202326] text-[#F4F1E9]/85',
+        secondary: 'border-[#414548] bg-transparent text-[#F4F1E9]/65',
+        destructive: 'border-[#dc2626]/40 bg-[#dc2626]/10 text-[#f87171]',
+        outline: 'border-[#414548] bg-transparent text-[#F4F1E9]/80',
+        accent: 'border-[#E83708]/40 bg-[#E83708]/10 text-[#E83708]',
       },
     },
     defaultVariants: {

@@ -118,7 +118,7 @@ function StatCard({ label, value, icon: Icon, color, sub, isDark }: {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`p-4 transition-colors duration-150 ${isDark ? 'bg-[#16161E]' : 'bg-white border border-gray-200'}`}
+      className={`p-4 transition-colors duration-150 ${isDark ? 'bg-[#202326]' : 'bg-white border border-gray-200'}`}
     >
       <div className="flex items-center justify-between mb-3">
         <Icon className={`w-4 h-4 ${color}`} />
@@ -141,7 +141,7 @@ function ActivityItemRow({ item }: { item: ActivityItem }) {
     ban: Users,
   };
   const colorMap: Record<string, string> = {
-    change: 'text-[#3DFFA2]',
+    change: 'text-[#E83708]',
     chat: 'text-white/50',
     scan: 'text-[#22c55e]',
     restart: 'text-[#f59e0b]',
@@ -151,7 +151,7 @@ function ActivityItemRow({ item }: { item: ActivityItem }) {
   const color = colorMap[item.type] || 'text-white/40';
 
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0">
+    <div className="flex items-center gap-3 py-2.5 border-b border-[#414548]/50 last:border-0">
       <div className={`w-7 h-7 flex items-center justify-center flex-shrink-0 ${color}`}>
         <Icon className="w-3.5 h-3.5" />
       </div>
@@ -211,7 +211,7 @@ function ServerCard({
   return (
     <Link
       href={`/dashboard/servers/${server.id}`}
-      className={`group block bg-[#16161E] hover:bg-[#1a1a24] transition-colors duration-100 rounded ${isDark ? '' : 'ring-1 ring-gray-200'}`}
+      className={`group block bg-[#202326] hover:bg-[#2D3237] transition-colors duration-100 rounded ${isDark ? '' : 'ring-1 ring-gray-200'}`}
     >
       {/* Header row */}
       <div className="flex items-start justify-between px-5 pt-4 pb-3">
@@ -238,7 +238,7 @@ function ServerCard({
               Connected
             </span>
           ) : server.hasAgent || server.status === 'paired' ? (
-            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(61,255,162,0.1)] text-[#3DFFA2]">
+            <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 bg-[rgba(232, 55, 8,0.1)] text-[#E83708]">
               Ready to connect
             </span>
           ) : (
@@ -284,7 +284,7 @@ function ServerCard({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-white/5">
+      <div className="flex items-center justify-between px-5 py-3 border-t border-[#414548]/50">
         <span className="font-mono text-[10px] text-white/25">
           {server.status === 'online' && server.hasAgent
             ? server.lastSeenAt
@@ -460,7 +460,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className={`flex-1 overflow-y-auto transition-colors duration-150 ${isDark ? 'bg-[#0a0a0f]' : 'bg-[#f3f4f6]'}`}>
+    <div className={`flex-1 overflow-y-auto transition-colors duration-150 ${isDark ? 'bg-[#111315]' : 'bg-[#f3f4f6]'}`}>
       {/* Create server modal / pairing result */}
       <AnimatePresence>
         {showCreateModal && (
@@ -478,7 +478,7 @@ export default function DashboardPage() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm z-50"
             >
-              <div className="bg-[#16161E] border border-white/10 p-5">
+              <div className="bg-[#202326] border border-[#414548] p-5">
                 {createdServer ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
@@ -493,22 +493,22 @@ export default function DashboardPage() {
 
                     <ol className="space-y-3 font-sans text-xs text-white/60 leading-[1.6] list-none">
                       <li className="flex gap-2.5">
-                        <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">1.</span>
+                        <span className="font-mono text-[10px] text-[#E83708] mt-0.5 flex-shrink-0">1.</span>
                         <span>
                           Download and install the{' '}
-                          <a href="/dist/NOXES-Setup.exe" className="text-[#3DFFA2] hover:text-white underline">NOXES desktop app</a>{' '}
+                          <a href="/dist/NOXES-Setup.exe" className="text-[#E83708] hover:text-white underline">NOXES desktop app</a>{' '}
                           on the PC running your FiveM server.
                         </span>
                       </li>
                       <li className="flex gap-2.5">
-                        <span className="font-mono text-[10px] text-[#3DFFA2] mt-0.5 flex-shrink-0">2.</span>
+                        <span className="font-mono text-[10px] text-[#E83708] mt-0.5 flex-shrink-0">2.</span>
                         <span>Open the app, <strong className="text-white/80">sign in with the same account</strong>, pick "{createdServerName}" and choose your server directory — it connects automatically.</span>
                       </li>
                     </ol>
 
                     <button
                       onClick={() => { setShowCreateModal(false); setCreatedServer(null); }}
-                      className="w-full py-2.5 bg-[#3DFFA2] hover:bg-[#36d98c] text-white font-mono text-xs uppercase tracking-wider transition-colors"
+                      className="w-full py-2.5 bg-[#E83708] hover:bg-[#d43106] text-[#111315] font-semibold font-mono text-xs uppercase tracking-wider transition-colors"
                     >
                       Got it
                     </button>
@@ -521,7 +521,7 @@ export default function DashboardPage() {
                       value={newServerName}
                       onChange={(e) => setNewServerName(e.target.value)}
                       placeholder="Server name..."
-                      className="w-full px-3 py-2 border border-white/10 bg-[#0a0a0f] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#3DFFA2] mb-4"
+                      className="w-full px-3 py-2 border border-[#414548] bg-[#111315] text-white font-mono text-sm placeholder:text-white/20 focus:outline-none focus:border-[#E83708] mb-4"
                       onKeyDown={(e) => e.key === 'Enter' && handleCreateServer()}
                     />
                     <div className="flex gap-2 justify-end">
@@ -534,7 +534,7 @@ export default function DashboardPage() {
                       <button
                         onClick={handleCreateServer}
                         disabled={creating || !newServerName.trim()}
-                        className="px-3 py-1.5 bg-[#3DFFA2] hover:bg-[#36d98c] disabled:opacity-50 text-white font-mono text-xs uppercase tracking-wider transition-colors"
+                        className="px-3 py-1.5 bg-[#E83708] hover:bg-[#d43106] disabled:opacity-50 text-[#111315] font-semibold font-mono text-xs uppercase tracking-wider transition-colors"
                       >
                         {creating ? 'Creating...' : 'Create'}
                       </button>
@@ -562,7 +562,7 @@ export default function DashboardPage() {
       )}
 
       {/* Top bar */}
-      <header className={`h-12 border-b flex items-center px-6 flex-shrink-0 transition-colors duration-150 ${isDark ? 'border-white/5 bg-[#16161E]/30' : 'border-gray-200 bg-white/80'}`}>
+      <header className={`h-12 border-b flex items-center px-6 flex-shrink-0 transition-colors duration-150 ${isDark ? 'border-[#414548]/50 bg-[#202326]/30' : 'border-gray-200 bg-white/80'}`}>
         <div className={`flex items-center gap-3 font-mono text-xs uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
           <span className={isDark ? 'text-white font-medium' : 'text-gray-900 font-medium'}>Servers</span>
           <span className={isDark ? 'text-white/20' : 'text-gray-300'}>/</span>
@@ -576,7 +576,7 @@ export default function DashboardPage() {
           <kbd className={`hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono ${isDark ? 'text-white/30 bg-white/5' : 'text-gray-400 bg-gray-100'} rounded`}>⌘K</kbd>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3DFFA2]/15 border border-[#3DFFA2]/30 text-[#3DFFA2] font-mono text-xs uppercase tracking-wider hover:bg-[#3DFFA2]/25 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E83708]/15 border border-[#E83708]/30 text-[#E83708] font-mono text-xs uppercase tracking-wider hover:bg-[#E83708]/25 transition-colors"
           >
             <PlusIcon className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">New Server</span>
@@ -608,7 +608,7 @@ export default function DashboardPage() {
               label="AI Messages"
               value={aiMessagesToday}
               icon={MessageSquare}
-              color="text-[#3DFFA2]"
+              color="text-[#E83708]"
               sub="today"
               isDark={isDark}
             />
@@ -625,7 +625,7 @@ export default function DashboardPage() {
 
         {/* ─── Activity Feed ──────────────────────────────────────────── */}
         {activityItems.length > 0 && (
-          <div className={`bg-[#16161E] p-4 transition-colors duration-150 ${isDark ? '' : 'bg-white border border-gray-200'}`}>
+          <div className={`bg-[#202326] p-4 transition-colors duration-150 ${isDark ? '' : 'bg-white border border-gray-200'}`}>
             <h3 className={`font-mono text-xs uppercase tracking-wider mb-3 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>Recent Activity</h3>
             <div className="space-y-0.5">
               {activityItems.map((item) => (
@@ -648,20 +648,20 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : hasError ? (
-            <div className={`text-center py-16 ${isDark ? 'bg-[#16161E]' : 'bg-white border border-gray-200'}`}>
+            <div className={`text-center py-16 ${isDark ? 'bg-[#202326]' : 'bg-white border border-gray-200'}`}>
               <AlertCircle className={`w-10 h-10 mx-auto mb-4 ${isDark ? 'text-white/20' : 'text-gray-300'}`} />
               <h3 className={`font-mono text-sm mb-2 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>Failed to load servers</h3>
               <p className={`font-sans text-xs mb-4 ${isDark ? 'text-white/30' : 'text-gray-400'}`}>Check your connection and try again</p>
               <button
                 onClick={() => mutate()}
-                className="flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors mx-auto"
+                className="flex items-center gap-2 px-4 py-2 bg-[#E83708] text-[#111315] font-semibold font-mono text-xs uppercase tracking-wider hover:bg-[#d43106] transition-colors mx-auto"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Retry
               </button>
             </div>
           ) : displayServers.length === 0 ? (
-            <div className={`text-center py-16 ${isDark ? 'bg-[#16161E]' : 'bg-white border border-gray-200'}`}>
+            <div className={`text-center py-16 ${isDark ? 'bg-[#202326]' : 'bg-white border border-gray-200'}`}>
               <Server className={`w-12 h-12 mx-auto mb-4 ${isDark ? 'text-white/15' : 'text-gray-300'}`} />
               <h3 className={`font-mono text-sm mb-2 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>No servers yet</h3>
               <p className={`font-sans text-xs mb-4 max-w-sm mx-auto ${isDark ? 'text-white/30' : 'text-gray-400'}`}>
@@ -669,7 +669,7 @@ export default function DashboardPage() {
               </p>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors mx-auto"
+                className="flex items-center gap-2 px-4 py-2 bg-[#E83708] text-[#111315] font-semibold font-mono text-xs uppercase tracking-wider hover:bg-[#d43106] transition-colors mx-auto"
               >
                 <PlusIcon className="w-3.5 h-3.5" />
                 Create Server
@@ -691,9 +691,9 @@ export default function DashboardPage() {
               {/* Create card */}
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex flex-col items-center justify-center min-h-[180px] bg-[#16161E]/50 border border-dashed border-white/10 hover:border-[#3DFFA2]/40 hover:bg-[#16161E] transition-all duration-100 rounded"
+                className="flex flex-col items-center justify-center min-h-[180px] bg-[#202326]/50 border border-dashed border-[#414548] hover:border-[#E83708]/40 hover:bg-[#202326] transition-all duration-100 rounded"
               >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-[#3DFFA2]/10">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-[#E83708]/10">
                   <PlusIcon className={`w-5 h-5 ${isDark ? 'text-white/30' : 'text-gray-400'}`} />
                 </div>
                 <span className={`font-mono text-xs uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Add Server</span>
