@@ -6,8 +6,12 @@ export default function LandingFooter() {
   return (
     <footer className="border-t border-[#414548] bg-[#111315]">
       <div className="mx-auto grid max-w-7xl gap-9 px-6 py-11 md:grid-cols-[1fr_auto_1fr] md:items-center md:px-12">
-        <Link href="/" aria-label="NOXES home" className="inline-flex w-fit rounded-sm">
-          <img src="/brand/noxes-logo.svg" alt="NOXES" className="h-7 w-auto" />
+        <Link href="/" aria-label="NOXES home" className="inline-flex w-fit rounded-sm focus-visible:outline-none">
+          <img
+            src="/brand/14_Small_NOXES_Worlds_in_Motion_Lockup.png"
+            alt="NOXES — Worlds in Motion"
+            className="h-10 w-auto object-contain"
+          />
         </Link>
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
           <Link href="/projects" className="text-sm font-medium text-[#B6B0A4] hover:text-[#F4F1E9] transition-colors">Projects</Link>
