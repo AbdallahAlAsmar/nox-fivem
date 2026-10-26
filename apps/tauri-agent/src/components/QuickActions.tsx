@@ -124,8 +124,8 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
         onClick={onToggle}
         className={`fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center px-2 py-3 font-mono text-xs uppercase tracking-wider transition-all duration-100 border-l ${
           isOpen
-            ? 'bg-[#20294A] text-white border-[rgba(255,255,255,0.08)]'
-            : 'bg-[#5B72F2] text-[#101426] border-transparent hover:bg-[#4962E4]'
+            ? 'bg-[#202326] text-white border-[#414548]'
+            : 'bg-[#E83708] text-[#111315] font-semibold border-transparent hover:bg-[#d43106]'
         }`}
         style={{ borderRadius: '4px 0 0 4px' }}
       >
@@ -148,10 +148,10 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
             animate={{ x: 0 }}
             exit={{ x: 320 }}
             transition={{ type: 'spring', damping: 20 }}
-            className="fixed right-0 top-0 h-full w-72 bg-[#111118] border-l border-[rgba(255,255,255,0.08)] z-30 flex flex-col"
+            className="fixed right-0 top-0 h-full w-72 bg-[#111118] border-l border-[#414548] z-30 flex flex-col"
           >
             {/* Header */}
-            <div className="p-4 border-b border-[rgba(255,255,255,0.08)]">
+            <div className="p-4 border-b border-[#414548]">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Quick Actions</h3>
                 <button onClick={onToggle} className="text-[rgba(255,255,255,0.3)] hover:text-white">
@@ -167,7 +167,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
                 const Icon = action.icon
                 const isExecuting = activeAction === action.id
                 const variantClass = {
-                  default: 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.7)] hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.04)]',
+                  default: 'border-[#414548] text-[rgba(255,255,255,0.7)] hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.04)]',
                   danger: 'border-[rgba(239,68,68,0.2)] text-[rgba(239,68,68,0.8)] hover:border-[rgba(239,68,68,0.4)] hover:bg-[rgba(239,68,68,0.05)]',
                   success: 'border-[rgba(34,197,94,0.2)] text-[rgba(34,197,94,0.8)] hover:border-[rgba(34,197,94,0.4)] hover:bg-[rgba(34,197,94,0.05)]',
                 }[action.variant || 'default']
@@ -252,7 +252,7 @@ export default function QuickActions({ serverId, serverName, isOpen, onToggle }:
                     className={`mt-3 p-3 font-mono text-xs border ${
                       result.type === 'success' ? 'border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.05)] text-[#22c55e]' :
                       result.type === 'error' ? 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)] text-[#ef4444]' :
-                      'border-[rgba(91,114,242,0.3)] bg-[rgba(91,114,242,0.05)] text-[#5B72F2]'
+                      'border-[rgba(232,55,8,0.3)] bg-[rgba(232,55,8,0.05)] text-[#E83708]'
                     }`}
                   >
                     <div className="flex items-center gap-2">

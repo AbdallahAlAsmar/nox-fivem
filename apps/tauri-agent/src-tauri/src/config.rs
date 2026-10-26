@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use std::sync::LazyLock;
 
+const DEFAULT_ORCHESTRATOR_URL: &str = "http://89.168.96.147:3001";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub theme: Theme,
@@ -45,7 +47,7 @@ impl Default for Config {
             show_code_changes: true,
             auto_start: false,
             agent_port: 3001,
-            orchestrator_url: "http://158.101.167.118:3001".to_string(),
+            orchestrator_url: DEFAULT_ORCHESTRATOR_URL.to_string(),
         }
     }
 }
@@ -85,8 +87,21 @@ pub fn load_config_from_disk() {
         .ok()
         .and_then(|raw| serde_json::from_str::<Config>(&raw).ok());
     match loaded {
-        Some(cfg) => {
-            *CONFIG.lock().unwrap() = cfg;
+        Some(mut cfg) => {
+            // Older builds persisted localhost or the retired VPS as their
+            // default. Move those defaults to the currently configured VPS.
+            if matches!(
+                cfg.orchestrator_url.as_str(),
+                "http://127.0.0.1:3001"
+                    | "http://localhost:3001"
+                    | "http://158.101.167.118:3001"
+            ) {
+                cfg.orchestrator_url = DEFAULT_ORCHESTRATOR_URL.to_string();
+                *CONFIG.lock().unwrap() = cfg;
+                save_config_to_disk();
+            } else {
+                *CONFIG.lock().unwrap() = cfg;
+            }
             println!("[Config] Loaded config from {}", path.display());
         }
         None => {
@@ -95,6 +110,14 @@ pub fn load_config_from_disk() {
             }
             *CONFIG.lock().unwrap() = Config::default();
             save_config_to_disk();
+        }
+    }
+    // A launch override wins over the saved file so local and hosted
+    // orchestrators can be selected without editing config.json by hand.
+    if let Ok(url) = std::env::var("NOXES_ORCHESTRATOR_URL") {
+        let url = url.trim().to_string();
+        if !url.is_empty() {
+            CONFIG.lock().unwrap().orchestrator_url = url;
         }
     }
 }

@@ -3,27 +3,53 @@ import { motion } from 'framer-motion'
 import { Loader2, AlertCircle, ExternalLink } from 'lucide-react'
 import { useClerk, useSignIn } from '@clerk/clerk-react'
 import { open as openUrl } from '@tauri-apps/plugin-shell'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
-const CLERK_FRONTEND_API = 'clerk.noxes.dev'
+function clerkError(err: unknown): string {
+  if (err && typeof err === 'object' && 'errors' in err) {
+    const errors = (err as { errors: Array<{ longMessage?: string; message?: string }> }).errors
+    if (Array.isArray(errors) && errors.length) {
+      return errors.map((item) => item.longMessage || item.message || 'Sign-in failed').join(' ')
+    }
+  }
+  return err instanceof Error ? err.message : String(err)
+}
 
 export default function SignIn() {
   const clerk = useClerk()
-  const { signIn, isLoaded: signInLoaded } = useSignIn()
+  const { signIn, setActive, isLoaded: signInLoaded } = useSignIn()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [socialLoading, setSocialLoading] = useState<'oauth_google' | 'oauth_discord' | null>(null)
 
-  // Listen for OAuth callback from Rust backend
+  // The system browser returns to the Rust loopback listener. Clerk only
+  // finishes the session if those callback params are on this window, then
+  // handleRedirectCallback runs — a reload alone drops the handshake.
   useEffect(() => {
+    if (!isTauri()) return
+
     let cleanup: (() => void) | undefined
 
     const setupListeners = async () => {
-      const unlistenCallback = await listen<string>('oauth:callback', () => {
-        window.location.reload()
+      const unlistenCallback = await listen<string>('oauth:callback', async (event) => {
+        try {
+          const incoming = new URL(event.payload)
+          const here = new URL(window.location.href)
+          incoming.searchParams.forEach((value, key) => {
+            here.searchParams.set(key, value)
+          })
+          window.history.replaceState({}, '', `${here.pathname}${here.search}${here.hash}`)
+          await clerk.handleRedirectCallback({
+            signInForceRedirectUrl: here.pathname,
+            signUpForceRedirectUrl: here.pathname,
+          })
+        } catch (err) {
+          setError(clerkError(err))
+          setSocialLoading(null)
+        }
       })
 
       const unlistenError = await listen<string>('oauth:error', (event) => {
@@ -44,7 +70,7 @@ export default function SignIn() {
       void invoke('stop_oauth_server_cmd').catch(() => {})
       cleanup?.()
     }
-  }, [])
+  }, [clerk])
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,54 +83,64 @@ export default function SignIn() {
     setError(null)
 
     try {
-      await signIn.create({
+      const attempt = await signIn.create({
         strategy: 'password',
         identifier: email,
         password,
       })
+      if (attempt.status === 'complete' && attempt.createdSessionId) {
+        await setActive({ session: attempt.createdSessionId })
+        return
+      }
+      setError(
+        attempt.status === 'needs_second_factor'
+          ? 'This account needs a second factor. Use the web dashboard to finish signing in, then reopen NOXES.'
+          : `Sign-in stopped at “${attempt.status}”. Check the email and password and try again.`,
+      )
     } catch (err) {
-      const msg =
-        err && typeof err === 'object' && 'errors' in err
-          ? JSON.stringify((err as { errors: unknown }).errors)
-          : err instanceof Error
-            ? err.message
-            : String(err)
-      setError(msg)
+      setError(clerkError(err))
+    } finally {
       setLoading(false)
     }
   }
 
   const handleOAuth = async (strategy: 'oauth_google' | 'oauth_discord') => {
+    if (!isTauri()) {
+      setError('Social sign-in is available in the NOXES desktop app. Use email and password here.')
+      return
+    }
+
     setSocialLoading(strategy)
     setError(null)
 
     try {
+      if (!signInLoaded || !signIn) {
+        setError('Auth is still loading — try again in a moment.')
+        setSocialLoading(null)
+        return
+      }
+
       const port = await invoke<number>('start_oauth_server_cmd')
       const redirectUrl = `http://127.0.0.1:${port}/callback`
-
-      // Open Clerk's OAuth authorize page in the SYSTEM browser
-      const oauthUrl = new URL('/v1/oauth/authorize', `https://${CLERK_FRONTEND_API}`)
-      oauthUrl.searchParams.set('client_name', 'clerk')
-      oauthUrl.searchParams.set('response_type', 'code')
-      oauthUrl.searchParams.set('redirect_uri', redirectUrl)
-      oauthUrl.searchParams.set('scope', 'openid profile email')
-      oauthUrl.searchParams.set('state', strategy)
-
-      await openUrl(oauthUrl.toString())
+      const attempt = await signIn.create({
+        strategy,
+        redirectUrl,
+      })
+      const external = attempt.firstFactorVerification?.externalVerificationRedirectURL
+      if (!external) {
+        setError('This provider is not enabled for the NOXES Clerk app.')
+        setSocialLoading(null)
+        return
+      }
+      await openUrl(external.toString())
     } catch (err) {
-      const msg =
-        err && typeof err === 'object' && 'errors' in err
-          ? JSON.stringify((err as { errors: unknown }).errors)
-          : err instanceof Error
-            ? err.message
-            : String(err)
-      setError(msg)
+      setError(clerkError(err))
       setSocialLoading(null)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#101426] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#111315] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -112,19 +148,19 @@ export default function SignIn() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-0 font-mono mb-4">
-            <span className="text-white font-bold text-3xl leading-none">|</span>
-            <span className="text-white font-mono text-3xl font-medium tracking-[0.2em] ml-1">
-              NOXES<span className="font-normal opacity-60">.</span>
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <img src="/brand/noxes-symbol.svg" alt="NOXES" className="w-8 h-8" />
+            <span className="text-[#F4F1E9] font-display font-extrabold text-3xl tracking-[0.2em]">
+              NOXES<span className="text-[#E83708]">.</span>
             </span>
           </div>
-          <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-[rgba(255,255,255,0.5)]">
-            Sign in to NOXES
+          <h1 className="font-sans text-xs uppercase tracking-[0.2em] text-[#68665F]">
+            Sign in to NOXES · Worlds in Motion
           </h1>
         </div>
 
         {/* Card */}
-        <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-6 space-y-5">
+        <div className="bg-[#202326] border border-[#414548] p-6 space-y-5">
           {/* Email/password form — stays in-app */}
           <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div>
@@ -137,7 +173,7 @@ export default function SignIn() {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] text-white placeholder:text-[rgba(255,255,255,0.25)] px-3 py-2 font-mono text-sm focus:border-[rgba(255,255,255,0.3)] focus:outline-none transition-colors"
+                className="w-full bg-transparent border border-[#414548] text-white placeholder:text-[rgba(255,255,255,0.25)] px-3 py-2 font-mono text-sm focus:border-[rgba(255,255,255,0.3)] focus:outline-none transition-colors"
               />
             </div>
             <div>
@@ -150,13 +186,13 @@ export default function SignIn() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
-                className="w-full bg-transparent border border-[rgba(255,255,255,0.1)] text-white placeholder:text-[rgba(255,255,255,0.25)] px-3 py-2 font-mono text-sm focus:border-[rgba(255,255,255,0.3)] focus:outline-none transition-colors"
+                className="w-full bg-transparent border border-[#414548] text-white placeholder:text-[rgba(255,255,255,0.25)] px-3 py-2 font-mono text-sm focus:border-[rgba(255,255,255,0.3)] focus:outline-none transition-colors"
               />
             </div>
             <button
               type="submit"
               disabled={loading || !signInLoaded}
-              className="w-full bg-white text-[#101426] font-mono text-xs uppercase tracking-[1.4px] py-2.5 hover:opacity-85 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-[#E83708] hover:bg-[#d43106] text-[#111315] font-semibold font-mono text-xs uppercase tracking-[1.4px] py-2.5 hover:opacity-85 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-2" />
@@ -168,10 +204,10 @@ export default function SignIn() {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[rgba(255,255,255,0.08)]" />
+              <div className="w-full border-t border-[#414548]" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="px-2 bg-[#20294A] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wider">
+              <span className="px-2 bg-[#202326] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wider">
                 or
               </span>
             </div>
@@ -182,10 +218,10 @@ export default function SignIn() {
             <button
               onClick={() => handleOAuth('oauth_google')}
               disabled={!!socialLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[rgba(255,255,255,0.08)] text-white hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)] transition-colors disabled:opacity-50 font-mono text-xs uppercase tracking-[1.4px]"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[#414548] text-white hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)] transition-colors disabled:opacity-50 font-mono text-xs uppercase tracking-[1.4px]"
             >
               {socialLoading === 'oauth_google' ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5B72F2]" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E83708]" />
               ) : (
                 <ExternalLink className="w-3.5 h-3.5 text-[rgba(255,255,255,0.4)]" />
               )}
@@ -194,10 +230,10 @@ export default function SignIn() {
             <button
               onClick={() => handleOAuth('oauth_discord')}
               disabled={!!socialLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[rgba(255,255,255,0.08)] text-white hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)] transition-colors disabled:opacity-50 font-mono text-xs uppercase tracking-[1.4px]"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[#414548] text-white hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)] transition-colors disabled:opacity-50 font-mono text-xs uppercase tracking-[1.4px]"
             >
               {socialLoading === 'oauth_discord' ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5B72F2]" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E83708]" />
               ) : (
                 <ExternalLink className="w-3.5 h-3.5 text-[rgba(255,255,255,0.4)]" />
               )}
@@ -221,7 +257,7 @@ export default function SignIn() {
 
         {/* Footer */}
         <p className="text-center font-mono text-[10px] text-[rgba(255,255,255,0.2)] mt-6 uppercase tracking-wider">
-          NOXES · FiveM Developer Tools
+          NOXES · Worlds in Motion.
         </p>
       </motion.div>
     </div>

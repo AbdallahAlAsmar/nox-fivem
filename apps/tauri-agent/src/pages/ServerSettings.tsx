@@ -116,7 +116,7 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
         </div>
         <button
           onClick={loadSettings}
-          className="flex items-center gap-1 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors border border-[rgba(255,255,255,0.08)]"
+          className="flex items-center gap-1 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors border border-[#414548]"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Refresh
@@ -133,24 +133,24 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
       {!loading && (
         <div className="space-y-4">
           {/* Server Name */}
-          <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
+          <div className="bg-[#202326] border border-[#414548] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <SettingsIcon className="w-4 h-4 text-[#5B72F2]" />
+              <SettingsIcon className="w-4 h-4 text-[#E83708]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server Name</h3>
             </div>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors"
+              className="w-full px-4 py-2.5 bg-transparent border border-[#414548] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#E83708] transition-colors"
               placeholder="My FiveM Server"
             />
           </div>
 
           {/* Server Directory */}
-          <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
+          <div className="bg-[#202326] border border-[#414548] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <FolderOpen className="w-4 h-4 text-[#5B72F2]" />
+              <FolderOpen className="w-4 h-4 text-[#E83708]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server Directory</h3>
             </div>
             <div className="flex gap-2">
@@ -159,11 +159,11 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
                 value={serverDir}
                 onChange={(e) => setServerDir(e.target.value)}
                 placeholder="C:/FXServer/server-data"
-                className="flex-1 px-4 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors"
+                className="flex-1 px-4 py-2.5 bg-transparent border border-[#414548] text-white font-mono text-sm placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#E83708] transition-colors"
               />
               <button
                 onClick={handleBrowseDir}
-                className="px-4 py-2.5 bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.1)] text-[rgba(255,255,255,0.6)] hover:text-white font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-2"
+                className="px-4 py-2.5 bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-[#414548] text-[rgba(255,255,255,0.6)] hover:text-white font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-2"
               >
                 <FolderOpen className="w-3.5 h-3.5" />
                 Browse
@@ -172,12 +172,12 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
           </div>
 
           {/* Framework (read-only) */}
-          <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
+          <div className="bg-[#202326] border border-[#414548] p-4">
             <div className="flex items-center gap-2 mb-4">
-              <SettingsIcon className="w-4 h-4 text-[#5B72F2]" />
+              <SettingsIcon className="w-4 h-4 text-[#E83708]" />
               <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Framework</h3>
             </div>
-            <div className="px-4 py-2.5 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] text-white font-mono text-sm">
+            <div className="px-4 py-2.5 bg-[rgba(255,255,255,0.04)] border border-[#414548] text-white font-mono text-sm">
               {framework}
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function ServerSettings({ serverId }: ServerSettingsProps) {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2.5 bg-white text-[#101426] font-mono text-xs uppercase tracking-[1.4px] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100 flex items-center gap-2"
+              className="px-6 py-2.5 bg-[#E83708] text-[#111315] font-mono text-xs uppercase tracking-[1.4px] font-semibold hover:bg-[#d43106] disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100 flex items-center gap-2"
             >
               {saving ? 'Saving...' : 'Save Settings'}
             </button>

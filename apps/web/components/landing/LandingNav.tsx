@@ -33,9 +33,9 @@ export default function LandingNav() {
       <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-6 md:px-12">
         <Link href="/" className="inline-flex items-center gap-3.5 focus-visible:outline-none" aria-label="NOXES home">
           <img
-            src="/brand/02_NOXES_Wordmark_in_Context.png"
+            src="/brand/13_Desktop_App_Icon.png"
             alt="NOXES"
-            className="h-8 w-auto object-contain"
+            className="h-8 w-8 object-contain"
           />
           <span className="hidden sm:inline-block border-l border-[#414548] py-0.5 pl-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[#68665F]">
             Worlds in Motion

@@ -142,7 +142,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
           </div>
           <button
             onClick={() => setTimelineMode(false)}
-            className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 border border-[rgba(255,255,255,0.08)]"
+            className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 border border-[#414548]"
           >
             <ArrowLeft className="w-3 h-3" />
             Back to Changes
@@ -165,19 +165,19 @@ export default function Changes({ serverId }: { serverId?: string }) {
                 <div className={`absolute left-2.5 top-6 w-3 h-3 rounded-full border-2 ${
                   change.status === 'applied' ? 'bg-[#22c55e] border-[#22c55e]' :
                   change.status === 'rolled_back' ? 'bg-[rgba(255,255,255,0.2)] border-[rgba(255,255,255,0.3)]' :
-                  'bg-[#5B72F2] border-[#5B72F2]'
+                  'bg-[#E83708] border-[#E83708]'
                 }`} />
 
                 {/* Content */}
                 <div className={`bg-nox-surface border p-4 ${
                   change.status === 'applied' ? 'border-[rgba(34,197,94,0.3)]' :
                   change.status === 'rolled_back' ? 'border-[rgba(255,255,255,0.06)] opacity-60' :
-                  'border-[rgba(255,255,255,0.08)]'
+                  'border-[#414548]'
                 }`}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <GitCommit className="w-4 h-4 text-[rgba(255,255,255,0.4)]" />
-                      <code className="font-mono text-xs text-[#5B72F2]">{change.commit ? change.commit.slice(0, 7) : 'pending'}</code>
+                      <code className="font-mono text-xs text-[#E83708]">{change.commit ? change.commit.slice(0, 7) : 'pending'}</code>
                       <span className="font-mono text-[10px] text-[rgba(255,255,255,0.3)]">
                         AI
                       </span>
@@ -200,7 +200,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0 }}
-                        className="font-mono text-xs text-[rgba(255,255,255,0.6)] bg-[#0B1020] p-3 mt-2 overflow-x-auto whitespace-pre"
+                        className="font-mono text-xs text-[rgba(255,255,255,0.6)] bg-[#111315] p-3 mt-2 overflow-x-auto whitespace-pre"
                       >
                         {change.diff}
                       </motion.pre>
@@ -227,17 +227,17 @@ export default function Changes({ serverId }: { serverId?: string }) {
         </div>
         <div className="flex items-center gap-2">
           {/* View Mode Toggle */}
-          <div className="flex border border-[rgba(255,255,255,0.08)]">
+          <div className="flex border border-[#414548]">
             <button
               onClick={() => setViewMode('unified')}
-              className={`p-2 transition-colors duration-100 ${viewMode === 'unified' ? 'bg-[rgba(91, 114, 242,0.2)] text-[#5B72F2]' : 'text-[rgba(255,255,255,0.4)] hover:text-white'}`}
+              className={`p-2 transition-colors duration-100 ${viewMode === 'unified' ? 'bg-[rgba(232,55,8,0.2)] text-[#E83708]' : 'text-[rgba(255,255,255,0.4)] hover:text-white'}`}
               title="Unified diff"
             >
               <Eye className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('split')}
-              className={`p-2 transition-colors duration-100 ${viewMode === 'split' ? 'bg-[rgba(91, 114, 242,0.2)] text-[#5B72F2]' : 'text-[rgba(255,255,255,0.4)] hover:text-white'}`}
+              className={`p-2 transition-colors duration-100 ${viewMode === 'split' ? 'bg-[rgba(232,55,8,0.2)] text-[#E83708]' : 'text-[rgba(255,255,255,0.4)] hover:text-white'}`}
               title="Split diff"
             >
               <Split className="w-4 h-4" />
@@ -247,7 +247,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
           {/* Timeline Toggle */}
           <button
             onClick={() => setTimelineMode(true)}
-            className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 border border-[rgba(255,255,255,0.08)]"
+            className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 border border-[#414548]"
           >
             <GitBranch className="w-3 h-3" />
             Timeline
@@ -258,7 +258,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
             <button
               onClick={handleApplyAll}
               disabled={applyingAll}
-              className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white bg-[#5B72F2] hover:bg-[#4962E4] transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white bg-[#E83708] hover:bg-[#d43106] transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {applyingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
               {applyingAll ? 'Applying…' : 'Apply All'}
@@ -278,7 +278,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
 
       {/* Pending Changes */}
       {pendingChanges.length === 0 && appliedChanges.length === 0 && rolledBackChanges.length === 0 ? (
-        <div className="text-center py-20 bg-nox-surface border border-[rgba(255,255,255,0.08)]">
+        <div className="text-center py-20 bg-nox-surface border border-[#414548]">
           <FileDiff className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-4" />
           <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">
             {error ? 'Could not load changes' : 'No pending changes'}
@@ -296,12 +296,12 @@ export default function Changes({ serverId }: { serverId?: string }) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-nox-surface border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)] transition-colors duration-100"
+              className="bg-nox-surface border border-[#414548] hover:border-[rgba(255,255,255,0.18)] transition-colors duration-100"
             >
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <FileDiff className="w-4 h-4 text-[#5B72F2]" />
+                    <FileDiff className="w-4 h-4 text-[#E83708]" />
                     <code className="font-mono text-xs uppercase tracking-wider text-white">{change.file}</code>
                     {change.commit && (
                       <code className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">
@@ -327,7 +327,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
                       exit={{ opacity: 0 }}
                       className="overflow-x-auto"
                     >
-                      <pre className="font-mono text-xs text-[rgba(255,255,255,0.7)] bg-[#0B1020] p-4 rounded border border-[rgba(255,255,255,0.06)]">
+                      <pre className="font-mono text-xs text-[rgba(255,255,255,0.7)] bg-[#111315] p-4 rounded border border-[rgba(255,255,255,0.06)]">
                         {viewMode === 'split' ? (
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -355,7 +355,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
                   <button
                     onClick={() => handleApply(change.id)}
                     disabled={!!busyIds[change.id] || applyingAll}
-                    className="flex items-center gap-1 px-4 py-2 font-mono text-xs uppercase tracking-[1.4px] bg-white text-[#101426] font-medium hover:opacity-85 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-100"
+                    className="flex items-center gap-1 px-4 py-2 font-mono text-xs uppercase tracking-[1.4px] bg-[#E83708] text-[#111315] font-semibold hover:bg-[#d43106] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-100"
                   >
                     {busyIds[change.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
                     Apply
@@ -363,7 +363,7 @@ export default function Changes({ serverId }: { serverId?: string }) {
                   <button
                     onClick={() => handleDiscard(change.id)}
                     disabled={!!busyIds[change.id] || applyingAll}
-                    className="flex items-center gap-1 px-4 py-2 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-100 border border-[rgba(255,255,255,0.08)]"
+                    className="flex items-center gap-1 px-4 py-2 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-100 border border-[#414548]"
                   >
                     {busyIds[change.id] ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
                     Discard

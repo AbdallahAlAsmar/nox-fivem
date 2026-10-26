@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Server, Shield } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
+import { setOrchestratorUrl } from '../api'
 
 // The desktop app ships a single dark theme — there is no light-mode
 // implementation to switch to, so no theme selector is rendered (honesty over
@@ -14,6 +15,7 @@ export default function Settings() {
   const [settings, setSettings] = useState({
     serverDirectory: '',
     autoConnect: false,
+    orchestratorUrl: 'http://89.168.96.147:3001',
   })
   const [saving, setSaving] = useState(false)
 
@@ -27,6 +29,7 @@ export default function Settings() {
       setSettings({
         serverDirectory: (cfg.server_directory as string) || '',
         autoConnect: !!cfg.auto_start,
+        orchestratorUrl: (cfg.orchestrator_url as string) || 'http://89.168.96.147:3001',
       })
       return
     } catch {
@@ -49,7 +52,9 @@ export default function Settings() {
       const cfg = await invoke<Record<string, unknown>>('get_config_cmd')
       cfg.server_directory = settings.serverDirectory
       cfg.auto_start = settings.autoConnect
+      cfg.orchestrator_url = settings.orchestratorUrl.trim() || 'http://89.168.96.147:3001'
       await invoke('update_config_cmd', { newConfig: cfg })
+      setOrchestratorUrl(String(cfg.orchestrator_url))
     } catch {
       // Fallback persistence for browser dev.
       try {
@@ -73,9 +78,9 @@ export default function Settings() {
       </div>
 
       {/* Server */}
-      <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#202326] border border-[#414548] p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Server className="w-4 h-4 text-[#5B72F2]" />
+          <Server className="w-4 h-4 text-[#E83708]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Server</h3>
         </div>
         <div className="space-y-3">
@@ -88,19 +93,34 @@ export default function Settings() {
               value={settings.serverDirectory}
               onChange={(e) => setSettings(s => ({ ...s, serverDirectory: e.target.value }))}
               placeholder="C:/FXServer/server-data"
-              className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white focus:outline-none focus:border-[#5B72F2] transition-colors duration-100"
+              className="w-full px-3 py-2.5 bg-transparent border border-[#414548] text-sm text-white focus:outline-none focus:border-[#E83708] transition-colors duration-100"
             />
           </div>
           <p className="font-mono text-[10px] text-[rgba(255,255,255,0.35)] leading-relaxed">
             Used as the fallback server-data folder when connecting an agent.
           </p>
+          <div>
+            <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)] mb-2">
+              Orchestrator URL
+            </label>
+            <input
+              type="text"
+              value={settings.orchestratorUrl}
+              onChange={(e) => setSettings(s => ({ ...s, orchestratorUrl: e.target.value }))}
+              placeholder="http://89.168.96.147:3001"
+              className="w-full px-3 py-2.5 bg-transparent border border-[#414548] text-sm text-white focus:outline-none focus:border-[#E83708] transition-colors duration-100"
+            />
+            <p className="font-mono text-[10px] text-[rgba(255,255,255,0.35)] leading-relaxed mt-2">
+              Chat and the agent both use this address. Local FreeLLM runs through the orchestrator on port 3001.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Behavior */}
-      <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-4">
+      <div className="bg-[#202326] border border-[#414548] p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-[#5B72F2]" />
+          <Shield className="w-4 h-4 text-[#E83708]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.15em] text-white">Behavior</h3>
         </div>
         <div className="space-y-3">
@@ -114,7 +134,7 @@ export default function Settings() {
             <button
               onClick={() => setSettings(s => ({ ...s, autoConnect: !s.autoConnect }))}
               aria-label="Toggle auto-connect on launch"
-              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.autoConnect ? 'bg-[#5B72F2]' : 'bg-[rgba(91, 114, 242,0.15)]'}`}
+              className={`w-10 h-5 transition-colors duration-100 flex items-center ${settings.autoConnect ? 'bg-[#E83708]' : 'bg-[rgba(232,55,8,0.15)]'}`}
             >
               <div className={`w-3 h-3 bg-white transition-transform duration-100 ${settings.autoConnect ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
@@ -129,7 +149,7 @@ export default function Settings() {
           disabled={saving}
           whileHover={{ opacity: 0.85 }}
           whileTap={{ scale: 0.98 }}
-          className="font-mono text-xs uppercase tracking-[1.4px] px-6 py-2.5 bg-white text-[#101426] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100"
+          className="font-mono text-xs uppercase tracking-[1.4px] px-6 py-2.5 bg-white text-[#111315] font-medium hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100"
         >
           {saving ? 'Saving…' : 'Save Settings'}
         </motion.button>

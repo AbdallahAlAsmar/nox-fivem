@@ -8,9 +8,9 @@ export default function LandingFooter() {
       <div className="mx-auto grid max-w-7xl gap-9 px-6 py-11 md:grid-cols-[1fr_auto_1fr] md:items-center md:px-12">
         <Link href="/" aria-label="NOXES home" className="inline-flex w-fit rounded-sm focus-visible:outline-none">
           <img
-            src="/brand/14_Small_NOXES_Worlds_in_Motion_Lockup.png"
-            alt="NOXES — Worlds in Motion"
-            className="h-10 w-auto object-contain"
+            src="/brand/13_Desktop_App_Icon.png"
+            alt="NOXES"
+            className="h-10 w-10 object-contain"
           />
         </Link>
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-3 text-sm">

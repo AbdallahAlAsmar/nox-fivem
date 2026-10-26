@@ -19,11 +19,13 @@ import { setTokenGetter } from './api'
 
 type Page = 'dashboard' | 'chat' | 'resources' | 'changes' | 'players' | 'settings' | 'errors' | 'account' | 'billing'
 
-// Use test key for local development (allows localhost)
-// Use pk_live_Y2xlcmsubm94ZXMuZGV2JA for production
-const CLERK_PUBLISHABLE_KEY = process.env.NODE_ENV === 'production'
-  ? 'pk_live_Y2xlcmsubm94ZXMuZGV2JA'
-  : 'pk_test_cmVsZXZhbnQtcmFtLTkxMjAuY2xlcmsuYWNjb3VudHMuZGV2JA'
+// Production Clerk keys are restricted to the noxes.dev site origin. The
+// desktop development server has a localhost origin, so it must use the
+// matching development Clerk instance and orchestrator credentials.
+const CLERK_PUBLISHABLE_KEY = import.meta.env.DEV
+  ? import.meta.env.VITE_CLERK_DEVELOPMENT_PUBLISHABLE_KEY
+  : (import.meta.env.VITE_CLERK_PRODUCTION_PUBLISHABLE_KEY
+    || import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
 
 function AppContent() {
   const { user, isSignedIn, isLoaded } = useUser()
@@ -84,7 +86,7 @@ function AppContent() {
   return (
     <>
       {!isLoaded ? (
-        <div className="min-h-screen bg-[#101426] flex items-center justify-center">
+        <div className="min-h-screen bg-[#111315] flex items-center justify-center">
           <div className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.3)]">
             Loading Clerk... (isLoaded: {String(isLoaded)}, isSignedIn: {String(isSignedIn)})
           </div>
@@ -109,6 +111,16 @@ function AppContent() {
 }
 
 export default function App() {
+  if (!CLERK_PUBLISHABLE_KEY) {
+    return (
+      <div className="min-h-screen bg-[#111315] flex items-center justify-center p-6">
+        <p className="max-w-lg text-center font-mono text-sm text-white/70">
+          Clerk is not configured for this build. Set the development key for local runs or the production key for release builds.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <ErrorBoundary>
       <ClerkProvider

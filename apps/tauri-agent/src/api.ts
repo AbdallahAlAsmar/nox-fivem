@@ -1,10 +1,34 @@
-// Desktop app API — talks directly to the orchestrator HTTP API
-// Uses Clerk session token for auth when available
+// Desktop app API — talks directly to the orchestrator HTTP API.
+// Uses a fresh Clerk session token for auth when the user is signed in.
+//
+// The address comes from the Rust config (Settings) so chat HTTP and the
+// agent WebSocket always hit the same orchestrator. VITE_ORCHESTRATOR_URL
+// is the fallback when the page is opened outside the desktop shell.
+const DEFAULT_ORCHESTRATOR_URL = import.meta.env?.VITE_ORCHESTRATOR_URL
+  || 'http://127.0.0.1:3001'
 
-// The orchestrator runs on VPS (Oracle 158.101.167.118:3001)
-// Override at build time with VITE_ORCHESTRATOR_URL env var
-const ORCHESTRATOR_URL = import.meta.env?.VITE_ORCHESTRATOR_URL
-  || 'http://158.101.167.118:3001'
+let resolvedOrchestratorUrl: string | null = null
+
+export function setOrchestratorUrl(url: string): void {
+  resolvedOrchestratorUrl = url.replace(/\/$/, '')
+}
+
+export async function getOrchestratorUrl(): Promise<string> {
+  if (resolvedOrchestratorUrl) return resolvedOrchestratorUrl
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    const cfg = await invoke<{ orchestrator_url?: string }>('get_config_cmd')
+    if (cfg?.orchestrator_url) {
+      resolvedOrchestratorUrl = cfg.orchestrator_url.replace(/\/$/, '')
+      return resolvedOrchestratorUrl
+    }
+  } catch {
+    // Plain browser dev has no Tauri IPC.
+  }
+  const fallback = DEFAULT_ORCHESTRATOR_URL.replace(/\/$/, '')
+  resolvedOrchestratorUrl = fallback
+  return fallback
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -64,12 +88,13 @@ async function currentToken(): Promise<string | null | undefined> {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export async function apiFetch(path: string, options: RequestInit = {}): Promise<any> {
-  const url = `${ORCHESTRATOR_URL}${path.startsWith('/') ? '' : '/'}${path}`
+  const base = await getOrchestratorUrl()
+  const url = `${base}${path.startsWith('/') ? '' : '/'}${path}`
   const token = await currentToken()
   const res = await fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -97,7 +122,7 @@ export async function fetchServer(serverId: string): Promise<Server> {
 
 export interface CreateServerResult {
   server: { id: string; name: string; status: string }
-  connect: { serverId: string; agentDeviceId: string; wsUrl: string }
+  connect: { serverId: string; agentDeviceId: string; wsUrl: string; sessionToken: string }
 }
 
 /**
@@ -131,13 +156,9 @@ export async function claimPairing(
  * auto-pairs the device at creation time — no separate pairing-code claim is
  * involved (that flow only applies to servers paired from the web dashboard).
  *
- * NOTE on tokens: POST /api/servers' `connect` payload carries ONLY
- * {serverId, agentDeviceId, wsUrl} — it does NOT issue a sessionToken (the
- * orchestrator mints tokens exclusively in POST /api/pairing/claim). A server
- * created through this path therefore has NO stored pairingTokenHash and its
- * device connects tokenless (accepted while AGENT_LEGACY_OK=true and the
- * stored hash is null). If the orchestrator later starts returning a token in
- * `connect`, capture it here.
+ * The orchestrator creates the paired device and returns its one-time session
+ * token alongside the connection details. The app stores that token securely
+ * before opening the agent WebSocket.
  */
 export async function createAndConnect(
   name: string,
@@ -150,7 +171,10 @@ export async function createAndConnect(
     throw new Error('Server created but no agent device was returned')
   }
   // Defensive: honor a token if the orchestrator ever adds one to `connect`.
-  const sessionToken = (result.connect as { sessionToken?: string } | undefined)?.sessionToken
+  const sessionToken = result.connect.sessionToken
+  if (!sessionToken) {
+    throw new Error('Server was created without an agent session token. Update the orchestrator and try again.')
+  }
   return { id: serverId, agentDeviceId, sessionToken }
 }
 
@@ -325,10 +349,14 @@ export interface ChatMessage {
   isError?: boolean
 }
 
-export async function sendChatMessage(threadId: string, message: string): Promise<string> {
+export async function sendChatMessage(
+  threadId: string,
+  message: string,
+  selectedSkills: string[] = [],
+): Promise<string> {
   const result = await apiFetch(`/api/threads/${threadId}/chat`, {
     method: 'POST',
-    body: JSON.stringify({ message, userId: 'tauri' }),
+    body: JSON.stringify({ message, selectedSkills }),
   })
   return result?.response ?? result?.message ?? 'Response received.'
 }

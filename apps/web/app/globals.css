@@ -376,3 +376,45 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 700ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.scroll-reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+.brand-section-scan {
+  background: linear-gradient(180deg, rgba(232, 55, 8, 0.08), transparent 80%);
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+.project-grid {
+  opacity: 0.42;
+  background-image: linear-gradient(rgba(65, 69, 72, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(65, 69, 72, 0.4) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 76%);
+}
+
+.project-map { position: relative; min-height: 210px; }
+.map-node { position: absolute; z-index: 2; width: 10px; height: 10px; border: 2px solid #E83708; border-radius: 50%; background: #111315; box-shadow: 0 0 0 6px rgba(232, 55, 8, 0.1); }
+.map-node-main { left: 44%; top: 44%; width: 16px; height: 16px; }
+.map-node-a { left: 16%; top: 20%; }
+.map-node-b { right: 12%; top: 18%; }
+.map-node-c { right: 20%; bottom: 12%; }
+.map-line { position: absolute; z-index: 1; height: 1px; transform-origin: left center; background: linear-gradient(90deg, #E83708, rgba(232, 55, 8, 0.08)); }
+.map-line-a { left: 18%; top: 24%; width: 30%; transform: rotate(26deg); }
+.map-line-b { left: 48%; top: 47%; width: 28%; transform: rotate(-24deg); }
+.map-line-c { left: 48%; top: 51%; width: 28%; transform: rotate(38deg); }
+.map-label { position: absolute; z-index: 3; padding: 4px 6px; border: 1px solid #414548; background: #181A1D; color: #B6B0A4; font: 9px/1.1 var(--noxes-font-mono); text-transform: uppercase; letter-spacing: 0.08em; }
+.map-label-main { left: 36%; top: 56%; color: #F4F1E9; }
+.map-label-a { left: 3%; top: 5%; }
+.map-label-b { right: 0; top: 4%; }
+.map-label-c { right: 4%; bottom: 0; color: #E83708; }
+
+@media (max-width: 640px) {
+  .map-label { font-size: 8px; }
+  .project-map { min-height: 180px; }
+}

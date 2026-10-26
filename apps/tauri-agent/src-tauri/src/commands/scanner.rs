@@ -122,35 +122,6 @@ impl Scanner {
                     continue;
                 }
             };
-        let dir_entries = fs::read_dir(dir)
-            .map_err(|e| format!("Failed to read {}: {}", dir.display(), e))?;
-
-        for entry in dir_entries.flatten() {
-            if resources.len() >= MAX_RESOURCES {
-                break;
-            }
-            let dir_path = entry.path();
-
-            if !dir_path.is_dir() {
-                continue;
-            }
-
-            let resource_name = dir_path.file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_default();
-
-            let manifest_path = self.find_manifest(&dir_path);
-            let manifest_path = match manifest_path {
-                Some(p) => p,
-                None => {
-                    // No manifest directly inside. If this is a bracketed
-                    // category folder ([category]/), look one level deeper.
-                    if resource_name.starts_with('[') && resource_name.ends_with(']') {
-                        self.scan_dir_children(&dir_path, resources)?;
-                    }
-                    continue;
-                }
-            };
 
             match fs::read_to_string(&manifest_path) {
                 Ok(manifest_content) => {
