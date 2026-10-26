@@ -4,40 +4,77 @@
 
 :root {
   color-scheme: dark;
-  --noxes-bg-primary: #101426;
-  --noxes-bg-elevated: #1a2140;
-  --noxes-bg-inset: #0b1020;
-  --noxes-fg-primary: #f4f5fb;
-  --noxes-fg-secondary: rgba(244, 245, 251, 0.72);
-  --noxes-fg-muted: rgba(204, 210, 232, 0.58);
-  --noxes-fg-disabled: rgba(204, 210, 232, 0.3);
-  --noxes-border-default: rgba(190, 200, 245, 0.13);
-  --noxes-border-strong: rgba(190, 200, 245, 0.25);
-  --noxes-accent: #5b72f2;
-  --noxes-accent-muted: rgba(91, 114, 242, 0.16);
-  --noxes-citrus: #d8f36a;
-  --noxes-citrus-muted: rgba(216, 243, 106, 0.13);
-  --noxes-font-display: 'Space Grotesk', 'Inter', 'Segoe UI', sans-serif;
-  --noxes-font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --noxes-font-mono: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
-  --noxes-radius-card: 1.25rem;
-  --foreground-rgb: 244, 245, 251;
-  --background-rgb: 16, 20, 38;
+  --noxes-bg-primary: #111315;
+  --noxes-bg-elevated: #202326;
+  --noxes-bg-inset: #181A1D;
+  --noxes-fg-primary: #F4F1E9;
+  --noxes-fg-secondary: rgba(244, 241, 233, 0.72);
+  --noxes-fg-muted: rgba(182, 176, 164, 0.65);
+  --noxes-fg-disabled: rgba(104, 102, 95, 0.6);
+  --noxes-border-default: #414548;
+  --noxes-border-strong: #68665F;
+  --noxes-accent: #E83708;
+  --noxes-accent-muted: rgba(232, 55, 8, 0.16);
+  --noxes-citrus: #E83708;
+  --noxes-citrus-muted: rgba(232, 55, 8, 0.16);
+  --noxes-font-display: var(--font-display, 'Barlow Condensed', sans-serif);
+  --noxes-font-body: var(--font-sans, 'Inter', sans-serif);
+  --noxes-font-mono: var(--font-mono, 'JetBrains Mono', monospace);
+  --noxes-radius-card: 4px;
+  --foreground-rgb: 244, 241, 233;
+  --background-rgb: 17, 19, 21;
+
+  /* HSL variables for shadcn/ui integration */
+  --background: 210 11% 7%;
+  --foreground: 43 33% 94%;
+  --card: 210 9% 14%;
+  --card-foreground: 43 33% 94%;
+  --popover: 210 9% 14%;
+  --popover-foreground: 43 33% 94%;
+  --primary: 13 93% 47%;
+  --primary-foreground: 210 11% 7%;
+  --secondary: 210 9% 18%;
+  --secondary-foreground: 43 33% 94%;
+  --muted: 210 9% 18%;
+  --muted-foreground: 40 8% 58%;
+  --accent: 13 93% 47%;
+  --accent-foreground: 210 11% 7%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 43 33% 94%;
+  --border: 206 5% 27%;
+  --input: 206 5% 27%;
+  --ring: 13 93% 47%;
+  --radius: 0.25rem;
 }
 
 html:not(.dark) {
   color-scheme: light;
-  --noxes-bg-primary: #f4f5fb;
-  --noxes-bg-elevated: #ffffff;
-  --noxes-bg-inset: #e9ecf8;
-  --noxes-fg-primary: #171a2b;
-  --noxes-fg-secondary: rgba(23, 26, 43, 0.76);
-  --noxes-fg-muted: rgba(38, 45, 74, 0.58);
-  --noxes-fg-disabled: rgba(38, 45, 74, 0.34);
-  --noxes-border-default: rgba(40, 52, 105, 0.13);
-  --noxes-border-strong: rgba(40, 52, 105, 0.25);
-  --foreground-rgb: 23, 26, 43;
-  --background-rgb: 244, 245, 251;
+  --noxes-bg-primary: #E2DCCE;
+  --noxes-bg-elevated: #F4F1E9;
+  --noxes-bg-inset: #D5D0C5;
+  --noxes-fg-primary: #111315;
+  --noxes-fg-secondary: rgba(17, 19, 21, 0.76);
+  --noxes-fg-muted: #68665F;
+  --noxes-fg-disabled: rgba(104, 102, 95, 0.4);
+  --noxes-border-default: #B6B0A4;
+  --noxes-border-strong: #68665F;
+  --foreground-rgb: 17, 19, 21;
+  --background-rgb: 226, 220, 206;
+
+  --background: 43 23% 85%;
+  --foreground: 210 11% 7%;
+  --card: 43 33% 94%;
+  --card-foreground: 210 11% 7%;
+  --popover: 43 33% 94%;
+  --popover-foreground: 210 11% 7%;
+  --primary: 13 93% 47%;
+  --primary-foreground: 43 33% 94%;
+  --secondary: 43 14% 78%;
+  --secondary-foreground: 210 11% 7%;
+  --muted: 43 14% 78%;
+  --muted-foreground: 48 4% 39%;
+  --border: 40 10% 68%;
+  --input: 40 10% 68%;
 }
 
 html {
@@ -54,13 +91,13 @@ body {
 }
 
 ::selection {
-  color: #101426;
-  background: var(--noxes-citrus);
+  color: #111315;
+  background: #E83708;
 }
 
 :focus-visible {
-  outline: 2px solid var(--noxes-citrus);
-  outline-offset: 3px;
+  outline: 2px solid #E83708;
+  outline-offset: 2px;
 }
 
 button,
@@ -71,15 +108,16 @@ a {
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--noxes-bg-primary); }
 ::-webkit-scrollbar-thumb {
-  background: var(--noxes-border-strong);
+  background: var(--noxes-border-default);
   border: 2px solid var(--noxes-bg-primary);
-  border-radius: 999px;
+  border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--noxes-fg-muted); }
+::-webkit-scrollbar-thumb:hover { background: var(--noxes-border-strong); }
 
 .brand-display {
   font-family: var(--noxes-font-display);
-  letter-spacing: -0.055em;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
   text-wrap: balance;
 }
 
@@ -87,93 +125,103 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  color: rgba(220, 225, 248, 0.72);
-  font: 500 0.72rem/1.2 var(--noxes-font-mono);
-  letter-spacing: 0.16em;
+  color: #B6B0A4;
+  font: 600 0.75rem/1.2 var(--noxes-font-mono);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
 .brand-eyebrow::before {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: var(--noxes-citrus);
-  box-shadow: 0 0 0 0.3rem rgba(216, 243, 106, 0.1);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 1px;
+  background: #E83708;
   content: '';
 }
 
 .brand-hero {
   isolation: isolate;
   background:
-    radial-gradient(ellipse at 73% 36%, rgba(91, 114, 242, 0.2), transparent 39%),
-    radial-gradient(ellipse at 4% 100%, rgba(91, 114, 242, 0.1), transparent 34%),
-    #101426;
+    radial-gradient(ellipse at 70% 30%, rgba(232, 55, 8, 0.08), transparent 50%),
+    radial-gradient(ellipse at 20% 90%, rgba(65, 69, 72, 0.25), transparent 45%),
+    #111315;
 }
 
 .brand-grid {
   background-image:
-    linear-gradient(rgba(203, 211, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(203, 211, 255, 0.035) 1px, transparent 1px);
-  background-size: 52px 52px;
-  mask-image: linear-gradient(to bottom, black, transparent 88%);
+    linear-gradient(rgba(65, 69, 72, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(65, 69, 72, 0.18) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black 30%, transparent 95%);
 }
 
 .brand-nav {
   border-color: transparent;
-  background: rgba(16, 20, 38, 0.6);
-  backdrop-filter: blur(18px);
+  background: rgba(17, 19, 21, 0.85);
+  backdrop-filter: blur(12px);
   transition: background-color 180ms ease, border-color 180ms ease;
 }
 
 .brand-nav.is-scrolled {
-  border-color: var(--noxes-border-default);
-  background: rgba(16, 20, 38, 0.92);
+  border-color: #414548;
+  background: rgba(17, 19, 21, 0.96);
 }
 
+/* Primary Button according to Section 7: Vermilion #E83708 fill, Deep Ink #111315 text */
 .brand-button-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  min-height: 3rem;
-  padding: 0.75rem 1.2rem;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
   border: 1px solid transparent;
-  border-radius: 999px;
-  background: var(--noxes-citrus);
-  color: #151a27;
-  font-size: 0.9rem;
-  font-weight: 650;
+  border-radius: 4px;
+  background: #E83708;
+  color: #111315;
+  font-family: var(--noxes-font-body);
+  font-size: 0.925rem;
+  font-weight: 600;
   text-decoration: none;
-  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  transition: background-color 180ms ease, transform 180ms ease;
 }
 
 .brand-button-primary:hover {
-  transform: translateY(-2px);
-  background: #e2f88a;
-  box-shadow: 0 10px 32px rgba(216, 243, 106, 0.17);
+  background: #d43106;
+  transform: translateY(-1px);
 }
 
+.brand-button-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary Button: Carbon surface, 1px Graphite border, Chalk text */
 .brand-button-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  min-height: 3rem;
-  padding: 0.75rem 1.2rem;
-  border: 1px solid var(--noxes-border-strong);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.025);
-  color: var(--noxes-fg-primary);
-  font-size: 0.9rem;
-  font-weight: 550;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
+  border: 1px solid #414548;
+  border-radius: 4px;
+  background: #202326;
+  color: #F4F1E9;
+  font-family: var(--noxes-font-body);
+  font-size: 0.925rem;
+  font-weight: 600;
   text-decoration: none;
   transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
 }
 
 .brand-button-secondary:hover {
-  transform: translateY(-2px);
-  border-color: rgba(216, 243, 106, 0.55);
-  background: var(--noxes-citrus-muted);
+  border-color: #68665F;
+  background: #282C30;
+  transform: translateY(-1px);
+}
+
+.brand-button-secondary:active {
+  transform: translateY(0);
 }
 
 .brand-stage {
@@ -188,113 +236,131 @@ a {
   right: 4%;
   width: 82%;
   aspect-ratio: 1;
-  border: 1px solid rgba(129, 146, 255, 0.14);
+  border: 1px solid rgba(65, 69, 72, 0.4);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(91, 114, 242, 0.18), transparent 65%);
-  animation: brand-orbit 18s linear infinite;
+  background: radial-gradient(circle, rgba(232, 55, 8, 0.06), transparent 70%);
+  animation: brand-orbit 30s linear infinite;
 }
 
 .brand-stage-orbit::before,
 .brand-stage-orbit::after {
   position: absolute;
-  border: 1px solid rgba(129, 146, 255, 0.12);
+  border: 1px solid rgba(65, 69, 72, 0.3);
   border-radius: 50%;
   content: '';
 }
 
-.brand-stage-orbit::before { inset: 12%; }
-.brand-stage-orbit::after { inset: 25%; }
+.brand-stage-orbit::before { inset: 15%; }
+.brand-stage-orbit::after { inset: 30%; }
 
 .brand-product-window {
-  border: 1px solid rgba(190, 200, 245, 0.18);
-  border-radius: 1.15rem;
-  background: rgba(13, 18, 36, 0.9);
-  box-shadow: 0 34px 100px rgba(0, 0, 0, 0.38), 0 0 0 8px rgba(91, 114, 242, 0.035);
-  backdrop-filter: blur(18px);
-  transform: perspective(1300px) rotateY(-7deg) rotateX(2deg);
+  border: 1px solid #414548;
+  border-radius: 6px;
+  background: #181A1D;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  transform: perspective(1300px) rotateY(-5deg) rotateX(2deg);
 }
 
-.brand-window-bar { border-bottom: 1px solid var(--noxes-border-default); }
-.brand-code-add { color: #d8f36a; }
-.brand-code-remove { color: #f294a7; }
+.brand-window-bar { border-bottom: 1px solid #414548; }
+.brand-code-add { color: #E83708; }
+.brand-code-remove { color: #8B95A0; }
 
 .brand-surface {
-  border: 1px solid var(--noxes-border-default);
-  border-radius: var(--noxes-radius-card);
-  background: linear-gradient(145deg, rgba(35, 44, 79, 0.75), rgba(22, 28, 54, 0.8));
+  border: 1px solid #414548;
+  border-radius: 4px;
+  background: #202326;
 }
 
 .brand-link {
-  color: var(--noxes-fg-muted);
+  color: #B6B0A4;
   text-decoration: none;
   transition: color 160ms ease;
 }
-.brand-link:hover { color: var(--noxes-citrus); }
+
+.brand-link:hover { color: #F4F1E9; }
 
 .brand-section-rule {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(190, 200, 245, 0.16), transparent);
+  background: linear-gradient(90deg, transparent, #414548, transparent);
 }
 
 @keyframes brand-orbit { to { transform: rotate(360deg); } }
 @keyframes brand-enter {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.brand-enter { animation: brand-enter 650ms cubic-bezier(0.2, 0.75, 0.25, 1) both; }
-.brand-enter-delay-1 { animation-delay: 90ms; }
-.brand-enter-delay-2 { animation-delay: 170ms; }
-.brand-enter-delay-3 { animation-delay: 250ms; }
+.brand-enter { animation: brand-enter 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.brand-enter-delay-1 { animation-delay: 80ms; }
+.brand-enter-delay-2 { animation-delay: 150ms; }
+.brand-enter-delay-3 { animation-delay: 220ms; }
 
 .noxes-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
-  border-radius: 999px;
-  padding: 0.8rem 1.35rem;
-  background: var(--noxes-citrus);
-  color: #151a27;
+  border-radius: 4px;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
+  background: #E83708;
+  color: #111315;
   font-family: var(--noxes-font-body);
-  font-size: 0.9rem;
-  font-weight: 650;
+  font-size: 0.925rem;
+  font-weight: 600;
   cursor: pointer;
   transition: transform 180ms ease, background-color 180ms ease;
 }
-.noxes-btn-primary:hover { transform: translateY(-1px); background: #e2f88a; }
+
+.noxes-btn-primary:hover {
+  transform: translateY(-1px);
+  background: #d43106;
+}
+
 .noxes-btn-ghost {
-  border: 1px solid var(--noxes-border-strong);
-  border-radius: 999px;
-  padding: 0.8rem 1.35rem;
-  background: transparent;
-  color: var(--noxes-fg-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #414548;
+  border-radius: 4px;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
+  background: #202326;
+  color: #F4F1E9;
   font-family: var(--noxes-font-body);
-  font-size: 0.9rem;
+  font-size: 0.925rem;
+  font-weight: 600;
   cursor: pointer;
   transition: border-color 180ms ease, background-color 180ms ease;
 }
-.noxes-btn-ghost:hover { border-color: rgba(216, 243, 106, 0.55); background: var(--noxes-citrus-muted); }
+
+.noxes-btn-ghost:hover {
+  border-color: #68665F;
+  background: #282C30;
+}
+
 .noxes-card {
-  border: 1px solid var(--noxes-border-default);
-  border-radius: var(--noxes-radius-card);
-  background: var(--noxes-bg-elevated);
+  border: 1px solid #414548;
+  border-radius: 4px;
+  background: #202326;
   padding: 1.5rem;
 }
+
 .noxes-input {
-  border: 1px solid var(--noxes-border-default);
-  border-radius: 0.75rem;
-  background: var(--noxes-bg-inset);
-  color: var(--noxes-fg-primary);
+  border: 1px solid #414548;
+  border-radius: 4px;
+  background: #181A1D;
+  color: #F4F1E9;
   font-family: var(--noxes-font-body);
-  font-size: 1rem;
+  font-size: 0.95rem;
   padding: 0.75rem 1rem;
   outline: none;
+  transition: border-color 160ms ease;
 }
-.noxes-input:focus { border-color: var(--noxes-accent); }
-.noxes-input::placeholder { color: var(--noxes-fg-disabled); }
 
-@keyframes cursor-blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0.15; }
-}
+.noxes-input:focus { border-color: #E83708; }
+.noxes-input::placeholder { color: #68665F; }
 
 @media (max-width: 1023px) {
   .brand-product-window { transform: none; }

@@ -8,7 +8,7 @@ export function ServerCardSkeleton() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="bg-[#20294A] p-4 space-y-3"
+      className="bg-[#202326] p-4 space-y-3"
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2 flex-1">
@@ -34,7 +34,7 @@ export function ServerCardSkeleton() {
 
 export function PlayerRowSkeleton() {
   return (
-    <div className="bg-[#20294A] px-5 py-3.5 flex items-center gap-4">
+    <div className="bg-[#202326] px-5 py-3.5 flex items-center gap-4">
       <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-3 w-32" />
@@ -47,7 +47,7 @@ export function PlayerRowSkeleton() {
 
 export function ResourceRowSkeleton() {
   return (
-    <div className="bg-[#20294A] px-5 py-3 flex items-center gap-4">
+    <div className="bg-[#202326] px-5 py-3 flex items-center gap-4">
       <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-3 w-40" />

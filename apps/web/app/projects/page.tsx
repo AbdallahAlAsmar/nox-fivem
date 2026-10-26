@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function ProjectsPage() {
   return (
-    <div className="min-h-screen bg-[#101426] text-[#F4F5FB]">
+    <div className="min-h-screen bg-[#111315] text-[#F4F5FB]">
       <LandingNav />
       <main className="pt-16">
         <section className="brand-hero relative overflow-hidden px-6 py-20 md:px-12 md:py-28">

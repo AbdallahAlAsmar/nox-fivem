@@ -44,14 +44,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!isLoaded) {
     return (
-      <div className="h-screen bg-[#101426] flex items-center justify-center">
-        <div className="font-mono text-xs text-white/30 uppercase tracking-widest">loading...</div>
+      <div className="h-screen bg-[#111315] flex items-center justify-center">
+        <div className="font-mono text-xs text-[#68665F] uppercase tracking-widest">loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#101426] dark:bg-[#101426]">
+    <div className="flex h-screen overflow-hidden bg-[#111315] text-[#F4F1E9]">
       <SidebarNav />
       <main className="flex-1 flex flex-col overflow-hidden ml-[48px] transition-all duration-300">
         {children}

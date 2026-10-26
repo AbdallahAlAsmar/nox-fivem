@@ -85,7 +85,7 @@ export default function ServerConnectPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#101426]">
+      <div className="flex-1 flex items-center justify-center bg-[#111315]">
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-[rgba(255,255,255,0.3)] animate-spin mx-auto mb-3" />
           <p className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
@@ -98,7 +98,7 @@ export default function ServerConnectPage() {
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#101426] p-6">
+      <div className="flex-1 flex items-center justify-center bg-[#111315] p-6">
         <div className="text-center max-w-md">
           <div className="w-12 h-12 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.2)] flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-6 h-6 text-[#ef4444]" />
@@ -136,7 +136,7 @@ export default function ServerConnectPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-[#101426]">
+    <div className="flex-1 overflow-y-auto p-6 bg-[#111315]">
       <div className="max-w-lg mx-auto">
         <Link
           href="/dashboard"
@@ -220,7 +220,7 @@ function ConnectedView({
   const [scanning, setScanning] = useState(false);
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-[#101426]">
+    <div className="flex-1 overflow-y-auto p-6 bg-[#111315]">
       <div className="max-w-2xl mx-auto space-y-6">
         <Link
           href="/dashboard"
@@ -244,7 +244,7 @@ function ConnectedView({
           </div>
         </div>
 
-        <div className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-5 space-y-4">
+        <div className="bg-[#202326] border border-[rgba(255,255,255,0.08)] p-5 space-y-4">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
             <span className="font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)]">
@@ -257,7 +257,7 @@ function ConnectedView({
               <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
                 Server ID
               </label>
-              <code className="block px-3 py-2 bg-[#0B1020] border border-[rgba(255,255,255,0.08)] font-mono text-xs text-[#5B72F2] truncate">
+              <code className="block px-3 py-2 bg-[#111315] border border-[rgba(255,255,255,0.08)] font-mono text-xs text-[#E83708] truncate">
                 {serverId}
               </code>
             </div>
@@ -265,7 +265,7 @@ function ConnectedView({
               <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)] mb-1.5">
                 Framework
               </label>
-              <p className="px-3 py-2 bg-[#0B1020] border border-[rgba(255,255,255,0.08)] font-mono text-xs text-white uppercase">
+              <p className="px-3 py-2 bg-[#111315] border border-[rgba(255,255,255,0.08)] font-mono text-xs text-white uppercase">
                 {framework || 'unknown'}
               </p>
             </div>
@@ -295,7 +295,7 @@ function ConnectedView({
         <div className="text-center">
           <Link
             href={`/dashboard/servers/${serverId}`}
-            className="font-mono text-xs uppercase tracking-wider text-[#5B72F2] hover:underline"
+            className="font-mono text-xs uppercase tracking-wider text-[#E83708] hover:underline"
           >
             Open Full Dashboard →
           </Link>
@@ -307,7 +307,7 @@ function ConnectedView({
 
 function NotFound() {
   return (
-    <div className="flex-1 flex items-center justify-center p-6 bg-[#101426]">
+    <div className="flex-1 flex items-center justify-center p-6 bg-[#111315]">
       <div className="text-center">
         <div className="font-mono text-8xl font-bold text-[rgba(255,255,255,0.1)] mb-4">
           404
@@ -320,7 +320,7 @@ function NotFound() {
         </p>
         <Link
           href="/dashboard"
-          className="font-mono text-xs uppercase tracking-wider text-[#5B72F2] hover:underline"
+          className="font-mono text-xs uppercase tracking-wider text-[#E83708] hover:underline"
         >
           ← Back to Dashboard
         </Link>

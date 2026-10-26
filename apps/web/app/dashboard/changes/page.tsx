@@ -132,7 +132,7 @@ export default function ChangesPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#101426] p-6">
+    <div className="flex-1 overflow-y-auto bg-[#111315] p-6">
       <div className="max-w-4xl mx-auto space-y-5">
         {/* Header */}
         <div>
@@ -148,7 +148,7 @@ export default function ChangesPage() {
             <select
               value={selectedServer}
               onChange={(e) => setSelectedServer(e.target.value)}
-              className="appearance-none bg-[#20294A] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2 pr-8 focus:outline-none focus:border-[#5B72F2] transition-colors duration-100"
+              className="appearance-none bg-[#202326] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2 pr-8 focus:outline-none focus:border-[#E83708] transition-colors duration-100"
             >
               <option value="">All servers</option>
               {servers?.map((s: any) => (
@@ -165,7 +165,7 @@ export default function ChangesPage() {
                 onClick={() => setStatusFilter(s)}
                 className={`font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border transition-colors duration-100 ${
                   statusFilter === s
-                    ? 'bg-[rgba(91, 114, 242,0.15)] border-[rgba(91, 114, 242,0.4)] text-[#5B72F2]'
+                    ? 'bg-[rgba(232, 55, 8,0.15)] border-[rgba(232, 55, 8,0.4)] text-[#E83708]'
                     : 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.4)] hover:text-white hover:border-[rgba(255,255,255,0.2)]'
                 }`}
               >
@@ -227,23 +227,23 @@ export default function ChangesPage() {
         {loadingServers || loadingChanges ? (
           <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] h-16 animate-pulse" />
+              <div key={i} className="bg-[#202326] border border-[rgba(255,255,255,0.08)] h-16 animate-pulse" />
             ))}
           </div>
         ) : loadError ? (
-          <div className="text-center py-16 bg-[#20294A] border border-[rgba(255,255,255,0.08)]">
+          <div className="text-center py-16 bg-[#202326] border border-[rgba(255,255,255,0.08)]">
             <AlertCircle className="w-10 h-10 text-white/20 mx-auto mb-4" />
             <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white/60 mb-2">Failed to load changes</h3>
             <p className="font-sans text-xs text-white/40 mb-4">Check your connection and try again</p>
             <button
               onClick={() => { mutateServers(); mutate(); }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#5B72F2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#4962E4] transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#E83708] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#d43106] transition-colors"
             >
               Retry
             </button>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 bg-[#20294A] border border-[rgba(255,255,255,0.08)]">
+          <div className="text-center py-20 bg-[#202326] border border-[rgba(255,255,255,0.08)]">
             <FileDiff className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-4" />
             <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">No changes yet</h3>
             <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] max-w-sm mx-auto leading-[1.6]">
@@ -310,17 +310,17 @@ function ChangeRow({
     <motion.div
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
-      className={`relative pl-10 ${isSelected ? 'bg-[rgba(91, 114, 242,0.05)]' : ''}`}
+      className={`relative pl-10 ${isSelected ? 'bg-[rgba(232, 55, 8,0.05)]' : ''}`}
     >
       {/* Timeline dot */}
       <div className={`absolute left-3.5 top-4 w-3 h-3 rounded-full border-2 ${
         change.status === 'pending' ? 'bg-[#f59e0b] border-[#f59e0b]' :
         change.status === 'applied' ? 'bg-[#22c55e] border-[#22c55e]' :
         change.status === 'failed' ? 'bg-[#ef4444] border-[#ef4444]' :
-        'bg-[#20294A] border-[rgba(255,255,255,0.3)]'
+        'bg-[#202326] border-[rgba(255,255,255,0.3)]'
       }`} />
 
-      <div className={`bg-[#20294A] border transition-colors duration-100 ${
+      <div className={`bg-[#202326] border transition-colors duration-100 ${
         isExpanded ? 'border-[rgba(255,255,255,0.18)]' : 'border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.15)]'
       }`}>
         <button onClick={onToggle} className="w-full flex items-center gap-4 px-5 py-3 text-left">
@@ -331,7 +331,7 @@ function ChangeRow({
                 onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
                 className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                   isSelected
-                    ? 'bg-[#5B72F2] border-[#5B72F2]'
+                    ? 'bg-[#E83708] border-[#E83708]'
                     : 'border-white/20 hover:border-white/40'
                 }`}
               >
@@ -376,7 +376,7 @@ function ChangeRow({
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onApply(); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider bg-white text-[#101426] hover:opacity-85 transition-opacity duration-100 flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider bg-[#E83708] text-[#111315] hover:bg-[#d43106] font-semibold transition-opacity duration-100 flex-shrink-0"
               >
                 <CheckCircle2 className="w-3 h-3" />
                 Apply

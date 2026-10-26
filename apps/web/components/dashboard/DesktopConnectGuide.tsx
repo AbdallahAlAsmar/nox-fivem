@@ -47,7 +47,7 @@ export function DesktopConnectGuide({ serverName }: DesktopConnectGuideProps) {
       icon: Download,
       title: 'Download the desktop app',
       body: 'Install NOXES on the Windows PC that has your FiveM server files.',
-      accent: '#5B72F2',
+      accent: '#E83708',
       action: (
         installerMissing ? (
           <div className="flex items-start gap-2 p-3 border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)]">
@@ -65,7 +65,7 @@ export function DesktopConnectGuide({ serverName }: DesktopConnectGuideProps) {
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#5B72F2] hover:bg-[#4962E4] text-[#101426] font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#E83708] hover:bg-[#d43106] text-[#111315] font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
           >
             {downloading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

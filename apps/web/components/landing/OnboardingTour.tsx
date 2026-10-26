@@ -73,8 +73,8 @@ export function OnboardingTour() {
       onEvent={handleEvent}
       styles={{
         beacon: {
-          background: '#5B72F2',
-          border: '2px solid #20294A',
+          background: '#E83708',
+          border: '2px solid #202326',
           borderRadius: '50%',
           height: 36,
           width: 36,
@@ -83,7 +83,7 @@ export function OnboardingTour() {
           background: 'rgba(0, 0, 0, 0.5)',
         },
         tooltip: {
-          background: '#20294A',
+          background: '#202326',
           border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 8,
           color: 'rgba(255, 255, 255, 0.9)',
@@ -94,7 +94,7 @@ export function OnboardingTour() {
           textAlign: 'left',
         },
         buttonPrimary: {
-          background: '#5B72F2',
+          background: '#E83708',
           borderRadius: 4,
           color: '#fff',
           fontSize: 13,

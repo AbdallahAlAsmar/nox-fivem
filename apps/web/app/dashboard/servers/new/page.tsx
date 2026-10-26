@@ -35,7 +35,7 @@ export default function NewServerPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-[#101426]">
+    <div className="flex-1 overflow-y-auto p-6 bg-[#111315]">
       <div className="max-w-lg mx-auto">
         <a
           href="/dashboard"
@@ -52,7 +52,7 @@ export default function NewServerPage() {
               <span className="font-mono text-xs text-[#22c55e]">Server created — auto-paired and ready</span>
             </div>
             {result.connect && (
-              <div className="bg-[#20294A] border border-white/10 p-4 space-y-2">
+              <div className="bg-[#202326] border border-white/10 p-4 space-y-2">
                 <div className="flex justify-between">
                   <span className="font-mono text-[10px] uppercase text-white/40">Server ID</span>
                   <span className="font-mono text-xs text-white/60">{result.connect.serverId}</span>
@@ -68,7 +68,7 @@ export default function NewServerPage() {
             </p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full py-2.5 bg-[#5B72F2] hover:bg-[#4962E4] text-white font-mono text-xs uppercase tracking-wider transition-colors"
+              className="w-full py-2.5 bg-[#E83708] hover:bg-[#d43106] text-white font-mono text-xs uppercase tracking-wider transition-colors"
             >
               Go to Dashboard
             </button>
@@ -82,7 +82,7 @@ export default function NewServerPage() {
               Create a server on the web, then pair it with the desktop agent.
             </p>
 
-            <form onSubmit={handleSubmit} className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-5 space-y-4">
+            <form onSubmit={handleSubmit} className="bg-[#202326] border border-[rgba(255,255,255,0.08)] p-5 space-y-4">
               <div>
                 <label className="block font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.5)] mb-2">
                   Server Name
@@ -93,7 +93,7 @@ export default function NewServerPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. My RP Server"
-                  className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white font-sans placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors duration-100"
+                  className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white font-sans placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#E83708] transition-colors duration-100"
                   required
                   maxLength={64}
                 />
@@ -109,7 +109,7 @@ export default function NewServerPage() {
               <button
                 type="submit"
                 disabled={loading || !name.trim()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-[1.4px] text-[#101426] bg-white hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-[1.4px] text-[#111315] bg-[#E83708] hover:bg-[#d43106] font-semibold disabled:opacity-30 disabled:cursor-not-allowed transition-opacity duration-100"
               >
                 {loading ? (
                   <>

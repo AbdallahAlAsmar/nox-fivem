@@ -81,12 +81,12 @@ export function PairingSetupView({
         </div>
       </div>
 
-      <div className="border border-[rgba(91, 114, 242,0.3)] bg-[rgba(91, 114, 242,0.06)] p-4">
+      <div className="border border-[rgba(232, 55, 8,0.3)] bg-[rgba(232, 55, 8,0.06)] p-4">
         <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-6 h-6 rounded-full bg-[rgba(91, 114, 242,0.06)] border border-[rgba(91, 114, 242,0.3)] flex items-center justify-center">
-            <span className="font-mono text-[10px] font-medium text-[#5B72F2]">1</span>
+          <div className="w-6 h-6 rounded-full bg-[rgba(232, 55, 8,0.06)] border border-[rgba(232, 55, 8,0.3)] flex items-center justify-center">
+            <span className="font-mono text-[10px] font-medium text-[#E83708]">1</span>
           </div>
-          <Download className="w-3.5 h-3.5 text-[#5B72F2]" />
+          <Download className="w-3.5 h-3.5 text-[#E83708]" />
           <h3 className="font-mono text-xs uppercase tracking-[0.12em] text-white">
             Download the Desktop App
           </h3>
@@ -111,7 +111,7 @@ export function PairingSetupView({
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#5B72F2] hover:bg-[#4962E4] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#E83708] hover:bg-[#d43106] text-white font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-50"
           >
             {downloading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -137,8 +137,8 @@ export function PairingSetupView({
           Open the NOXES desktop app, click Add Server, and enter the code below to link this server
           to the agent.
         </p>
-        <div className="bg-[#0B1020] border border-[rgba(255,255,255,0.08)] p-3 flex items-center justify-between gap-3">
-          <code className="font-mono text-sm text-[#5B72F2] tracking-widest">
+        <div className="bg-[#111315] border border-[rgba(255,255,255,0.08)] p-3 flex items-center justify-between gap-3">
+          <code className="font-mono text-sm text-[#E83708] tracking-widest">
             {pairing.pairingCode}
           </code>
           <button

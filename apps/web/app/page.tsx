@@ -9,25 +9,25 @@ import TerminalDemo from '@/components/landing/TerminalDemo';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#101426] text-[#F4F5FB]">
+    <div className="min-h-screen bg-[#111315] text-[#F4F1E9]">
       <LandingNav />
       <main>
         <Hero />
         <Projects />
 
-        <section id="demo" className="border-y border-white/[0.08] bg-[#151B33] py-24 md:py-32">
+        <section id="demo" className="border-y border-[#414548] bg-[#181A1D] py-24 md:py-32">
           <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 md:px-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
             <div>
-              <p className="brand-eyebrow">How the flagship works</p>
-              <h2 className="brand-display mt-5 text-4xl font-semibold leading-tight text-[#F4F5FB] md:text-6xl">
+              <p className="brand-eyebrow">Verification First</p>
+              <h2 className="brand-display mt-5 text-4xl font-black uppercase tracking-tight text-[#F4F1E9] md:text-6xl">
                 Ask clearly.
                 <br />
-                Review calmly.
+                <span className="text-[#E83708]">Review calmly.</span>
               </h2>
-              <p className="mt-6 max-w-lg text-base leading-relaxed text-[#AEB5D0] md:text-lg">
-                Describe the change you want. NOXES reads the relevant server resources and prepares a diff. You review and approve it; a Git checkpoint is made before the change is applied.
+              <p className="mt-6 max-w-lg text-base leading-relaxed text-[#B6B0A4] md:text-lg">
+                Describe the change you want. NOXES reads your server resources and drafts a precise diff. You review every line; a Git checkpoint is created before anything touches disk.
               </p>
-              <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#8D96B7]">
+              <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.16em] text-[#68665F]">
                 No approval, no file change.
               </p>
             </div>
