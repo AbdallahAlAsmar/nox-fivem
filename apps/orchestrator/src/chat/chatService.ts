@@ -1,6 +1,6 @@
 import { prisma } from '@fivem-ai/db';
 import type { AgentGateway } from '../ws/agentGateway';
-import { streamChat, type ChatContext } from '../claude/session';
+import { streamChat, chatModel, type ChatContext } from '../claude/session';
 import { estimateCostUsd } from '../claude/pricing';
 import { sanitizeRelativePath } from '../http/pathGuard';
 
@@ -175,7 +175,7 @@ export async function handleChatMessage(
         const limitMsg = 'Reached tool-call limit for this turn.';
         onStream({ type: 'text', content: `\n\n${limitMsg}` });
         await prisma.chatMessage.create({
-          data: { threadId, role: 'assistant', content: limitMsg, model: 'Noxes AI' },
+          data: { threadId, role: 'assistant', content: limitMsg, model: chatModel() },
         });
         break;
       }
@@ -211,7 +211,7 @@ export async function handleChatMessage(
           role: 'assistant',
           content: assistantContent,
           toolCalls,
-          model: 'Noxes AI',
+          model: chatModel(),
         },
       });
 
@@ -224,7 +224,7 @@ export async function handleChatMessage(
               role: 'tool',
               content: typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result),
               toolCalls: [tc],
-              model: 'Noxes AI',
+              model: chatModel(),
             },
           });
         }
@@ -255,6 +255,14 @@ export async function handleChatMessage(
   }
 }
 
+/** "." is the server-data root. The shared sanitizer rejects empty paths because
+ * other callers use it for writes; directory listing still needs the root. */
+function toolPath(input: unknown): string | null {
+  const raw = String(input ?? '').trim();
+  if (raw === '' || raw === '.' || raw === './') return '.';
+  return sanitizeRelativePath(raw);
+}
+
 async function handleToolCall(gateway: AgentGateway, serverId: string, threadId: string, userId: string, user: any, toolName: string, args: any): Promise<any> {
   if (!gateway.isConnected(serverId)) {
     return { error: `Agent is not connected for server ${serverId}. Pair your server first to enable file operations.`, toolName, status: 'disconnected' };
@@ -263,13 +271,13 @@ async function handleToolCall(gateway: AgentGateway, serverId: string, threadId:
   // Add argument validation based on tool type
   switch (toolName) {
     case 'read_remote_file': {
-      const safe = sanitizeRelativePath(String(args.path ?? ''));
+      const safe = toolPath(args.path);
       if (!safe) return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
       // Add reasonable size limit for file reads (100KB)
       return gateway.sendCommand(serverId, 'fs.read', { path: safe, maxBytes: 102400 }, 30000);
     }
     case 'list_remote_directory': {
-      const safe = sanitizeRelativePath(String(args.path ?? ''));
+      const safe = toolPath(args.path);
       if (!safe) return { error: `Unsafe path rejected: ${args.path}`, toolName, status: 'rejected' };
       // Limit maxEntries to prevent excessive memory usage
       return gateway.sendCommand(serverId, 'fs.list', { path: safe, recursive: false, maxEntries: 1000 }, 30000);

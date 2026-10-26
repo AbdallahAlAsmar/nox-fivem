@@ -140,7 +140,7 @@ export default function Players({ serverId }: { serverId?: string }) {
         </div>
         <button
           onClick={loadPlayers}
-          className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 border border-[rgba(255,255,255,0.08)]"
+          className="flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-100 border border-[#414548]"
         >
           <RefreshCw className="w-3 h-3" />
           Refresh
@@ -156,18 +156,18 @@ export default function Players({ serverId }: { serverId?: string }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search players..."
-            className="w-full pl-10 pr-4 py-2 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors duration-100"
+            className="w-full pl-10 pr-4 py-2 bg-transparent border border-[#414548] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#E83708] transition-colors duration-100"
           />
         </div>
 
-        <div className="flex border border-[rgba(255,255,255,0.08)]">
+        <div className="flex border border-[#414548]">
           {(['all', 'online', 'banned'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors duration-100 ${
                 filter === f
-                  ? 'bg-[rgba(91, 114, 242,0.2)] text-[#5B72F2]'
+                  ? 'bg-[rgba(232,55,8,0.2)] text-[#E83708]'
                   : 'text-[rgba(255,255,255,0.4)] hover:text-white'
               }`}
             >
@@ -219,11 +219,11 @@ export default function Players({ serverId }: { serverId?: string }) {
       {/* Player List */}
       {loading ? (
         <div className="text-center py-20">
-          <div className="w-8 h-8 border-2 border-[#5B72F2] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-2 border-[#E83708] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="font-mono text-xs text-[rgba(255,255,255,0.4)] uppercase tracking-wider">Loading players…</p>
         </div>
       ) : !error && effectiveServerId && filteredPlayers.length === 0 ? (
-        <div className="text-center py-20 bg-nox-surface border border-[rgba(255,255,255,0.08)] border-dashed">
+        <div className="text-center py-20 bg-nox-surface border border-[#414548] border-dashed">
           <Users className="w-10 h-10 text-[rgba(255,255,255,0.2)] mx-auto mb-4" />
           <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white mb-2">No players found</h3>
           <p className="font-sans text-xs text-[rgba(255,255,255,0.4)]">No players match your criteria</p>
@@ -239,13 +239,13 @@ export default function Players({ serverId }: { serverId?: string }) {
               className={`bg-nox-surface border p-4 flex items-center gap-4 ${
                 player.isBanned
                   ? 'border-[rgba(239,68,68,0.2)]'
-                  : 'border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.18)]'
+                  : 'border-[#414548] hover:border-[rgba(255,255,255,0.18)]'
               } transition-colors duration-100`}
             >
               <div className={`w-10 h-10 flex items-center justify-center flex-shrink-0 ${
-                player.isBanned ? 'bg-[rgba(239,68,68,0.15)]' : 'bg-[rgba(91, 114, 242,0.15)]'
+                player.isBanned ? 'bg-[rgba(239,68,68,0.15)]' : 'bg-[rgba(232,55,8,0.15)]'
               }`}>
-                <User className={`w-5 h-5 ${player.isBanned ? 'text-[#ef4444]' : 'text-[#5B72F2]'}`} />
+                <User className={`w-5 h-5 ${player.isBanned ? 'text-[#ef4444]' : 'text-[#E83708]'}`} />
               </div>
 
               <div className="flex-1 min-w-0">
@@ -257,7 +257,7 @@ export default function Players({ serverId }: { serverId?: string }) {
                     </span>
                   )}
                   {player.permissions.includes('moderator') && (
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-[#5B72F2] bg-[rgba(91, 114, 242,0.1)] px-2 py-0.5 flex items-center gap-1">
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-[#E83708] bg-[rgba(232,55,8,0.1)] px-2 py-0.5 flex items-center gap-1">
                       <Shield className="w-3 h-3" /> Mod
                     </span>
                   )}
@@ -298,13 +298,13 @@ export default function Players({ serverId }: { serverId?: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#101426]/80 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-[#111315]/80 backdrop-blur-sm flex items-center justify-center z-50"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#20294A] border border-[rgba(255,255,255,0.08)] p-6 w-full max-w-md mx-4"
+              className="bg-[#202326] border border-[#414548] p-6 w-full max-w-md mx-4"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-mono text-sm uppercase tracking-[0.15em] text-white">Ban Player</h3>
@@ -334,7 +334,7 @@ export default function Players({ serverId }: { serverId?: string }) {
                     value={banReason}
                     onChange={(e) => setBanReason(e.target.value)}
                     placeholder="Reason for banning..."
-                    className="w-full px-3 py-2.5 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#ef4444] transition-colors duration-100 resize-none"
+                    className="w-full px-3 py-2.5 bg-transparent border border-[#414548] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#ef4444] transition-colors duration-100 resize-none"
                     rows={3}
                   />
                 </div>

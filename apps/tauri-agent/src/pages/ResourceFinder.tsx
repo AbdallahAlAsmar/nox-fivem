@@ -82,7 +82,7 @@ export default function ResourceFinder({ serverId }: ResourceFinderProps) {
         <button
           onClick={handleScan}
           disabled={scanning}
-          className="flex items-center gap-2 px-4 py-2 bg-[rgba(91, 114, 242,0.15)] hover:bg-[rgba(91, 114, 242,0.25)] border border-[rgba(91, 114, 242,0.3)] text-[#5B72F2] font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-30"
+          className="flex items-center gap-2 px-4 py-2 bg-[rgba(232,55,8,0.15)] hover:bg-[rgba(232,55,8,0.25)] border border-[rgba(232,55,8,0.3)] text-[#E83708] font-mono text-xs uppercase tracking-wider transition-colors disabled:opacity-30"
         >
           {scanning ? <AlertCircle className="w-3.5 h-3.5 animate-spin" /> : <Filter className="w-3.5 h-3.5" />}
           {scanning ? 'Scanning...' : 'Rescan'}
@@ -104,7 +104,7 @@ export default function ResourceFinder({ serverId }: ResourceFinderProps) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search resources..."
-          className="w-full pl-10 pr-4 py-2 bg-transparent border border-[rgba(255,255,255,0.1)] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#5B72F2] transition-colors"
+          className="w-full pl-10 pr-4 py-2 bg-transparent border border-[#414548] text-sm text-white placeholder:text-[rgba(255,255,255,0.25)] focus:outline-none focus:border-[#E83708] transition-colors"
         />
       </div>
 
@@ -126,15 +126,15 @@ export default function ResourceFinder({ serverId }: ResourceFinderProps) {
             filteredResources.map((resource) => (
               <div
                 key={resource.name}
-                className="flex items-center gap-3 p-3 bg-[#20294A] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.15)] transition-colors"
+                className="flex items-center gap-3 p-3 bg-[#202326] border border-[#414548] hover:border-[rgba(255,255,255,0.15)] transition-colors"
               >
-                <Package className="w-4 h-4 text-[#5B72F2] flex-shrink-0" />
+                <Package className="w-4 h-4 text-[#E83708] flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-sm text-white truncate">{resource.name}</div>
                   <div className="font-mono text-[10px] text-[rgba(255,255,255,0.4)] truncate">{resource.path}</div>
                 </div>
                 {resource.dependencies && resource.dependencies.length > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)]">
+                  <div className="flex items-center gap-1 px-2 py-1 bg-[rgba(255,255,255,0.04)] border border-[#414548]">
                     <CheckCircle2 className="w-3 h-3 text-[#22c55e]" />
                     <span className="font-mono text-[10px] text-[rgba(255,255,255,0.5)]">{resource.dependencies.length} deps</span>
                   </div>

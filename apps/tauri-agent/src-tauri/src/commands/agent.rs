@@ -171,18 +171,9 @@ fn cancel_reconnect() {
 /// is only written after a successful connect and cannot be relied on here).
 #[tauri::command]
 pub fn set_session_token_cmd(server_id: String, session_token: String) -> Result<(), String> {
-    // Validate that the server_id matches the currently configured server
-    // to prevent storing a token for one server but claiming it's for another.
-    let config = get_config();
-    if let Some(configured_server_id) = &config.server_id {
-        if server_id != *configured_server_id {
-            return Err(format!(
-                "Session token can only be set for the currently configured server ({})",
-                configured_server_id
-            ));
-        }
-    }
-
+    // Bind the token to the server it was minted for. The hello path only
+    // sends it when that binding matches, so a second server can be linked
+    // without the previous server_id blocking the write.
     mutate_config(|cfg| {
         cfg.session_token = Some(session_token);
         cfg.session_token_server_id = Some(server_id);
@@ -538,8 +529,22 @@ async fn handle_orchestrator_request(
 
     let srv_path = PathBuf::from(&server_directory);
 
-    // Check if this is an async txAdmin call that needs await
-    // Most handlers are sync now; only txAdmin calls need async
+    // txAdmin calls must stay on localhost or the LAN. A model-supplied URL
+    // would otherwise be an SSRF gadget.
+    fn validate_txadmin_url(url: &str) -> Result<(), String> {
+        let parsed = url::Url::parse(url).map_err(|e| format!("Invalid txAdmin URL: {}", e))?;
+        let host = parsed.host_str().ok_or("No host in URL")?;
+        let private_172 = host.split('.').nth(1).and_then(|part| part.parse::<u8>().ok());
+        let allowed = host == "localhost"
+            || host == "127.0.0.1"
+            || host.starts_with("10.")
+            || host.starts_with("192.168.")
+            || (host.starts_with("172.") && matches!(private_172, Some(16..=31)));
+        if !allowed {
+            return Err("txAdmin URL must point to localhost or a local LAN address".to_string());
+        }
+        Ok(())
+    }
 
     match action {
         "scan.resources" => {
@@ -648,7 +653,7 @@ async fn handle_orchestrator_request(
         }
         "fs.list" => {
             let rel_path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
-            let full_path = if rel_path.is_empty() {
+            let full_path = if rel_path.is_empty() || rel_path == "." {
                 match dunce::canonicalize(&srv_path) {
                     Ok(p) => p,
                     Err(_) => srv_path.clone(),
@@ -936,25 +941,7 @@ async fn handle_orchestrator_request(
                 }
             }
         }
-        // Validate txAdmin URL to prevent SSRF — only allow localhost/127.0.0.1 or the server's own LAN IP
-            fn validate_txadmin_url(url: &str) -> Result<(), String> {
-                let parsed = url::Url::parse(url).map_err(|e| format!("Invalid txAdmin URL: {}", e))?;
-                let host = parsed.host_str().ok_or("No host in URL")?;
-                // Allow localhost, 127.0.0.1, or any local LAN IP (10.x, 172.16-31.x, 192.168.x)
-                let allowed = host == "localhost"
-                    || host == "127.0.0.1"
-                    || host.starts_with("10.")
-                    || host.starts_with("172.16.") || host.starts_with("172.17.") || host.starts_with("172.18.") || host.starts_with("172.19.")
-                    || host.starts_with("172.20.") || host.starts_with("172.21.") || host.starts_with("172.22.") || host.starts_with("172.23.")
-                    || host.starts_with("172.24.") || host.starts_with("172.25.") || host.starts_with("172.26.") || host.starts_with("172.27.")
-                    || host.starts_with("172.28.") || host.starts_with("172.29.") || host.starts_with("172.30.") || host.starts_with("172.31.")
-                    || host.starts_with("192.168.");
-                if !allowed {
-                    return Err("txAdmin URL must point to localhost or a local LAN address".to_string());
-                }
-                Ok(())
-            }
-
+        "fivem.listPlayers" => {
             let use_txadmin = args.get("useTxAdmin").and_then(|v| v.as_bool()).unwrap_or(false);
             let txadmin_url = args.get("txadminUrl").and_then(|v| v.as_str()).unwrap_or("");
             let txadmin_api_key = args.get("txadminApiKey").and_then(|v| v.as_str()).unwrap_or("");
@@ -1109,14 +1096,6 @@ async fn handle_orchestrator_request(
                     }
                     Err(e) => {
                         send_error(&tx, req_id, server_id, agent_device_id, "fivem.tailConsole", "TXADMIN_ERROR", &e);
-                        return;
-                    }
-                }
-            }
-                            "agentDeviceId": agent_device_id,
-                            "payload": { "ok": false, "action": "fivem.tailConsole", "error": { "code": "TXADMIN_ERROR", "message": e, "retryable": true } }
-                        });
-                        let _ = tx.send(Message::Text(env.to_string()));
                         return;
                     }
                 }

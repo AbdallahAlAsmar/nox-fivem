@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { ArrowDownRight, ArrowRight, Check, GitBranch, ScanSearch } from 'lucide-react';
+import SignalField from '@/app/SignalField';
 
 const PROMISES = ['Built for creators. Not consumers.', 'No approval, no file change.', 'Git checkpoint before apply.'];
 
@@ -7,6 +7,7 @@ export default function Hero() {
   return (
     <section id="home" className="brand-hero relative min-h-[760px] overflow-hidden pt-24 md:min-h-[820px]">
       <div aria-hidden="true" className="brand-grid pointer-events-none absolute inset-0" />
+      <SignalField />
       <div aria-hidden="true" className="pointer-events-none absolute -right-32 top-12 h-[34rem] w-[34rem] rounded-full bg-[#E83708]/5 blur-[120px]" />
 
       <div className="relative mx-auto grid min-h-[700px] max-w-7xl items-center gap-16 px-6 py-16 md:px-12 lg:grid-cols-[0.92fr_1.08fr] lg:gap-10 lg:py-20">
@@ -48,7 +49,7 @@ export default function Hero() {
           <div className="brand-product-window relative z-[1] overflow-hidden rounded-sm border border-[#414548] bg-[#181A1D]">
             <div className="brand-window-bar flex items-center justify-between gap-4 border-b border-[#414548] bg-[#111315] px-5 py-3.5 md:px-6">
               <div className="flex items-center gap-3">
-                <img src="/brand/noxes-symbol.svg" alt="" aria-hidden="true" className="h-6 w-6" />
+                <img src="/brand/13_Desktop_App_Icon.png" alt="" aria-hidden="true" className="h-6 w-6" />
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#68665F]">NOXES for FiveM</p>
                   <p className="text-xs font-semibold text-[#F4F1E9]">Authoring Pipeline</p>

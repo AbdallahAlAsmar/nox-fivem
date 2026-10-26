@@ -13,6 +13,23 @@ async function main() {
     },
   });
 
+  // Desktop and dashboard clients set Content-Type: application/json on POSTs
+  // that have no body (apply, scan, start). Fastify's default parser rejects
+  // that as an empty JSON body, so those actions 400 before the handler runs.
+  fastify.removeContentTypeParser('application/json');
+  fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (!body || body.length === 0) {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(body as string));
+    } catch (err) {
+      (err as Error & { statusCode?: number }).statusCode = 400;
+      done(err as Error, undefined);
+    }
+  });
+
   // Register plugins
   const corsOrigins = [process.env.DASHBOARD_ORIGIN, ...config.corsOrigins]
     .filter((o): o is string => Boolean(o));

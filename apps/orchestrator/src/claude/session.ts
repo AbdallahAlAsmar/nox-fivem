@@ -3,10 +3,26 @@ import { prisma } from '@fivem-ai/db';
 import { estimateCostUsd } from './pricing';
 import type { ChatMessage, ResourceIndex } from '@prisma/client';
 
-const openai = new OpenAI({
-  apiKey: process.env.OMNI_KEY,
-  baseURL: process.env.OMNIROUTE_BASE_URL || 'http://localhost:20128/v1',
-});
+/** Model id sent to the OpenAI-compatible backend (FreeLLM profile or a pinned model). */
+export function chatModel(): string {
+  return process.env.OMNIROUTE_MODEL || 'auto';
+}
+
+let openaiClient: OpenAI | null = null;
+
+function openai(): OpenAI {
+  if (!openaiClient) {
+    const apiKey = process.env.OMNIROUTE_API_KEY || process.env.OMNI_KEY || '';
+    if (!apiKey) {
+      throw new Error('OMNIROUTE_API_KEY is not set. Point it at the local FreeLLM unified key.');
+    }
+    openaiClient = new OpenAI({
+      apiKey,
+      baseURL: process.env.OMNIROUTE_BASE_URL || 'http://127.0.0.1:3101/v1',
+    });
+  }
+  return openaiClient;
+}
 
 export interface ChatContext {
   serverId: string;
@@ -376,7 +392,7 @@ export async function* streamChat(
         parameters: {
           type: 'object' as const,
           properties: {
-            path: { type: 'string', description: 'Relative path from server-data' },
+            path: { type: 'string', description: 'Relative path from the server-data root, such as resources/demo/config.lua' },
           },
           required: ['path'],
         },
@@ -390,7 +406,7 @@ export async function* streamChat(
         parameters: {
           type: 'object' as const,
           properties: {
-            path: { type: 'string', description: 'Relative path from server-data' },
+            path: { type: 'string', description: 'Relative path from server-data. Use "." to list the server-data root.' },
           },
           required: ['path'],
         },
@@ -429,9 +445,10 @@ export async function* streamChat(
   ] : undefined;
 
   try {
-    console.log('[streamChat] calling OmniRoute with model Noxes AI, tools:', tools ? 'enabled' : 'disabled');
-    const stream = await openai.chat.completions.create({
-      model: 'Noxes AI',
+    const model = chatModel();
+    console.log('[streamChat] calling AI with model', model, 'tools:', tools ? 'enabled' : 'disabled');
+    const stream = await openai().chat.completions.create({
+      model,
       messages,
       stream: true,
       // Ask the OpenAI-compatible backend to append a final usage-only chunk.
@@ -506,11 +523,20 @@ export async function* streamChat(
 
     for (const tc of toolCallsMap.values()) {
       if (tc.name) {
+        let toolArgs: Record<string, unknown> = {};
+        try {
+          const raw = tc.arguments;
+          toolArgs = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw ?? {});
+        } catch (parseError) {
+          console.error('[streamChat] tool arguments were not JSON:', parseError);
+          yield { type: 'error', content: `The model returned invalid arguments for ${tc.name}.` };
+          continue;
+        }
         yield {
           type: 'tool_use',
           content: '',
           toolName: tc.name,
-          toolArgs: JSON.parse(tc.arguments || '{}'),
+          toolArgs,
           toolId: tc.id,
         };
       }

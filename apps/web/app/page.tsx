@@ -1,10 +1,11 @@
-import AboutNoxes from '@/components/landing/AboutNoxes';
+import AboutNoxes from '@/components/landing/AboutNoxesMotion';
 import Features from '@/components/landing/Features';
 import GetStarted from '@/components/landing/GetStarted';
 import Hero from '@/components/landing/Hero';
 import LandingFooter from '@/components/landing/LandingFooter';
 import LandingNav from '@/components/landing/LandingNav';
-import Projects from '@/components/landing/Projects';
+import Projects from '@/components/landing/ProjectsMotion';
+import ScrollReveal from '@/components/landing/ScrollReveal';
 import TerminalDemo from '@/components/landing/TerminalDemo';
 
 export default function LandingPage() {
@@ -16,7 +17,7 @@ export default function LandingPage() {
         <Projects />
 
         <section id="demo" className="border-y border-[#414548] bg-[#181A1D] py-24 md:py-32">
-          <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 md:px-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+          <ScrollReveal className="mx-auto grid max-w-7xl items-center gap-14 px-6 md:px-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
             <div>
               <p className="brand-eyebrow">Verification First</p>
               <h2 className="brand-display mt-5 text-4xl font-black uppercase tracking-tight text-[#F4F1E9] md:text-6xl">
@@ -32,7 +33,7 @@ export default function LandingPage() {
               </p>
             </div>
             <TerminalDemo />
-          </div>
+          </ScrollReveal>
         </section>
 
         <Features />

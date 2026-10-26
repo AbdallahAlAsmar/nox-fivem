@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyToken as clerkVerifyToken } from '@clerk/backend';
 import fp from 'fastify-plugin';
 import { resolveUser } from './provisioning';
+import { isUsableClerkSecret, verifySessionWithJwks } from './clerkJwt';
 
 export interface AuthUser {
   /** Stable Clerk user id from the verified token's `sub` claim. */
@@ -81,9 +82,10 @@ export async function verifyBearerToken(token: string): Promise<AuthUser | null>
 async function verifyClerkToken(token: string): Promise<AuthUser | null> {
   try {
     const secretKey = process.env.CLERK_SECRET_KEY;
-    if (!secretKey) {
-      console.error('[auth] CLERK_SECRET_KEY is not configured — cannot verify tokens');
-      return null;
+    if (!isUsableClerkSecret(secretKey)) {
+      const session = await verifySessionWithJwks(token);
+      if (!session) return null;
+      return await resolveUser(session.sub, session.email);
     }
     const payload = await clerkVerifyToken(token, { secretKey });
     if (!payload || !payload.sub) return null;

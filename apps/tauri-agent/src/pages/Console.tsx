@@ -89,8 +89,8 @@ export default function Console({ serverId }: ConsoleProps) {
             onClick={() => setAutoScroll(!autoScroll)}
             className={`px-2 py-1 font-mono text-xs uppercase tracking-wider transition-colors border ${
               autoScroll
-                ? 'border-[rgba(91,114,242,0.4)] bg-[rgba(91,114,242,0.1)] text-[#5B72F2]'
-                : 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.4)] hover:text-white'
+                ? 'border-[rgba(232,55,8,0.4)] bg-[rgba(232,55,8,0.1)] text-[#E83708]'
+                : 'border-[#414548] text-[rgba(255,255,255,0.4)] hover:text-white'
             }`}
           >
             {autoScroll ? 'Auto' : 'Locked'}
@@ -100,7 +100,7 @@ export default function Console({ serverId }: ConsoleProps) {
             className={`flex items-center gap-1 px-2 py-1 font-mono text-xs uppercase tracking-wider transition-colors border ${
               paused
                 ? 'border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] text-[#ef4444]'
-                : 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.4)] hover:text-white'
+                : 'border-[#414548] text-[rgba(255,255,255,0.4)] hover:text-white'
             }`}
           >
             {paused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
@@ -109,7 +109,7 @@ export default function Console({ serverId }: ConsoleProps) {
           <button
             onClick={fetchConsole}
             disabled={loading}
-            className="flex items-center gap-1 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors border border-[rgba(255,255,255,0.08)]"
+            className="flex items-center gap-1 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors border border-[#414548]"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -125,7 +125,7 @@ export default function Console({ serverId }: ConsoleProps) {
       )}
 
       {/* Console output */}
-      <div className="flex-1 bg-[#0B1020] border border-[rgba(255,255,255,0.08)] p-3 overflow-y-auto font-mono text-xs">
+      <div className="flex-1 bg-[#111315] border border-[#414548] p-3 overflow-y-auto font-mono text-xs">
         {lines.length === 0 && !loading ? (
           <div className="text-center py-8 text-[rgba(255,255,255,0.3)]">
             <p className="uppercase tracking-wider">No console output</p>
@@ -140,7 +140,7 @@ export default function Console({ serverId }: ConsoleProps) {
               <div
                 key={i}
                 className={`py-0.5 ${
-                  isError ? 'text-[#ef4444]' : isWarning ? 'text-[#f59e0b]' : isInfo ? 'text-[#5B72F2]' : 'text-[rgba(255,255,255,0.7)]'
+                  isError ? 'text-[#ef4444]' : isWarning ? 'text-[#f59e0b]' : isInfo ? 'text-[#E83708]' : 'text-[rgba(255,255,255,0.7)]'
                 }`}
               >
                 {line}

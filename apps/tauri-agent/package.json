@@ -8,8 +8,8 @@
     "build": "tsc && vite build && node postbuild.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:dev": "node scripts/run-tauri.mjs dev",
+    "tauri:build": "node scripts/run-tauri.mjs build"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.9",
