@@ -32,9 +32,12 @@ export default function LandingNav() {
     <header className={`brand-nav fixed inset-x-0 top-0 z-50 border-b ${scrolled ? 'is-scrolled' : 'border-transparent'}`}>
       <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-6 md:px-12">
         <Link href="/" className="inline-flex items-center gap-3.5 focus-visible:outline-none" aria-label="NOXES home">
-          <img src="/brand/noxes-symbol.svg" alt="" aria-hidden="true" className="h-7 w-7" />
-          <span className="font-display text-2xl font-black tracking-wider text-[#F4F1E9] uppercase">NOXES</span>
-          <span className="hidden sm:inline-block font-mono text-[10px] tracking-[0.2em] text-[#68665F] uppercase border-l border-[#414548] pl-3 py-0.5">
+          <img
+            src="/brand/02_NOXES_Wordmark_in_Context.png"
+            alt="NOXES"
+            className="h-8 w-auto object-contain"
+          />
+          <span className="hidden sm:inline-block border-l border-[#414548] py-0.5 pl-3 font-mono text-[10px] uppercase tracking-[0.2em] text-[#68665F]">
             Worlds in Motion
           </span>
         </Link>
