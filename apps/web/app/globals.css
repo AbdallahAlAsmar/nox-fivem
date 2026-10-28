@@ -378,6 +378,11 @@ a {
 }
 
 .scroll-reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-reveal.is-pending {
   opacity: 0;
   transform: translateY(28px);
   transition: opacity 700ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);

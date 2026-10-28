@@ -37,7 +37,7 @@ const KIND_STYLE: Record<Line['kind'], string> = {
 };
 
 export default function TerminalDemo() {
-  const [lines, setLines] = useState<Line[]>([]);
+  const [lines, setLines] = useState<Line[]>(() => SCRIPT.slice(0, 4));
   const [started, setStarted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -48,12 +48,24 @@ export default function TerminalDemo() {
       setStarted(true);
       return;
     }
+
+    const reveal = () => setStarted(true);
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      reveal();
+      return;
+    }
+
     const obs = new IntersectionObserver(
-      ([e]) => e.isIntersecting && setStarted(true),
-      { threshold: 0.35 },
+      ([e]) => e.isIntersecting && reveal(),
+      { threshold: 0.1 },
     );
     obs.observe(el);
-    return () => obs.disconnect();
+    const fallback = window.setTimeout(reveal, 3000);
+    return () => {
+      obs.disconnect();
+      window.clearTimeout(fallback);
+    };
   }, []);
 
   useEffect(() => {
