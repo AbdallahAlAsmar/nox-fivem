@@ -11,6 +11,18 @@ export function isUsableClerkSecret(value: string | undefined): boolean {
 }
 
 function frontendApiHost(): string | null {
+  const configuredDomain = process.env.CLERK_JWKS_DOMAIN?.trim();
+  if (configuredDomain) {
+    try {
+      const host = configuredDomain.includes('://')
+        ? new URL(configuredDomain).hostname
+        : configuredDomain.split('/')[0];
+      if (/^[a-z0-9.-]+$/i.test(host)) return host;
+    } catch {
+      // Fall through to the domain encoded in the publishable key.
+    }
+  }
+
   const key =
     process.env.CLERK_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||

@@ -81,29 +81,43 @@ export async function verifyBearerToken(token: string): Promise<AuthUser | null>
 }
 
 async function verifyClerkToken(token: string): Promise<AuthUser | null> {
-  try {
-    const secretKey = process.env.CLERK_SECRET_KEY;
-    if (!isUsableClerkSecret(secretKey)) {
-      const session = await verifySessionWithJwks(token);
-      if (!session) return null;
-      return await resolveUser(session.sub, session.email);
-    }
-    const payload = await clerkVerifyToken(token, { secretKey });
-    if (!payload || !payload.sub) return null;
+  const secretKey = process.env.CLERK_SECRET_KEY;
+  let session: { sub: string; email: string | null } | null = null;
 
-    // Defensive claim mapping: template/email claims may be absent.
-    const claims = payload as unknown as Record<string, unknown>;
-    const email = typeof claims.email === 'string' ? claims.email : null;
-    // NOTE: orgId is deliberately NOT read from JWT org_* claims — tenancy is
-    // owned by the AppUser provisioning record.
-    return await resolveUser(payload.sub, email);
-  } catch (error) {
-    console.error(
-      '[auth] Clerk token verification failed:',
-      (error as Error)?.message || error,
-    );
-    return null;
+  if (isUsableClerkSecret(secretKey)) {
+    try {
+      const payload = await clerkVerifyToken(token, { secretKey });
+      if (payload?.sub) {
+        // Defensive claim mapping: template/email claims may be absent.
+        const claims = payload as unknown as Record<string, unknown>;
+        session = {
+          sub: payload.sub,
+          email: typeof claims.email === 'string' ? claims.email : null,
+        };
+      }
+    } catch {
+      // The site's active Clerk instance can differ from this secret during key
+      // rotation. The configured instance JWKS below remains authoritative.
+    }
   }
+
+  if (!session) {
+    try {
+      session = await verifySessionWithJwks(token);
+    } catch (error) {
+      console.error(
+        '[auth] Clerk JWKS verification failed:',
+        (error as Error)?.message || error,
+      );
+      return null;
+    }
+  }
+
+  if (!session) return null;
+
+  // Keep DB provisioning outside the token-validation catch path. Database
+  // failures must surface as service errors, never as an invalid-token 401.
+  return resolveUser(session.sub, session.email);
 }
 
 async function authHook(request: FastifyRequest, reply: FastifyReply) {

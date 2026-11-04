@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { SignInButton, UserButton, useUser } from '@clerk/nextjs';
-import { ArrowRight, ArrowUp, Check, Copy, Download, FileText, LoaderCircle, MessageSquarePlus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ArrowRight, Check, Copy, Download, FileText, LoaderCircle, MessageSquarePlus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PromptInput } from '@/components/ui/ai-chat-input';
 
 type FileEntry = { path: string; content: string };
 type Result = { prompt: string; files: FileEntry[]; notes?: string };
@@ -123,13 +124,6 @@ export default function PromptStudio() {
     window.setTimeout(() => setCopied(false), 1600);
   };
 
-  const keyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      void submit();
-    }
-  };
-
   const hasMessages = messages.length > 0;
 
   return (
@@ -216,15 +210,16 @@ export default function PromptStudio() {
 
         <div className="shrink-0 border-t border-[#414548] bg-[#111315] px-4 pb-3 pt-4 md:px-8 md:pb-5">
           {error && !hasMessages && <p role="alert" className="mx-auto mb-2 max-w-4xl text-xs text-[#F4F1E9]">{error}</p>}
-          <form onSubmit={(event) => { event.preventDefault(); void submit(); }} className="mx-auto max-w-4xl">
-            <div className="relative border border-[#68665F] bg-[#202326] focus-within:border-[#E83708]">
-              <label htmlFor="prompt-input" className="sr-only">Describe the prompt you want to create</label>
-              <textarea id="prompt-input" ref={inputRef} value={text} onChange={(event) => setText(event.target.value)} onKeyDown={keyDown} maxLength={12_000} rows={2} placeholder="Describe the prompt you want to create…" aria-label="Describe the prompt you want to create" className="block max-h-48 min-h-[96px] w-full resize-y bg-transparent px-4 pb-12 pt-4 text-sm leading-6 text-[#F4F1E9] outline-none placeholder:text-[#B6B0A4]" />
-              <div className="absolute bottom-3 left-4 text-xs text-[#B6B0A4]">Enter to send · Shift + Enter for a new line</div>
-              <button type="submit" disabled={!text.trim() || busy} aria-label="Send message" className="brand-button-primary absolute bottom-2 right-2 flex h-10 w-10 min-h-10 p-0 disabled:cursor-not-allowed disabled:border-[#414548] disabled:bg-[#414548] disabled:text-[#B6B0A4]"><ArrowUp size={18} /></button>
-            </div>
+          <div className="mx-auto max-w-4xl">
+            <PromptInput
+              ref={inputRef}
+              value={text}
+              onChange={setText}
+              onSubmit={(message) => void submit(message)}
+              disabled={busy}
+            />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs leading-5 text-[#B6B0A4]"><span>{!isSignedIn && `Guest chats are not saved. ${remaining === null ? '5 free turns per day.' : `${remaining} left today.`}`}</span><span>Review the prompt before using it.</span></div>
-          </form>
+          </div>
         </div>
       </section>
     </main>
