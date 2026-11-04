@@ -144,8 +144,8 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
       <div className={cn('w-full', className)}>
         <div
           className={cn(
-            'relative overflow-hidden rounded-lg border bg-[#181A1D] transition-[border-color,background-color] duration-200',
-            disabled ? 'border-[#414548] opacity-70' : 'border-[#414548] focus-within:border-[#E83708] focus-within:bg-[#202326]',
+            'relative overflow-hidden rounded-xl border bg-[#202326] transition-colors duration-200',
+            disabled ? 'border-[#414548] opacity-70' : 'border-[#414548] focus-within:border-[#B6B0A4] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#B6B0A4]',
           )}
         >
           <div className="flex items-center justify-between gap-3 px-4 pt-3 sm:px-5">
@@ -169,35 +169,24 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
             disabled={disabled || listening}
             placeholder={placeholder}
             aria-describedby={voiceError ? 'prompt-input-error' : 'prompt-input-hint'}
-            className="block max-h-40 min-h-[72px] w-full resize-none bg-transparent px-4 pb-2 pt-2 text-[16px] leading-7 text-[#F4F1E9] outline-none placeholder:text-[#68665F] disabled:cursor-not-allowed sm:px-5"
+            className="block max-h-40 min-h-[112px] w-full resize-none bg-transparent px-4 pb-14 pt-2 text-[16px] leading-7 text-[#F4F1E9] outline-none placeholder:text-[#68665F] disabled:cursor-not-allowed sm:px-5"
           />
 
-          <div className="flex min-h-12 items-center justify-between gap-3 bg-[#202326] px-3 py-2 sm:px-4">
+          <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 sm:inset-x-4">
             <p id="prompt-input-hint" className="min-w-0 text-xs leading-5 text-[#B6B0A4]">
-              {listening ? 'Speak clearly, then stop when you’re done.' : 'Enter to send · Shift + Enter for a new line'}
+              {listening ? 'Listening… select stop when you’re done.' : 'Enter to send · Shift + Enter for a new line'}
             </p>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={listening ? stopVoiceInput : startVoiceInput}
-                disabled={disabled}
-                aria-label={listening ? 'Stop voice input' : 'Start voice input'}
-                aria-pressed={listening}
-                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-md text-[#B6B0A4] transition-colors hover:bg-white/[0.07] hover:text-[#F4F1E9] disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E83708]"
-              >
-                {listening ? <Square size={14} /> : <Mic size={17} />}
-              </button>
             <button
               type="button"
-              onClick={handleSubmit}
-              disabled={!hasValue || disabled || listening}
-              aria-label={isSubmitting ? 'Sending message' : 'Send message'}
-              className="brand-button-primary flex h-11 min-h-11 min-w-11 cursor-pointer rounded-md px-3 shadow-none transition-transform active:scale-95 disabled:cursor-not-allowed disabled:border-[#414548] disabled:bg-[#414548] disabled:text-[#B6B0A4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E83708]"
+              onClick={listening ? stopVoiceInput : hasValue ? handleSubmit : startVoiceInput}
+              disabled={disabled}
+              aria-label={isSubmitting ? 'Sending message' : listening ? 'Stop voice input' : hasValue ? 'Send message' : 'Start voice input'}
+              aria-pressed={listening || undefined}
+              className="brand-button-primary flex h-11 min-h-11 min-w-11 cursor-pointer rounded-lg px-3 shadow-none transition-transform active:scale-95 disabled:cursor-not-allowed disabled:border-[#414548] disabled:bg-[#414548] disabled:text-[#B6B0A4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B6B0A4]"
             >
-              {isSubmitting ? <LoaderCircle size={17} className="animate-spin" /> : <ArrowUp size={18} />}
-              <span className="hidden text-sm sm:inline">Send</span>
+              {isSubmitting ? <LoaderCircle size={17} className="animate-spin" /> : listening ? <Square size={14} /> : hasValue ? <ArrowUp size={18} /> : <Mic size={17} />}
+              <span className="hidden text-sm sm:inline">{isSubmitting ? 'Working' : listening ? 'Stop' : hasValue ? 'Send' : 'Voice'}</span>
             </button>
-            </div>
           </div>
         </div>
         <p id="prompt-input-error" role="status" aria-live="polite" className="mt-2 min-h-5 text-xs leading-5 text-[#E2A18D]">
