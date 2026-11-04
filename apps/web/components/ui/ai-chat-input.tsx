@@ -151,9 +151,9 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
       <div className={cn('w-full', className)} onBlur={handleBlur}>
         <div
           className={cn(
-            'relative border bg-[#202326] transition-[border-color,min-height] duration-200',
+            'relative rounded-2xl border bg-[#202326] transition-[border-color,background-color,box-shadow] duration-200',
             expanded || hasValue ? 'min-h-[118px]' : 'min-h-[56px]',
-            disabled ? 'border-[#414548] opacity-70' : 'border-[#68665F] focus-within:border-[#E83708]',
+            disabled ? 'border-[#414548] opacity-70' : 'border-white/[0.12] focus-within:border-[#E83708]/70 focus-within:bg-[#24272A] focus-within:shadow-[0_0_0_3px_rgba(232,55,8,0.12)]',
           )}
         >
           <label htmlFor="prompt-input" className="sr-only">Describe the prompt you want to create</label>
@@ -191,7 +191,7 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
                     disabled={disabled}
                     aria-label={listening ? 'Stop voice input' : 'Start voice input'}
                     aria-pressed={listening}
-                    className="flex h-10 w-10 items-center justify-center border border-[#414548] text-[#B6B0A4] hover:border-[#68665F] hover:text-[#F4F1E9] disabled:cursor-not-allowed"
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-[#B6B0A4] transition-colors hover:bg-white/[0.07] hover:text-[#F4F1E9] disabled:cursor-not-allowed"
                   >
                     {listening ? <Square size={14} /> : <Mic size={16} />}
                   </button>
@@ -201,7 +201,7 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
                   onClick={handleSubmit}
                   disabled={!hasValue || disabled || listening}
                   aria-label="Send message"
-                  className="brand-button-primary flex h-10 w-10 min-h-10 p-0 disabled:cursor-not-allowed disabled:border-[#414548] disabled:bg-[#414548] disabled:text-[#B6B0A4]"
+                  className="brand-button-primary flex h-10 w-10 min-h-10 rounded-full p-0 shadow-none transition-transform active:scale-95 disabled:cursor-not-allowed disabled:border-[#414548] disabled:bg-[#414548] disabled:text-[#B6B0A4]"
                 >
                   <ArrowUp size={18} />
                 </button>
