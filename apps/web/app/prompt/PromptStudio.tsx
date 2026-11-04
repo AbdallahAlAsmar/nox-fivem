@@ -79,6 +79,41 @@ export default function PromptStudio() {
     }
   };
 
+  const recoverSavedConversation = async (pendingMessage: string, knownConversationId: string | null) => {
+    if (!isSignedIn) return false;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const candidates = knownConversationId ? [knownConversationId] : await fetch('/api/prompt/conversations', { cache: 'no-store' })
+          .then(async (response) => response.ok ? (await response.json()).conversations || [] : [])
+          .then((items: Conversation[]) => items.slice(0, 3).map((item) => item.id));
+
+        for (const id of candidates) {
+          const response = await fetch(`/api/prompt/conversations/${encodeURIComponent(id)}`, { cache: 'no-store' });
+          if (!response.ok) continue;
+          const data = await response.json();
+          const savedMessages = (data.messages || []).map((saved: any) => ({
+            id: saved.id,
+            role: saved.role === 'assistant' ? 'assistant' as const : 'user' as const,
+            content: saved.content,
+            result: saved.result || null,
+          }));
+          const userIndex = savedMessages.map((saved: Message) => saved.role === 'user' && saved.content === pendingMessage).lastIndexOf(true);
+          if (userIndex < 0 || !savedMessages.slice(userIndex + 1).some((saved: Message) => saved.role === 'assistant')) continue;
+          setConversationId(data.conversation.id);
+          setMessages(savedMessages);
+          setActiveFile(null);
+          void refreshConversations();
+          return true;
+        }
+      } catch {
+        // Retry briefly: the backend may still be committing a result after a dropped response.
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 1_200));
+    }
+    return false;
+  };
+
   const submit = async (value = text) => {
     const message = value.trim();
     if (!message || busy) return;
@@ -112,6 +147,7 @@ export default function PromptStudio() {
       setActiveFile(null);
       if (isSignedIn) void refreshConversations();
     } catch (err) {
+      if (await recoverSavedConversation(message, conversationId)) return;
       setError(err instanceof Error ? err.message : 'Prompt generation failed. Please try again.');
     } finally {
       setBusy(false);

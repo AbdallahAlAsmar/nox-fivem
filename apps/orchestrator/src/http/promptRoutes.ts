@@ -78,13 +78,23 @@ async function generate(turns: Turn[], withFiles: boolean) {
   const key = process.env.OMNIROUTE_API_KEY;
   const base = process.env.PROMPT_AI_BASE_URL || process.env.OMNIROUTE_BASE_URL || 'http://host.docker.internal:3101/v1';
   if (!key) throw new Error('Prompt generation is not configured.');
+  // The Vercel proxy deliberately stops waiting after 55 seconds. Keep all model
+  // attempts inside one budget so a late fallback cannot save a result after the
+  // browser has already received an unavailable error.
+  const deadline = Date.now() + 48_000;
+  const models = [...new Set([process.env.PROMPT_AI_PRIMARY_MODEL || 'free-router', process.env.PROMPT_AI_FALLBACK_MODEL || 'auto'])];
   let failure: unknown;
-  for (const model of [...new Set([process.env.PROMPT_AI_PRIMARY_MODEL || 'free-router', process.env.PROMPT_AI_FALLBACK_MODEL || 'auto'])]) {
+  for (const [index, model] of models.entries()) {
+    const remaining = deadline - Date.now();
+    if (remaining < 6_000) break;
+    // Preserve enough time for one fallback plus parsing and persistence.
+    const timeout = index < models.length - 1 ? Math.min(30_000, remaining - 16_000) : remaining - 2_000;
+    if (timeout < 6_000) break;
     try {
       const response = await fetch(base.replace(/\/$/, '') + '/chat/completions', {
         method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt(withFiles) }, ...turns], temperature: 0.4, max_tokens: 8192 }),
-        signal: AbortSignal.timeout(50_000),
+        signal: AbortSignal.timeout(timeout),
       });
       const body = await response.json().catch(() => null) as any;
       if (!response.ok) throw new Error(typeof body?.error?.message === 'string' ? body.error.message : 'Provider returned ' + response.status);
