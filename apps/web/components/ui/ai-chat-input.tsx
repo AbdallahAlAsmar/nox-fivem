@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUp, Mic, Square } from 'lucide-react';
+import { ArrowUp, LoaderCircle, Mic, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SpeechResult = {
@@ -33,6 +33,7 @@ export interface PromptInputProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  isSubmitting?: boolean;
   maxLength?: number;
 }
 
@@ -45,6 +46,7 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
       placeholder = 'Describe the prompt you want to create…',
       className,
       disabled = false,
+      isSubmitting = false,
       maxLength = 12_000,
     },
     forwardedRef,
@@ -53,7 +55,6 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
     const recognitionRef = useRef<SpeechRecognizer | null>(null);
     const speechBaseRef = useRef('');
     const speechFinalRef = useRef('');
-    const [expanded, setExpanded] = useState(false);
     const [listening, setListening] = useState(false);
     const [voiceError, setVoiceError] = useState('');
     const hasValue = value.trim().length > 0;
@@ -69,7 +70,6 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
 
     useEffect(() => {
       resizeTextarea();
-      if (hasValue) setExpanded(true);
     }, [hasValue, resizeTextarea, value]);
 
     const stopVoiceInput = useCallback(() => {
@@ -89,7 +89,6 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
       }
 
       setVoiceError('');
-      setExpanded(true);
       speechBaseRef.current = value.trimEnd();
       speechFinalRef.current = '';
 
@@ -139,86 +138,69 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
       const message = value.trim();
       if (!message || disabled || listening) return;
       onSubmit(message);
-      setExpanded(false);
-    };
-
-    const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
-      if (event.currentTarget.contains(event.relatedTarget as Node)) return;
-      if (!hasValue && !listening) setExpanded(false);
     };
 
     return (
-      <div className={cn('w-full', className)} onBlur={handleBlur}>
+      <div className={cn('w-full', className)}>
         <div
           className={cn(
-            'relative rounded-2xl border bg-[#202326] transition-[border-color,background-color,box-shadow] duration-200',
-            expanded || hasValue ? 'min-h-[118px]' : 'min-h-[56px]',
-            disabled ? 'border-[#414548] opacity-70' : 'border-white/[0.12] focus-within:border-[#E83708]/70 focus-within:bg-[#24272A] focus-within:shadow-[0_0_0_3px_rgba(232,55,8,0.12)]',
+            'relative overflow-hidden rounded-lg border bg-[#181A1D] transition-[border-color,background-color] duration-200',
+            disabled ? 'border-[#414548] opacity-70' : 'border-[#414548] focus-within:border-[#E83708] focus-within:bg-[#202326]',
           )}
         >
-          <label htmlFor="prompt-input" className="sr-only">Describe the prompt you want to create</label>
+          <div className="flex items-center justify-between gap-3 px-4 pt-3 sm:px-5">
+            <label htmlFor="prompt-input" className="text-sm font-medium text-[#F4F1E9]">Message Lyra</label>
+            {listening && <span className="flex items-center gap-2 text-xs text-[#E2A18D]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#E83708]" />Listening</span>}
+          </div>
           <textarea
             id="prompt-input"
             ref={textareaRef}
             value={value}
             onChange={(event) => onChange(event.target.value.slice(0, maxLength))}
-            onFocus={() => { setExpanded(true); setVoiceError(''); }}
+            onFocus={() => setVoiceError('')}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                 event.preventDefault();
                 handleSubmit();
               }
-              if (event.key === 'Escape' && !hasValue && !listening) setExpanded(false);
             }}
             maxLength={maxLength}
-            rows={1}
+            rows={2}
             disabled={disabled || listening}
             placeholder={placeholder}
-            aria-describedby={expanded ? 'prompt-input-hint' : undefined}
-            className="block max-h-40 min-h-12 w-full resize-none bg-transparent px-4 pb-3 pt-3 text-sm leading-6 text-[#F4F1E9] outline-none placeholder:text-[#B6B0A4] disabled:cursor-not-allowed"
+            aria-describedby={voiceError ? 'prompt-input-error' : 'prompt-input-hint'}
+            className="block max-h-40 min-h-[72px] w-full resize-none bg-transparent px-4 pb-2 pt-2 text-[16px] leading-7 text-[#F4F1E9] outline-none placeholder:text-[#68665F] disabled:cursor-not-allowed sm:px-5"
           />
 
-          {expanded && (
-            <div className="flex min-h-12 items-center justify-between gap-3 px-3 pb-2">
-              <p id="prompt-input-hint" className="min-w-0 text-xs leading-5 text-[#B6B0A4]">
-                {listening ? 'Listening… Speak clearly, then stop when you’re done.' : 'Lyra · Automatic model routing · Enter to send'}
-              </p>
-              <div className="flex shrink-0 items-center gap-2">
-                {(!hasValue || listening) && (
-                  <button
-                    type="button"
-                    onClick={listening ? stopVoiceInput : startVoiceInput}
-                    disabled={disabled}
-                    aria-label={listening ? 'Stop voice input' : 'Start voice input'}
-                    aria-pressed={listening}
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-[#B6B0A4] transition-colors hover:bg-white/[0.07] hover:text-[#F4F1E9] disabled:cursor-not-allowed"
-                  >
-                    {listening ? <Square size={14} /> : <Mic size={16} />}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!hasValue || disabled || listening}
-                  aria-label="Send message"
-                  className="brand-button-primary flex h-10 w-10 min-h-10 rounded-full p-0 shadow-none transition-transform active:scale-95 disabled:cursor-not-allowed disabled:border-[#414548] disabled:bg-[#414548] disabled:text-[#B6B0A4]"
-                >
-                  <ArrowUp size={18} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!expanded && (
+          <div className="flex min-h-12 items-center justify-between gap-3 bg-[#202326] px-3 py-2 sm:px-4">
+            <p id="prompt-input-hint" className="min-w-0 text-xs leading-5 text-[#B6B0A4]">
+              {listening ? 'Speak clearly, then stop when you’re done.' : 'Enter to send · Shift + Enter for a new line'}
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={listening ? stopVoiceInput : startVoiceInput}
+                disabled={disabled}
+                aria-label={listening ? 'Stop voice input' : 'Start voice input'}
+                aria-pressed={listening}
+                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-md text-[#B6B0A4] transition-colors hover:bg-white/[0.07] hover:text-[#F4F1E9] disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E83708]"
+              >
+                {listening ? <Square size={14} /> : <Mic size={17} />}
+              </button>
             <button
               type="button"
-              onClick={() => { setExpanded(true); textareaRef.current?.focus(); }}
-              className="absolute inset-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#E83708] focus-visible:ring-inset"
-              aria-label="Open prompt input"
-            />
-          )}
+              onClick={handleSubmit}
+              disabled={!hasValue || disabled || listening}
+              aria-label={isSubmitting ? 'Sending message' : 'Send message'}
+              className="brand-button-primary flex h-11 min-h-11 min-w-11 cursor-pointer rounded-md px-3 shadow-none transition-transform active:scale-95 disabled:cursor-not-allowed disabled:border-[#414548] disabled:bg-[#414548] disabled:text-[#B6B0A4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E83708]"
+            >
+              {isSubmitting ? <LoaderCircle size={17} className="animate-spin" /> : <ArrowUp size={18} />}
+              <span className="hidden text-sm sm:inline">Send</span>
+            </button>
+            </div>
+          </div>
         </div>
-        <p role="status" aria-live="polite" className="mt-2 min-h-5 text-xs leading-5 text-[#E2A18D]">
+        <p id="prompt-input-error" role="status" aria-live="polite" className="mt-2 min-h-5 text-xs leading-5 text-[#E2A18D]">
           {voiceError}
         </p>
       </div>

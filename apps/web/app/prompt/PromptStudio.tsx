@@ -132,7 +132,7 @@ export default function PromptStudio() {
         <div className="flex h-full w-[280px] flex-col">
           <div className="flex h-[72px] items-center justify-between px-5">
             <Link href="/" className="flex items-center gap-2.5" aria-label="Noxes Studio home">
-              <Image src="/brand/noxes-lockup.png" width={140} height={45} alt="NOXES · Worlds in Motion" priority />
+              <Image src="/brand/noxes-wordmark.svg" width={112} height={34} alt="NOXES" priority />
             </Link>
             <button onClick={() => setSidebarOpen(false)} className="flex h-10 w-10 items-center justify-center text-[#B6B0A4] transition-colors hover:bg-white/[0.06] hover:text-[#F4F1E9]" aria-label="Close history sidebar"><PanelLeftClose size={17} /></button>
           </div>
@@ -213,6 +213,7 @@ export default function PromptStudio() {
               onChange={setText}
               onSubmit={(message) => void submit(message)}
               disabled={busy}
+              isSubmitting={busy}
             />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 text-xs leading-5 text-[#68665F]"><span>{!isSignedIn && `Guest chats are not saved. ${remaining === null ? '5 free turns per day.' : `${remaining} left today.`}`}</span><span>AI can make mistakes. Review before use.</span></div>
           </div>
