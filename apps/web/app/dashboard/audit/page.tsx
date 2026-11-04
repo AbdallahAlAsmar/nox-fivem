@@ -26,11 +26,11 @@ const ACTION_ICONS: Record<string, any> = {
 };
 
 const ACTION_COLORS: Record<string, string> = {
-  'change.proposed': 'text-[#3DFFA2]',
+  'change.proposed': 'text-[#E83708]',
   'change.approved': 'text-[#22c55e]',
   'change.applied': 'text-[#22c55e]',
   'change.rolled_back': 'text-[#f59e0b]',
-  'server.scanned': 'text-[#3DFFA2]',
+  'server.scanned': 'text-[#E83708]',
   'agent.connected': 'text-[#22c55e]',
 };
 
@@ -84,7 +84,7 @@ export default function AuditLogPage() {
   const filteredLogs = logs;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0F0F14] p-6">
+    <div className="flex-1 overflow-y-auto bg-[#111315] p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div>
@@ -99,7 +99,7 @@ export default function AuditLogPage() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="appearance-none bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2 pr-8 focus:outline-none focus:border-[#3DFFA2] transition-colors duration-100"
+            className="appearance-none bg-[#202326] border border-[rgba(255,255,255,0.08)] text-white font-mono text-xs uppercase tracking-wider px-4 py-2 pr-8 focus:outline-none focus:border-[#E83708] transition-colors duration-100"
           >
             <option value="all">All Actions</option>
             <option value="change">Changes</option>
@@ -109,7 +109,7 @@ export default function AuditLogPage() {
 
           <button
             onClick={fetchLogs}
-            className="flex items-center gap-2 px-3 py-2 bg-[#16161E] border border-[rgba(255,255,255,0.08)] text-white/60 hover:text-white font-mono text-xs uppercase tracking-wider transition-colors duration-100"
+            className="flex items-center gap-2 px-3 py-2 bg-[#202326] border border-[rgba(255,255,255,0.08)] text-white/60 hover:text-white font-mono text-xs uppercase tracking-wider transition-colors duration-100"
           >
             <Clock className="w-3.5 h-3.5" />
             Refresh
@@ -124,7 +124,7 @@ export default function AuditLogPage() {
             // counting the loaded page if the grouped payload is absent.
             const count = actionCounts[action] ?? logs.filter(l => l.action === action).length;
             return (
-              <div key={action} className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-4">
+              <div key={action} className="bg-[#202326] border border-[rgba(255,255,255,0.08)] p-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Icon className={`w-4 h-4 ${ACTION_COLORS[action]}`} />
                   <span className="font-mono text-[10px] uppercase tracking-wider text-[rgba(255,255,255,0.4)]">
@@ -138,7 +138,7 @@ export default function AuditLogPage() {
         </div>
 
         {/* Log list */}
-        <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden">
+        <div className="bg-[#202326] border border-[rgba(255,255,255,0.08)] rounded-xl overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-white/30 font-mono text-sm">Loading...</div>
           ) : error ? (
@@ -148,7 +148,7 @@ export default function AuditLogPage() {
               <p className="font-sans text-xs text-white/40 mb-4">{error}</p>
               <button
                 onClick={fetchLogs}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#3DFFA2] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#36d98c] transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#E83708] text-white font-mono text-xs uppercase tracking-wider hover:bg-[#d43106] transition-colors"
               >
                 Retry
               </button>

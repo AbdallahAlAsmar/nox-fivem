@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NOXES — Brand identity concepts</title>
+  <style>
+    :root { color-scheme: light; --ink:#1d1f20; --paper:#f4f0e8; --ember:#b7472f; --ember-light:#f28a62; --muted:#696b67; --line:#d8d2c7; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 Inter, "Segoe UI", sans-serif; }
+    main { max-width:1180px; margin:0 auto; padding:48px 28px 72px; }
+    .eyebrow { color:var(--ember); font:600 12px/1.4 "IBM Plex Mono", Consolas, monospace; letter-spacing:.18em; text-transform:uppercase; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { max-width:850px; margin:20px 0 14px; font-size:clamp(42px,7vw,82px); line-height:.98; letter-spacing:-.065em; }
+    .lead { max-width:720px; color:#484a47; font-size:19px; }
+    .brief { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin:36px 0 54px; background:var(--line); border:1px solid var(--line); }
+    .brief section { padding:20px; background:#fffdf8; }
+    .brief h2 { margin-bottom:8px; color:var(--muted); font:600 11px/1.4 "IBM Plex Mono",Consolas,monospace; letter-spacing:.12em; text-transform:uppercase; }
+    .brief p { margin:0; font-size:15px; }
+    .routes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+    article { display:flex; flex-direction:column; min-height:420px; padding:24px; border:1px solid var(--line); background:#fffdf8; }
+    article.recommended { border:2px solid var(--ember); padding:23px; }
+    .badge { align-self:flex-start; margin-bottom:12px; padding:5px 8px; background:#f6e4dc; color:#813321; font:600 10px/1.3 "IBM Plex Mono",Consolas,monospace; letter-spacing:.09em; text-transform:uppercase; }
+    .mark { display:grid; place-items:center; height:190px; margin:0 -4px 16px; background:#ece7dd; }
+    .mark img { width:156px; height:156px; }
+    h3 { margin-bottom:9px; font-size:24px; letter-spacing:-.04em; }
+    .meaning { margin-bottom:10px; color:#3f413e; }
+    .tradeoff { margin-top:auto; padding-top:15px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    .palette { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:40px 0; }
+    .swatch { display:flex; align-items:center; gap:9px; padding:8px 12px 8px 8px; border:1px solid var(--line); background:#fffdf8; font:12px "IBM Plex Mono",Consolas,monospace; }
+    .chip { width:25px; height:25px; border:1px solid #0002; border-radius:50%; }
+    .note { padding:20px 22px; border-left:4px solid var(--ember); background:#ebe5da; color:#444642; }
+    .note strong { color:var(--ink); }
+    @media(max-width:800px){ main{padding:32px 18px 48px}.brief,.routes{grid-template-columns:1fr}.brief{gap:1px}.brief section{padding:16px}.routes{gap:12px}article{min-height:0}.tradeoff{margin-top:12px} }
+  </style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">NOXES / identity exploration / 01</p>
+  <h1>Make complex worlds yours to shape.</h1>
+  <p class="lead">A software studio for builders. The first audience is FiveM server owners and developers; the identity must keep working as NOXES grows beyond FiveM.</p>
+
+  <div class="brief">
+    <section><h2>Promise</h2><p>Make complex systems easier to shape while people stay in control.</p></section>
+    <section><h2>Product truth</h2><p>Understand the system. Review the proposed change. Choose what goes live.</p></section>
+    <section><h2>Design rule</h2><p>The mark has meaning in one color and at small sizes. No letter monogram or stock AI/gaming symbol.</p></section>
+  </div>
+
+  <section class="routes" aria-label="Three logo concept routes">
+    <article class="recommended">
+      <span class="badge">Recommended route</span>
+      <div class="mark"><img src="concept-01-passage.svg" alt="Three paths converge, pass through an opening, and resolve into one route"></div>
+      <h3>01 — Controlled passage</h3>
+      <p class="meaning">Separate inputs resolve through one deliberate opening into a clear route: complexity made actionable under human control.</p>
+      <p class="tradeoff"><strong>Strength:</strong> broad enough for every future product. <strong>Test:</strong> keep it from reading like a flowchart or a letter.</p>
+    </article>
+    <article>
+      <span class="badge">Concept route</span>
+      <div class="mark"><img src="concept-02-checkpoint.svg" alt="A path bends at a checkpoint before continuing"></div>
+      <h3>02 — Human checkpoint</h3>
+      <p class="meaning">A route changes direction at a distinct control point before continuing: consequential actions remain a human decision.</p>
+      <p class="tradeoff"><strong>Strength:</strong> directly expresses review and agency. <strong>Test:</strong> avoid resembling a generic routing or navigation icon.</p>
+    </article>
+    <article>
+      <span class="badge">Concept route</span>
+      <div class="mark"><img src="concept-03-return-path.svg" alt="Two system states connected by a recoverable path"></div>
+      <h3>03 — Recoverable change</h3>
+      <p class="meaning">Two states remain connected by a clear return path: builders can move forward with confidence and recover when needed.</p>
+      <p class="tradeoff"><strong>Strength:</strong> grounded in checkpoints and rollback. <strong>Test:</strong> avoid looking like a generic undo or infinity symbol.</p>
+    </article>
+  </section>
+
+  <div class="palette" aria-label="Preliminary warm-signal palette">
+    <span class="swatch"><span class="chip" style="background:#1d1f20"></span>Graphite</span>
+    <span class="swatch"><span class="chip" style="background:#f4f0e8"></span>Warm white</span>
+    <span class="swatch"><span class="chip" style="background:#b7472f"></span>Deep ember / light surface</span>
+    <span class="swatch"><span class="chip" style="background:#f28a62"></span>Bright ember / dark surface</span>
+  </div>
+
+  <p class="note"><strong>Review checkpoint:</strong> these are concept sketches, not approved marks. Choose a route or give directional feedback before the production logo, app/site theme, social exports, or existing brand kits are replaced.</p>
+</main>
+</body>
+</html>

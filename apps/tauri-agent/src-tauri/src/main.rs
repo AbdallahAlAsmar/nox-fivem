@@ -1,6 +1,5 @@
 pub mod config;
 pub mod commands;
-mod oauth;
 
 use tauri::Emitter;
 use tauri::Manager;
@@ -12,6 +11,7 @@ use commands::{
     filesystem::{list_files_cmd, read_file_cmd, find_server_data_cmd},
     git::{git_init_cmd, git_add_all_cmd, git_commit_cmd, git_rollback_cmd, git_log_cmd, git_checkpoint_cmd},
     agent::{connect_agent_cmd, disconnect_agent_cmd, send_chat_message_cmd, get_agent_state_cmd, set_session_token_cmd, scan_server_resources_cmd},
+    oauth::{start_oauth_server_cmd, stop_oauth_server_cmd},
 };
 use config::AgentState;
 
@@ -56,7 +56,6 @@ fn main() {
             // Global handle for event emissions from non-command code paths
             // (WS reader tasks, reconnect loop).
             commands::agent::set_app_handle(app.handle().clone());
-            oauth::spawn(app.handle().clone());
 
             // Auto-connect agent on startup if a server is configured.
             // Honors the persisted auto_start preference (Settings toggle).
@@ -113,9 +112,8 @@ fn main() {
             set_session_token_cmd,
             send_chat_message_cmd,
             get_agent_state_cmd,
-            oauth::open_external_url,
-            oauth::oauth_callback_base,
-            oauth::start_oauth_server_cmd,
+            start_oauth_server_cmd,
+            stop_oauth_server_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

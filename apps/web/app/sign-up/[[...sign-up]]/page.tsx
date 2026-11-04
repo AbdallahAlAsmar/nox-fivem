@@ -2,16 +2,18 @@ import { SignUp } from '@clerk/nextjs';
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen bg-[#0F0F14] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#111315] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-0 font-mono mb-4">
-            <img src="/noxes-avatar.svg" alt="NOXES" className="w-8 h-8 opacity-90" />
-            <span className="text-white font-mono text-3xl font-medium tracking-[0.2em] ml-1">NOXES<span className="font-normal opacity-60">.</span></span>
+          <div className="flex items-center justify-center gap-2 font-mono mb-3">
+            <img src="/brand/noxes-symbol.svg" alt="NOXES" className="w-7 h-7" />
+            <span className="text-[#F4F1E9] font-display font-extrabold text-2xl tracking-[0.2em]">
+              NOXES<span className="text-[#E83708]">.</span>
+            </span>
           </div>
-          <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-[rgba(255,255,255,0.5)]">
-            Create your account
+          <h1 className="font-sans text-xs uppercase tracking-[0.2em] text-[#68665F]">
+            Create your account · Worlds in Motion
           </h1>
         </div>
 
@@ -21,18 +23,18 @@ export default function SignUpPage() {
           appearance={{
             elements: {
               root: 'w-full',
-              card: 'bg-[#16161E] border border-[rgba(255,255,255,0.08)] shadow-none',
+              card: 'bg-[#202326] border border-[#414548] rounded-sm shadow-none',
               headerTitle: 'hidden',
               headerSubtitle: 'hidden',
               socialButtonsBlockButton:
-                'border border-[rgba(255,255,255,0.08)] text-white hover:border-[rgba(255,255,255,0.18)] bg-transparent',
-              socialButtonsBlockButtonIcon: 'text-[rgba(255,255,255,0.4)]',
+                'border border-[#414548] text-[#F4F1E9] hover:bg-[#2D3237] bg-[#181A1D] rounded-sm font-sans',
+              socialButtonsBlockButtonIcon: 'text-[#B6B0A4]',
               formFieldInput:
-                'bg-transparent border border-[rgba(255,255,255,0.1)] text-white placeholder:text-[rgba(255,255,255,0.25)] rounded-none',
-              formFieldLabel: 'text-[rgba(255,255,255,0.6)] font-mono text-xs uppercase tracking-wider',
+                'bg-[#181A1D] border border-[#414548] text-[#F4F1E9] placeholder:text-[#68665F] focus:border-[#E83708] rounded-sm font-sans',
+              formFieldLabel: 'text-[#B6B0A4] font-sans text-xs font-medium uppercase tracking-wider',
               formButtonPrimary:
-                'bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-[1.4px] hover:opacity-85 rounded-none',
-              footerActionLink: 'text-[#3DFFA2] hover:underline font-mono text-xs',
+                'bg-[#E83708] hover:bg-[#d43106] text-[#111315] font-sans font-semibold text-xs uppercase tracking-wider rounded-sm',
+              footerActionLink: 'text-[#E83708] hover:underline font-sans text-xs',
             },
           }}
         />

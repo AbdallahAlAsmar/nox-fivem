@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">NOXES animated signal mark</title>
+  <desc id="desc">The cobalt frame and citrus N appear in sequence, then the endpoint pulses.</desc>
+  <style>
+    .frame { opacity: 0; animation: frame-in 1.2s cubic-bezier(.2,.8,.2,1) forwards, frame-breathe 3.6s 1.3s ease-in-out infinite; }
+    .signal { opacity: 0; animation: signal-in .8s .42s cubic-bezier(.2,.8,.2,1) forwards; }
+    .tip { opacity: 0; animation: tip-on .35s 1.25s ease-out forwards, tip-pulse 3.6s 1.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes frame-in { to { opacity: 1; } }
+    @keyframes signal-in { to { opacity: 1; } }
+    @keyframes tip-on { to { opacity: 1; } }
+    @keyframes tip-pulse { 0%, 78%, 100% { transform: scale(1); } 86% { transform: scale(1.45); } }
+    @keyframes frame-breathe { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+      .frame, .signal, .tip { animation: none; opacity: 1; }
+    }
+  </style>
+  <g class="frame" fill="none" stroke="#5B72F2" stroke-linecap="round" stroke-width="7">
+    <path d="M42 17H27a10 10 0 0 0-10 10v15M86 17h15a10 10 0 0 1 10 10v15M111 86v15a10 10 0 0 1-10 10H86M42 111H27a10 10 0 0 1-10-10V86"/>
+  </g>
+  <path class="signal" d="M39 87V41l50 46V41" fill="none" stroke="#D8F36A" stroke-linecap="round" stroke-linejoin="round" stroke-width="9"/>
+  <circle class="tip" cx="89" cy="41" r="5" fill="#D8F36A"/>
+</svg>

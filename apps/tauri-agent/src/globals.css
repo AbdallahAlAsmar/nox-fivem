@@ -1,0 +1,39 @@
+:root {
+  --brand: #E83708;
+  --brand-dim: rgba(232, 55, 8, 0.16);
+  --brand-citrus: #E83708;
+  --bg-dark: #111315;
+  --bg-card: #202326;
+  --bg-input: #181A1D;
+  --text-primary: #F4F1E9;
+  --text-secondary: rgba(244, 241, 233, 0.72);
+  --text-muted: rgba(182, 176, 164, 0.65);
+  --border: #414548;
+  --border-hover: #68665F;
+  --error: #F07187;
+  --success: #42CC8D;
+}
+
+@media (prefers-color-scheme: light) {
+  html:not(.dark) {
+    --bg-dark: #E2DCCE;
+    --bg-card: #F4F1E9;
+    --bg-input: #D5D0C5;
+    --text-primary: #111315;
+    --text-secondary: rgba(17, 19, 21, 0.76);
+    --text-muted: #68665F;
+    --border: #B6B0A4;
+    --border-hover: #414548;
+  }
+}
+
+.dark {
+  --bg-dark: #111315;
+  --bg-card: #202326;
+  --bg-input: #181A1D;
+  --text-primary: #F4F1E9;
+  --text-secondary: rgba(244, 241, 233, 0.72);
+  --text-muted: rgba(182, 176, 164, 0.65);
+  --border: #414548;
+  --border-hover: #68665F;
+}

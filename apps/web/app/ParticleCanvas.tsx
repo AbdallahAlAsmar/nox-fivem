@@ -51,11 +51,12 @@ export function ParticleCanvas() {
       positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 8 - 2;
 
-      // Teal-ish color variation
+      // NOXES signal palette: Vermilion accent, Paper highlights, Graphite field.
+      const accent = i % 9 === 0;
       const t = Math.random();
-      colors[i * 3]     = 0.1 + t * 0.15;   // R
-      colors[i * 3 + 1] = 0.45 + t * 0.25;  // G
-      colors[i * 3 + 2] = 0.35 + t * 0.2;   // B
+      colors[i * 3]     = accent ? 0.91 : 0.25 + t * 0.12;
+      colors[i * 3 + 1] = accent ? 0.22 : 0.24 + t * 0.12;
+      colors[i * 3 + 2] = accent ? 0.03 : 0.20 + t * 0.12;
       sizes[i] = Math.random() * 2 + 0.5;
     }
 
@@ -95,13 +96,16 @@ export function ParticleCanvas() {
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
+    resizeObserver?.observe(container);
     window.addEventListener('resize', onResize);
 
     // Animation loop
     const animate = () => {
       rafRef.current = requestAnimationFrame(animate);
 
-      const t = performance.now() * 0.0003;
+      const t = reducedMotion ? 0 : performance.now() * 0.0003;
 
       // Gentle rotation
       points.rotation.y = t * 0.15 + mouseRef.current.x * 0.05;
@@ -125,6 +129,7 @@ export function ParticleCanvas() {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('resize', onResize);
+      resizeObserver?.disconnect();
       container.removeChild(renderer.domElement);
       renderer.dispose();
       geometry.dispose();
@@ -132,5 +137,5 @@ export function ParticleCanvas() {
     };
   }, []);
 
-  return <div ref={containerRef} className="absolute inset-0 pointer-events-none" />;
+  return <div ref={containerRef} className="pointer-events-none absolute inset-0 z-0" />;
 }

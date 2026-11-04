@@ -1,211 +1,263 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { SignIn as ClerkSignIn, useClerk, useSignIn } from '@clerk/clerk-react'
+import { Loader2, AlertCircle, ExternalLink } from 'lucide-react'
+import { useClerk, useSignIn } from '@clerk/clerk-react'
+import { open as openUrl } from '@tauri-apps/plugin-shell'
+import { invoke, isTauri } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 
-const PROVIDER_LABELS: Record<string, string> = {
-  oauth_google: 'Google',
-  oauth_discord: 'Discord',
-  oauth_github: 'GitHub',
-  oauth_microsoft: 'Microsoft',
-  oauth_apple: 'Apple',
-  oauth_twitch: 'Twitch',
-}
-
-function providerLabel(strategy: string): string {
-  return PROVIDER_LABELS[strategy]
-    ?? strategy.replace(/^oauth_/, '').replace(/_/g, ' ')
-}
-
-function errorMessage(err: unknown): string {
-  // Tauri commands reject with plain strings; treating those as unknown errors
-  // hid useful failures behind the unhelpful "Sign-in failed" fallback.
-  if (typeof err === 'string' && err.trim()) return err
+function clerkError(err: unknown): string {
   if (err && typeof err === 'object' && 'errors' in err) {
-    const errors = (err as { errors?: { longMessage?: string; message?: string }[] }).errors
-    const first = errors?.[0]
-    const message = first?.longMessage || first?.message
-    if (message) return message
+    const errors = (err as { errors: Array<{ longMessage?: string; message?: string }> }).errors
+    if (Array.isArray(errors) && errors.length) {
+      return errors.map((item) => item.longMessage || item.message || 'Sign-in failed').join(' ')
+    }
   }
-  if (err instanceof Error) return err.message
-  return 'Sign-in failed'
+  return err instanceof Error ? err.message : String(err)
 }
 
 export default function SignIn() {
-  const { signIn, isLoaded } = useSignIn()
   const clerk = useClerk()
-  const [providers, setProviders] = useState<{ strategy: string; label: string }[]>([])
-  const [busy, setBusy] = useState<string | null>(null)
+  const { signIn, setActive, isLoaded: signInLoaded } = useSignIn()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [socialLoading, setSocialLoading] = useState<'oauth_google' | 'oauth_discord' | null>(null)
 
+  // The system browser returns to the Rust loopback listener. Clerk only
+  // finishes the session if those callback params are on this window, then
+  // handleRedirectCallback runs — a reload alone drops the handshake.
   useEffect(() => {
-    if (!isLoaded) return
-    const social = (window.Clerk as { environment?: { userSettings?: { social?: Record<string, { enabled?: boolean }> } } } | undefined)
-      ?.environment?.userSettings?.social
-    if (!social) return
-    setProviders(
-      Object.entries(social)
-        .filter(([, value]) => value?.enabled)
-        .map(([strategy]) => ({ strategy, label: providerLabel(strategy) })),
-    )
-  }, [isLoaded])
+    if (!isTauri()) return
 
-  // Clerk's sign-up form shares this screen. Clear an old social-login error as
-  // soon as the user moves into the email/password flow so it can't look like
-  // the email form itself failed.
-  useEffect(() => {
-    const clearProviderError = () => setError(null)
-    window.addEventListener('hashchange', clearProviderError)
-    return () => window.removeEventListener('hashchange', clearProviderError)
-  }, [])
+    let cleanup: (() => void) | undefined
 
-  const startOAuth = async (strategy: string) => {
-    if (!isLoaded || !signIn || busy) return
-    setError(null)
-    setBusy(strategy)
-    let stage = 'Preparing the sign-in callback'
-    try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      const base = await invoke<string>('oauth_callback_base')
-      const redirectUrl = `${base}/sso-callback`
-      // Production Clerk only hands the session back to a second browser when
-      // the sign-in is started as a native request and the return address is
-      // on the instance allowlist.
-      stage = 'Connecting to Clerk'
-      const response = await fetch(
-        'https://clerk.noxes.dev/v1/client/sign_ins?_is_native=true',
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Authorization: `Bearer ${window.Clerk.publishableKey}`,
-          },
-          body: new URLSearchParams({
-            strategy,
-            redirect_url: redirectUrl,
-            action_complete_redirect_url: `${window.location.origin}/`,
-          }),
-        },
-      )
-      const payload = await response.json()
-      if (!response.ok) {
-        const clerkError = payload?.errors?.[0]
-        const wrapped = Object.assign(new Error(clerkError?.long_message || clerkError?.message || 'Sign-in failed'), {
-          errors: payload?.errors,
-        })
-        throw wrapped
-      }
-      const redirect = payload?.response?.first_factor_verification?.external_verification_redirect_url
-      if (!redirect) {
-        throw new Error('Clerk did not return a sign-in link for this provider')
-      }
-      stage = 'Opening your browser'
-      await Promise.race([
-        invoke('open_external_url', { url: redirect }),
-        new Promise((_, reject) => {
-          window.setTimeout(() => reject(new Error('The browser did not open. Try again.')), 8000)
-        }),
-      ])
-    } catch (err) {
-      const message = errorMessage(err)
-      const code = err && typeof err === 'object' && 'errors' in err
-        ? (err as { errors?: { code?: string }[] }).errors?.[0]?.code
-        : undefined
-      if (code === 'session_exists' || /already signed in/i.test(message)) {
-        const sessionId = clerk.session?.id
-          || clerk.client?.lastActiveSessionId
-          || clerk.client?.signedInSessions?.[0]?.id
-          || clerk.client?.sessions?.[0]?.id
-        if (sessionId) {
-          await clerk.setActive({ session: sessionId })
-          return
+    const setupListeners = async () => {
+      const unlistenCallback = await listen<string>('oauth:callback', async (event) => {
+        try {
+          const incoming = new URL(event.payload)
+          const here = new URL(window.location.href)
+          incoming.searchParams.forEach((value, key) => {
+            here.searchParams.set(key, value)
+          })
+          window.history.replaceState({}, '', `${here.pathname}${here.search}${here.hash}`)
+          await clerk.handleRedirectCallback({
+            signInForceRedirectUrl: here.pathname,
+            signUpForceRedirectUrl: here.pathname,
+          })
+        } catch (err) {
+          setError(clerkError(err))
+          setSocialLoading(null)
         }
+      })
+
+      const unlistenError = await listen<string>('oauth:error', (event) => {
+        setError(event.payload || 'OAuth failed')
+        setLoading(false)
+        setSocialLoading(null)
+      })
+
+      cleanup = () => {
+        unlistenCallback()
+        unlistenError()
       }
-      setError(`${stage}: ${message}`)
+    }
+
+    setupListeners()
+
+    return () => {
+      void invoke('stop_oauth_server_cmd').catch(() => {})
+      cleanup?.()
+    }
+  }, [clerk])
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!signInLoaded || !signIn) {
+      setError('Auth is still loading — try again in a moment.')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const attempt = await signIn.create({
+        strategy: 'password',
+        identifier: email,
+        password,
+      })
+      if (attempt.status === 'complete' && attempt.createdSessionId) {
+        await setActive({ session: attempt.createdSessionId })
+        return
+      }
+      setError(
+        attempt.status === 'needs_second_factor'
+          ? 'This account needs a second factor. Use the web dashboard to finish signing in, then reopen NOXES.'
+          : `Sign-in stopped at “${attempt.status}”. Check the email and password and try again.`,
+      )
+    } catch (err) {
+      setError(clerkError(err))
     } finally {
-      setBusy(null)
+      setLoading(false)
+    }
+  }
+
+  const handleOAuth = async (strategy: 'oauth_google' | 'oauth_discord') => {
+    if (!isTauri()) {
+      setError('Social sign-in is available in the NOXES desktop app. Use email and password here.')
+      return
+    }
+
+    setSocialLoading(strategy)
+    setError(null)
+
+    try {
+      if (!signInLoaded || !signIn) {
+        setError('Auth is still loading — try again in a moment.')
+        setSocialLoading(null)
+        return
+      }
+
+      const port = await invoke<number>('start_oauth_server_cmd')
+      const redirectUrl = `http://127.0.0.1:${port}/callback`
+      const attempt = await signIn.create({
+        strategy,
+        redirectUrl,
+      })
+      const external = attempt.firstFactorVerification?.externalVerificationRedirectURL
+      if (!external) {
+        setError('This provider is not enabled for the NOXES Clerk app.')
+        setSocialLoading(null)
+        return
+      }
+      await openUrl(external.toString())
+    } catch (err) {
+      setError(clerkError(err))
+      setSocialLoading(null)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0F0F14] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#111315] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="w-full max-w-sm"
       >
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-0 font-mono mb-4">
-            <span className="text-white font-bold text-3xl leading-none">|</span>
-            <span className="text-white font-mono text-3xl font-medium tracking-[0.2em] ml-1">NOX<span className="font-normal opacity-60">.</span></span>
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <img src="/brand/noxes-symbol.svg" alt="NOXES" className="w-8 h-8" />
+            <span className="text-[#F4F1E9] font-display font-extrabold text-3xl tracking-[0.2em]">
+              NOXES<span className="text-[#E83708]">.</span>
+            </span>
           </div>
-          <h1 className="font-mono text-sm uppercase tracking-[0.2em] text-[rgba(255,255,255,0.5)]">
-            Sign in to NOX // FiveM
+          <h1 className="font-sans text-xs uppercase tracking-[0.2em] text-[#68665F]">
+            Sign in to NOXES · Worlds in Motion
           </h1>
         </div>
 
-        <div className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] p-6">
-          <div className="flex flex-col gap-2 mb-4">
-            {providers.map((provider) => (
-              <button
-                key={provider.strategy}
-                type="button"
-                disabled={!isLoaded || busy !== null}
-                onClick={() => void startOAuth(provider.strategy)}
-                className="w-full border border-[rgba(255,255,255,0.1)] text-white hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.04)] font-mono text-xs uppercase tracking-[1.4px] py-2.5 disabled:opacity-40"
-              >
-                {busy === provider.strategy ? 'Opening browser…' : `Continue with ${provider.label}`}
-              </button>
-            ))}
-          </div>
-          {error && (
-            <p className="font-mono text-[11px] text-[#ff8a8a] mb-4 leading-relaxed">{error}</p>
-          )}
-          <div id="clerk-captcha" />
+        {/* Card */}
+        <div className="bg-[#202326] border border-[#414548] p-6 space-y-5">
+          {/* Email/password form — stays in-app */}
+          <form onSubmit={handleEmailSignIn} className="space-y-4">
+            <div>
+              <label className="block font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)] mb-1.5">
+                Email address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                className="w-full bg-transparent border border-[#414548] text-white placeholder:text-[rgba(255,255,255,0.25)] px-3 py-2 font-mono text-sm focus:border-[rgba(255,255,255,0.3)] focus:outline-none transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block font-mono text-xs uppercase tracking-wider text-[rgba(255,255,255,0.6)] mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                className="w-full bg-transparent border border-[#414548] text-white placeholder:text-[rgba(255,255,255,0.25)] px-3 py-2 font-mono text-sm focus:border-[rgba(255,255,255,0.3)] focus:outline-none transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !signInLoaded}
+              className="w-full bg-[#E83708] hover:bg-[#d43106] text-[#111315] font-semibold font-mono text-xs uppercase tracking-[1.4px] py-2.5 hover:opacity-85 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-2" />
+              ) : null}
+              Continue
+            </button>
+          </form>
 
-          {/* Email and password stay in this window. Clerk's own social
-              buttons navigate to the Account Portal, so they are hidden. */}
-          <div onFocusCapture={() => setError(null)}>
-            <ClerkSignIn
-              routing="hash"
-              withSignUp
-              forceRedirectUrl="/"
-              fallbackRedirectUrl="/"
-              signUpForceRedirectUrl="/"
-              signUpFallbackRedirectUrl="/"
-              appearance={{
-                variables: {
-                  colorPrimary: '#5E6AD2',
-                  colorBackground: '#16161E',
-                  colorInputBackground: '#0A0A0F',
-                  colorInputText: '#ffffff',
-                  colorText: '#ffffff',
-                  colorTextSecondary: 'rgba(255,255,255,0.6)',
-                  colorShadow: 'rgba(0,0,0,0.4)',
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  fontFamilyButtons: "'JetBrains Mono', monospace",
-                  borderRadius: '0px',
-                },
-                elements: {
-                  card: 'bg-[#16161E] border border-[rgba(255,255,255,0.08)] shadow-none',
-                  headerTitle: 'hidden',
-                  headerSubtitle: 'hidden',
-                  socialButtonsRoot: 'hidden',
-                  socialButtons: 'hidden',
-                  dividerRow: 'hidden',
-                  formFieldInput: 'bg-transparent border border-[rgba(255,255,255,0.1)] text-white placeholder:text-[rgba(255,255,255,0.25)] rounded-none',
-                  formFieldLabel: 'text-[rgba(255,255,255,0.6)] font-mono text-xs uppercase tracking-wider',
-                  formButtonPrimary: 'bg-white text-[#0F0F14] font-mono text-xs uppercase tracking-[1.4px] hover:opacity-85 rounded-none',
-                  footerActionLink: 'text-[#5E6AD2] hover:underline font-mono text-xs',
-                  footerActionText: 'text-[rgba(255,255,255,0.4)]',
-                },
-              }}
-            />
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#414548]" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-2 bg-[#202326] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wider">
+                or
+              </span>
+            </div>
           </div>
+
+          {/* Social buttons — open in SYSTEM browser */}
+          <div className="space-y-2">
+            <button
+              onClick={() => handleOAuth('oauth_google')}
+              disabled={!!socialLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[#414548] text-white hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)] transition-colors disabled:opacity-50 font-mono text-xs uppercase tracking-[1.4px]"
+            >
+              {socialLoading === 'oauth_google' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E83708]" />
+              ) : (
+                <ExternalLink className="w-3.5 h-3.5 text-[rgba(255,255,255,0.4)]" />
+              )}
+              Continue with Google
+            </button>
+            <button
+              onClick={() => handleOAuth('oauth_discord')}
+              disabled={!!socialLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[#414548] text-white hover:border-[rgba(255,255,255,0.18)] hover:bg-[rgba(255,255,255,0.04)] transition-colors disabled:opacity-50 font-mono text-xs uppercase tracking-[1.4px]"
+            >
+              {socialLoading === 'oauth_discord' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E83708]" />
+              ) : (
+                <ExternalLink className="w-3.5 h-3.5 text-[rgba(255,255,255,0.4)]" />
+              )}
+              Continue with Discord
+            </button>
+          </div>
+
+          {/* Info text */}
+          <p className="text-center font-mono text-[10px] text-[rgba(255,255,255,0.25)] leading-relaxed">
+            Social login opens in your browser. Email sign-in stays in-app.
+          </p>
+
+          {/* Error message */}
+          {error && (
+            <div className="flex items-start gap-2 p-3 border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.05)]">
+              <AlertCircle className="w-4 h-4 text-[#ef4444] flex-shrink-0 mt-0.5" />
+              <p className="font-mono text-xs text-[#ef4444] leading-[1.5] break-all">{error}</p>
+            </div>
+          )}
         </div>
 
+        {/* Footer */}
         <p className="text-center font-mono text-[10px] text-[rgba(255,255,255,0.2)] mt-6 uppercase tracking-wider">
-          NOX // FiveM Developer Tools
+          NOXES · Worlds in Motion.
         </p>
       </motion.div>
     </div>

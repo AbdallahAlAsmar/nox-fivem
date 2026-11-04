@@ -1,15 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    outputFileTracingIncludes: {
-      '/api/prompt/*': ['./lib/prompt-agent/resources/*.md'],
-    },
-  },
   async rewrites() {
     return [
       {
         source: '/api/orchestrator/:path*',
-        destination: `${process.env.ORCHESTRATOR_BACKEND_URL || 'http://89.168.96.147:3001'}/:path*`,
+        destination: `${(process.env.ORCHESTRATOR_BACKEND_URL || 'http://89.168.96.147:3001').replace(/\/$/, '')}/:path*`,
       },
       {
         source: '/clerk.browser.js',

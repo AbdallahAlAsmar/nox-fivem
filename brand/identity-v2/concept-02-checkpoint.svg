@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Human checkpoint concept</title>
+  <desc id="desc">A route changes direction at a deliberate point before proceeding.</desc>
+  <g fill="none" stroke="#1D1F20" stroke-linecap="round" stroke-linejoin="round" stroke-width="15">
+    <path d="M30 194h55c27 0 43-16 43-43V96c0-28 16-43 43-43h55"/>
+  </g>
+  <circle cx="128" cy="151" r="13" fill="#B7472F"/>
+  <circle cx="226" cy="53" r="8" fill="#1D1F20"/>
+</svg>

@@ -31,7 +31,7 @@ export function AgentStatusProvider({ children }: { children: ReactNode }) {
   });
   const [isChecking, setIsChecking] = useState(true);
 
-  const orchestratorUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://158.101.167.118:3001';
+  const orchestratorUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || 'http://89.168.96.147:3001';
   const wsUrl = orchestratorUrl.replace('http://', 'ws://').replace('https://', 'wss://');
 
   // Initialize WebSocket connection

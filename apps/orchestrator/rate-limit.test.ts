@@ -87,10 +87,10 @@ beforeEach(() => {
 });
 
 describe('rate limiting', () => {
-  it('429s with { error: "rate_limited" } after the pairing/claim per-IP limit (10/min)', async () => {
+  it('429s with { error: "rate_limited" } after the pairing/claim per-IP limit (5/min)', async () => {
     // Pairing claim is unauthenticated and hits prisma before any rate limit;
     // a 404 still counts as a request against the bucket.
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       const res = await app.inject({
         method: 'POST',
         url: '/api/pairing/claim',

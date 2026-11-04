@@ -20,7 +20,17 @@ export const config = {
   port: parseInt(process.env.ORCHESTRATOR_PORT || process.env.PORT || '3001', 10),
   databaseUrl: process.env.DATABASE_URL || '',
   directUrl: process.env.DIRECT_URL || process.env.DATABASE_URL,
-  jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production-min-32-chars',
+  jwtSecret: (() => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new Error('JWT_SECRET must be set and at least 32 characters');
+    }
+    // Add complexity check
+    if (!/[A-Z]/.test(secret) || !/[a-z]/.test(secret) || !/[0-9]/.test(secret) || !/[^A-Za-z0-9]/.test(secret)) {
+      throw new Error('JWT_SECRET must contain uppercase, lowercase, numbers, and special characters');
+    }
+    return secret;
+  })(),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   corsOrigins: (
     process.env.CORS_ORIGINS ||
@@ -34,5 +44,21 @@ if (config.nodeEnv === 'production') {
   if (!result.success) {
     console.error('Invalid configuration:', result.error.flatten());
     process.exit(1);
+  }
+
+  // Additional production-only checks
+  if (!config.jwtSecret) {
+    console.error('CRITICAL: JWT_SECRET must be set in production');
+    process.exit(1);
+  }
+
+  if (!process.env.CLERK_SECRET_KEY) {
+    console.error('CRITICAL: CLERK_SECRET_KEY must be set in production');
+    process.exit(1);
+  }
+
+  // Deny anonymous access in production unless explicitly allowed
+  if (process.env.AUTH_ALLOW_ANON !== 'true' && process.env.AUTH_ALLOW_ANON !== '1') {
+    console.log('auth: Anonymous access disabled (AUTH_ALLOW_ANON not set)');
   }
 }

@@ -247,7 +247,7 @@ export default function DocsPage() {
   }, [searchQuery]);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0F0F14] p-6">
+    <div className="flex-1 overflow-y-auto bg-[#111315] p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div>
@@ -265,7 +265,7 @@ export default function DocsPage() {
             placeholder="Search documentation..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2.5 bg-[#16161E] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#3DFFA2] transition-colors"
+            className="w-full pl-10 pr-3 py-2.5 bg-[#202326] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#E83708] transition-colors"
           />
           {searchQuery && (
             <button
@@ -284,7 +284,7 @@ export default function DocsPage() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              className="bg-[#16161E] border border-white/10 rounded-lg overflow-hidden"
+              className="bg-[#202326] border border-white/10 rounded-lg overflow-hidden"
             >
               <div className="p-3 border-b border-white/10">
                 <span className="font-mono text-xs text-white/50">
@@ -302,7 +302,7 @@ export default function DocsPage() {
                     className="w-full text-left p-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-[10px] text-[#3DFFA2] uppercase">{result.section}</span>
+                      <span className="font-mono text-[10px] text-[#E83708] uppercase">{result.section}</span>
                       <span className="font-mono text-xs text-white">{result.item.title}</span>
                     </div>
                     <p className="font-sans text-xs text-white/50 line-clamp-1">
@@ -318,7 +318,7 @@ export default function DocsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center py-8 bg-[#16161E] border border-white/10 rounded-lg"
+              className="text-center py-8 bg-[#202326] border border-white/10 rounded-lg"
             >
               <Search className="w-8 h-8 text-white/20 mx-auto mb-2" />
               <p className="font-mono text-xs text-white/40">No results for "{searchQuery}"</p>
@@ -337,7 +337,7 @@ export default function DocsPage() {
                 onClick={() => { setActiveSection(s.id); setSearchQuery(''); }}
                 className={`flex items-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-wider border transition-colors duration-100 whitespace-nowrap ${
                   isActive
-                    ? 'bg-[rgba(61,255,162,0.15)] border-[rgba(61,255,162,0.4)] text-[#3DFFA2]'
+                    ? 'bg-[rgba(232, 55, 8,0.15)] border-[rgba(232, 55, 8,0.4)] text-[#E83708]'
                     : 'border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.4)] hover:text-white hover:border-[rgba(255,255,255,0.2)]'
                 }`}
               >
@@ -359,7 +359,7 @@ export default function DocsPage() {
             className="space-y-3"
           >
             {filteredContent.length === 0 ? (
-              <div className="text-center py-12 bg-[#16161E] border border-white/10 rounded-lg">
+              <div className="text-center py-12 bg-[#202326] border border-white/10 rounded-lg">
                 <Search className="w-8 h-8 text-white/20 mx-auto mb-2" />
                 <p className="font-mono text-xs text-white/40">No results in this section</p>
               </div>
@@ -367,7 +367,7 @@ export default function DocsPage() {
               filteredContent.map((item, i) => (
                 <div
                   key={i}
-                  className="bg-[#16161E] border border-[rgba(255,255,255,0.08)] rounded-lg overflow-hidden"
+                  className="bg-[#202326] border border-[rgba(255,255,255,0.08)] rounded-lg overflow-hidden"
                 >
                   <button
                     onClick={() => setExpandedCard(expandedCard === i ? null : i)}
@@ -404,7 +404,7 @@ export default function DocsPage() {
                             <ol className="space-y-2">
                               {(item as any).steps.map((step: string, si: number) => (
                                 <li key={si} className="flex items-start gap-3">
-                                  <span className="w-5 h-5 rounded-full bg-[#3DFFA2]/20 text-[#3DFFA2] font-mono text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <span className="w-5 h-5 rounded-full bg-[#E83708]/20 text-[#E83708] font-mono text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
                                     {si + 1}
                                   </span>
                                   <span className="font-sans text-xs text-white/60">{step}</span>
@@ -447,9 +447,9 @@ export default function DocsPage() {
         </div>
 
         {/* Need help section */}
-        <div className="bg-[rgba(61,255,162,0.1)] border border-[rgba(61,255,162,0.2)] rounded-lg p-5">
+        <div className="bg-[rgba(232, 55, 8,0.1)] border border-[rgba(232, 55, 8,0.2)] rounded-lg p-5">
           <div className="flex items-start gap-3">
-            <HelpCircle className="w-5 h-5 text-[#3DFFA2] flex-shrink-0 mt-0.5" />
+            <HelpCircle className="w-5 h-5 text-[#E83708] flex-shrink-0 mt-0.5" />
             <div>
               <h3 className="font-mono text-sm font-medium text-white mb-1">Need Help?</h3>
               <p className="font-sans text-xs text-white/50 leading-[1.6]">
@@ -460,7 +460,7 @@ export default function DocsPage() {
                   href="https://github.com/nousresearch/nox-fivem/issues"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3DFFA2]/15 border border-[#3DFFA2]/30 text-[#3DFFA2] font-mono text-[10px] uppercase tracking-wider hover:bg-[#3DFFA2]/25 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E83708]/15 border border-[#E83708]/30 text-[#E83708] font-mono text-[10px] uppercase tracking-wider hover:bg-[#E83708]/25 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
                   GitHub Issues

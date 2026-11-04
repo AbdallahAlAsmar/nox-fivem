@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Recoverable change concept</title>
+  <desc id="desc">A stable checkpoint links two states with a clear return route.</desc>
+  <g fill="none" stroke="#1D1F20" stroke-linecap="round" stroke-linejoin="round" stroke-width="14">
+    <path d="M31 79h116c25 0 41 15 41 39v21c0 24-16 39-41 39H76"/>
+    <path d="M76 178l23-22M76 178l23 22"/>
+    <path d="M31 79l17-17M31 79l17 17"/>
+  </g>
+  <circle cx="147" cy="79" r="11" fill="#B7472F"/>
+  <circle cx="147" cy="178" r="11" fill="#1D1F20"/>
+</svg>

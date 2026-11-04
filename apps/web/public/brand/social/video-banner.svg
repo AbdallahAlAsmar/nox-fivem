@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20294A"/><stop offset=".48" stop-color="#101426"/><stop offset="1" stop-color="#0B1020"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#5B72F2" stop-opacity=".36"/><stop offset="1" stop-color="#5B72F2" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="96" height="96" patternUnits="userSpaceOnUse"><path d="M96 0H0V96" fill="none" stroke="#D5DBFF" stroke-opacity=".045"/></pattern>
+  </defs>
+  <rect width="2560" height="1440" fill="url(#bg)"/><rect width="2560" height="1440" fill="url(#grid)"/><circle cx="1820" cy="676" r="880" fill="url(#glow)"/>
+  <path d="M1390 1500C1720 996 1870 1470 2160 1000s278-372 490-562" fill="none" stroke="#D8F36A" stroke-opacity=".55" stroke-width="4"/>
+  <path d="M1320 1514C1700 954 1870 1418 2190 934s278-348 488-540" fill="none" stroke="#8E9DFF" stroke-opacity=".5" stroke-width="3"/>
+  <g transform="translate(742 468) scale(1.72)" fill="none" stroke="#5B72F2" stroke-linecap="round" stroke-width="7"><path d="M42 17H27a10 10 0 0 0-10 10v15M86 17h15a10 10 0 0 1 10 10v15M111 86v15a10 10 0 0 1-10 10H86M42 111H27a10 10 0 0 1-10-10V86"/></g>
+  <path d="M811 618V539l86 79v-79" fill="none" stroke="#D8F36A" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><circle cx="897" cy="539" r="9" fill="#D8F36A"/>
+  <text x="1005" y="613" fill="#F4F5FB" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="135" font-weight="700" letter-spacing="2">NOXES</text>
+  <text x="1011" y="698" fill="#D8F36A" font-family="IBM Plex Mono, monospace" font-size="23" letter-spacing="6">BUILD WHAT COMES NEXT</text>
+  <text x="1011" y="835" fill="#BBC3DF" font-family="Inter, Arial, sans-serif" font-size="33">Thoughtful software for people shaping</text>
+  <text x="1011" y="883" fill="#BBC3DF" font-family="Inter, Arial, sans-serif" font-size="33">their own digital worlds.</text>
+  <text x="1011" y="920" fill="#929BB9" font-family="IBM Plex Mono, monospace" font-size="16" letter-spacing="2">STARTING WITH NOXES FOR FIVEM</text>
+</svg>

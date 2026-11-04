@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyToken as clerkVerifyToken } from '@clerk/backend';
 import fp from 'fastify-plugin';
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { resolveUser } from './provisioning';
+import { isUsableClerkSecret, verifySessionWithJwks } from './clerkJwt';
 
 export interface AuthUser {
   /** Stable Clerk user id from the verified token's `sub` claim. */
@@ -65,7 +65,10 @@ function isPublicPath(method: string, pathname: string): boolean {
  */
 export function authAllowAnon(): boolean {
   const raw = process.env.AUTH_ALLOW_ANON;
-  if (raw === undefined || raw === '') return true;
+  if (raw === undefined || raw === '') {
+    // Safe default: only allow anon in non-production (opt-in for dev).
+    return process.env.NODE_ENV !== 'production';
+  }
   return raw === 'true' || raw === '1';
 }
 
@@ -77,70 +80,20 @@ export async function verifyBearerToken(token: string): Promise<AuthUser | null>
   return verifyClerkToken(token);
 }
 
-/**
- * Frontend API host baked into the publishable key (`pk_test_…` is base64 of
- * `instance.clerk.accounts.dev$`). Tokens are checked against this instance
- * only — the issuer is never taken from the token itself.
- */
-function clerkFrontendHost(): string | null {
-  const key =
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
-    process.env.CLERK_PUBLISHABLE_KEY ||
-    '';
-  const encoded = key.trim().replace(/^pk_(test|live)_/, '');
-  if (!encoded) return null;
-  const host = Buffer.from(encoded, 'base64').toString('utf8').replace(/\$$/, '').trim();
-  if (!/^[a-z0-9.-]+$/i.test(host)) return null;
-  return host;
-}
-
-const DESKTOP_ORIGINS = [
-  'http://localhost:1420',
-  'http://127.0.0.1:1420',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-  'http://tauri.localhost',
-  'https://tauri.localhost',
-  'tauri://localhost',
-];
-
-let remoteJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
-
-async function verifyWithInstanceJwks(token: string): Promise<JWTPayload | null> {
-  const host = clerkFrontendHost();
-  if (!host) return null;
-  if (!remoteJwks) {
-    remoteJwks = createRemoteJWKSet(new URL(`https://${host}/.well-known/jwks.json`));
-  }
-  const { payload } = await jwtVerify(token, remoteJwks, {
-    issuer: `https://${host}`,
-    clockTolerance: '10s',
-  });
-  if (typeof payload.azp === 'string' && !DESKTOP_ORIGINS.includes(payload.azp)) {
-    console.error('[auth] token azp rejected:', payload.azp);
-    return null;
-  }
-  return payload;
-}
-
 async function verifyClerkToken(token: string): Promise<AuthUser | null> {
   try {
-    let payload: { sub?: string } & Record<string, unknown> | null = null;
-    try {
-      payload = (await verifyWithInstanceJwks(token)) as { sub?: string } & Record<string, unknown> | null;
-    } catch (error) {
-      console.error(
-        '[auth] instance JWKS verification failed:',
-        (error as Error)?.message || error,
-      );
-    }
     const secretKey = process.env.CLERK_SECRET_KEY;
-    if (!payload?.sub && secretKey) {
-      payload = (await clerkVerifyToken(token, { secretKey })) as { sub?: string } & Record<string, unknown>;
+    if (!isUsableClerkSecret(secretKey)) {
+      const session = await verifySessionWithJwks(token);
+      if (!session) return null;
+      return await resolveUser(session.sub, session.email);
     }
-    if (!payload?.sub) return null;
+    const payload = await clerkVerifyToken(token, { secretKey });
+    if (!payload || !payload.sub) return null;
 
-    const email = typeof payload.email === 'string' ? payload.email : null;
+    // Defensive claim mapping: template/email claims may be absent.
+    const claims = payload as unknown as Record<string, unknown>;
+    const email = typeof claims.email === 'string' ? claims.email : null;
     // NOTE: orgId is deliberately NOT read from JWT org_* claims — tenancy is
     // owned by the AppUser provisioning record.
     return await resolveUser(payload.sub, email);
