@@ -1,10 +1,8 @@
 // Desktop app API — talks directly to the orchestrator HTTP API
 // Uses Clerk session token for auth when available
 
-// The orchestrator runs on VPS (Oracle 158.101.167.118:3001)
-// Override at build time with VITE_ORCHESTRATOR_URL env var
-const ORCHESTRATOR_URL = import.meta.env?.VITE_ORCHESTRATOR_URL
-  || 'http://158.101.167.118:3001'
+// Local orchestrator on port 3001. It accepts the desktop app's Clerk session.
+const ORCHESTRATOR_URL = 'http://89.168.96.147:3001'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

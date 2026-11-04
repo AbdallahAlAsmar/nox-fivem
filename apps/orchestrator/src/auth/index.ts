@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyToken as clerkVerifyToken } from '@clerk/backend';
 import fp from 'fastify-plugin';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { resolveUser } from './provisioning';
 
 export interface AuthUser {
@@ -46,6 +47,7 @@ const PUBLIC_ROUTES = new Set([
   'GET /ws/status',
   // Public resource catalog browsing.
   'GET /api/resources/catalog',
+  'POST /api/prompt/generate',
 ]);
 
 // GET /api/resources/catalog/:slug
@@ -75,19 +77,70 @@ export async function verifyBearerToken(token: string): Promise<AuthUser | null>
   return verifyClerkToken(token);
 }
 
+/**
+ * Frontend API host baked into the publishable key (`pk_test_…` is base64 of
+ * `instance.clerk.accounts.dev$`). Tokens are checked against this instance
+ * only — the issuer is never taken from the token itself.
+ */
+function clerkFrontendHost(): string | null {
+  const key =
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+    process.env.CLERK_PUBLISHABLE_KEY ||
+    '';
+  const encoded = key.trim().replace(/^pk_(test|live)_/, '');
+  if (!encoded) return null;
+  const host = Buffer.from(encoded, 'base64').toString('utf8').replace(/\$$/, '').trim();
+  if (!/^[a-z0-9.-]+$/i.test(host)) return null;
+  return host;
+}
+
+const DESKTOP_ORIGINS = [
+  'http://localhost:1420',
+  'http://127.0.0.1:1420',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://tauri.localhost',
+  'https://tauri.localhost',
+  'tauri://localhost',
+];
+
+let remoteJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+async function verifyWithInstanceJwks(token: string): Promise<JWTPayload | null> {
+  const host = clerkFrontendHost();
+  if (!host) return null;
+  if (!remoteJwks) {
+    remoteJwks = createRemoteJWKSet(new URL(`https://${host}/.well-known/jwks.json`));
+  }
+  const { payload } = await jwtVerify(token, remoteJwks, {
+    issuer: `https://${host}`,
+    clockTolerance: '10s',
+  });
+  if (typeof payload.azp === 'string' && !DESKTOP_ORIGINS.includes(payload.azp)) {
+    console.error('[auth] token azp rejected:', payload.azp);
+    return null;
+  }
+  return payload;
+}
+
 async function verifyClerkToken(token: string): Promise<AuthUser | null> {
   try {
-    const secretKey = process.env.CLERK_SECRET_KEY;
-    if (!secretKey) {
-      console.error('[auth] CLERK_SECRET_KEY is not configured — cannot verify tokens');
-      return null;
+    let payload: { sub?: string } & Record<string, unknown> | null = null;
+    try {
+      payload = (await verifyWithInstanceJwks(token)) as { sub?: string } & Record<string, unknown> | null;
+    } catch (error) {
+      console.error(
+        '[auth] instance JWKS verification failed:',
+        (error as Error)?.message || error,
+      );
     }
-    const payload = await clerkVerifyToken(token, { secretKey });
-    if (!payload || !payload.sub) return null;
+    const secretKey = process.env.CLERK_SECRET_KEY;
+    if (!payload?.sub && secretKey) {
+      payload = (await clerkVerifyToken(token, { secretKey })) as { sub?: string } & Record<string, unknown>;
+    }
+    if (!payload?.sub) return null;
 
-    // Defensive claim mapping: template/email claims may be absent.
-    const claims = payload as unknown as Record<string, unknown>;
-    const email = typeof claims.email === 'string' ? claims.email : null;
+    const email = typeof payload.email === 'string' ? payload.email : null;
     // NOTE: orgId is deliberately NOT read from JWT org_* claims — tenancy is
     // owned by the AppUser provisioning record.
     return await resolveUser(payload.sub, email);

@@ -45,7 +45,7 @@ impl Default for Config {
             show_code_changes: true,
             auto_start: false,
             agent_port: 3001,
-            orchestrator_url: "http://158.101.167.118:3001".to_string(),
+            orchestrator_url: "http://89.168.96.147:3001".to_string(),
         }
     }
 }

@@ -28,6 +28,7 @@ export default function LandingNav() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-8 font-mono text-xs uppercase tracking-[0.15em] text-white/50">
+          <Link href="/prompt" className="hover:text-white transition-colors">Prompt Studio</Link>
           <a href="#demo" className="hover:text-white transition-colors">Demo</a>
           <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
           <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>

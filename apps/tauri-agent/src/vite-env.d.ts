@@ -3,6 +3,7 @@
 declare global {
   interface Window {
     __noxClerk?: any
+    Clerk?: any
   }
 }
 

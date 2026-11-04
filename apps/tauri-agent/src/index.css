@@ -32,6 +32,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Clerk's built-in social buttons leave the webview for the Account Portal. */
+.cl-socialButtonsRoot,
+.cl-socialButtons,
+.cl-dividerRow,
+.cl-dividerText {
+  display: none !important;
+}
+
 /* ─── Text selection policy ───────────────────────────────────────── */
 /* App-chrome (nav/sidebar/header) is not selectable, so dragging doesn't
    highlight labels — but real content (chat answers, diffs, console logs,

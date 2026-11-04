@@ -826,6 +826,7 @@ dependencies = [
  "futures-util",
  "lazy_static",
  "once_cell",
+ "open",
  "parking_lot",
  "reqwest 0.11.27",
  "serde",
@@ -837,6 +838,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tokio",
  "tokio-tungstenite",
+ "url",
  "uuid",
 ]
 

@@ -14,10 +14,19 @@ async function main() {
   });
 
   // Register plugins
-  const corsOrigins = [process.env.DASHBOARD_ORIGIN, ...config.corsOrigins]
+  const corsOrigins = [process.env.DASHBOARD_ORIGIN, ...config.corsOrigins, 'https://tauri.localhost']
     .filter((o): o is string => Boolean(o));
+  // @fastify/cors v9 drops the header when `origin` is an array, so the
+  // desktop webview (http://localhost:1420 / http://tauri.localhost) never
+  // gets an Access-Control-Allow-Origin and every API call fails.
   await fastify.register(cors, {
-    origin: corsOrigins,
+    origin: (origin, cb) => {
+      if (!origin || corsOrigins.includes(origin)) {
+        cb(null, true);
+        return;
+      }
+      cb(null, false);
+    },
     credentials: true,
   });
 

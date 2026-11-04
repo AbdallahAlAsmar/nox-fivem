@@ -399,7 +399,8 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
       setError(null)
     } catch (e) {
       console.error('Fetch servers error:', e)
-      setError('Could not reach the orchestrator. Check your connection and retry.')
+      const message = e instanceof Error ? e.message : 'Could not reach the orchestrator.'
+      setError(message)
     }
 
     setServers(fetched)
@@ -472,12 +473,14 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
     }
     setIsCreating(true)
     setCreateError(null)
+    let created: { id: string; agentDeviceId: string } | null = null
     try {
       // Create server — the orchestrator auto-pairs an agent device and
       // returns its id plus a one-time session token under `connect`
       // (minted like pairing claim; persisted below for token-authenticated
       // hellos).
       const result = await api.createAndConnect(newServerName, newServerDir)
+      created = result
 
       // Persist the minted session token bound to this server.
       if (result.sessionToken) {
@@ -512,7 +515,23 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
       setShowAddModal(false)
       await fetchServers()
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : 'Failed to create server')
+      const message = e instanceof Error
+        ? e.message
+        : typeof e === 'string' && e
+          ? e
+          : 'Failed to create server'
+      if (created) {
+        localStorage.setItem(`agent_device_${created.id}`, created.agentDeviceId)
+        localStorage.setItem(`server_dir_${created.id}`, newServerDir)
+        setNewServerName('')
+        setNewServerDir('')
+        setInspectResult(null)
+        setShowAddModal(false)
+        setToast(`Server created, but the agent could not connect. ${message}`)
+        await fetchServers()
+      } else {
+        setCreateError(message)
+      }
     } finally {
       setIsCreating(false)
     }
@@ -859,8 +878,7 @@ export default function Dashboard({ onNavigate, onServerSelect }: DashboardProps
                 Connection failed
               </h3>
               <p className="font-sans text-xs text-[rgba(255,255,255,0.4)] mt-1">
-                Could not connect to the orchestrator. Make sure it is running
-                on port 3001.
+                {error}
               </p>
             </div>
             <button

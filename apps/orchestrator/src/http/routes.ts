@@ -16,6 +16,7 @@ import type { AgentGateway } from '../ws/agentGateway';
 import { cache } from '../cache/cache';
 import { handleChatMessage, ChatCapError, startOfMonth } from '../chat/chatService';
 import { registerResourceRoutes } from './resourceRoutes';
+import { registerPromptRoutes } from './promptRoutes';
 
 export async function registerRoutes(fastify: FastifyInstance) {
   // ── Rate limiting ────────────────────────────────────────────────────────
@@ -44,6 +45,7 @@ export async function registerRoutes(fastify: FastifyInstance) {
     `${request.authUser?.userId ?? request.ip}:${request.ip}`;
 
   await fastify.register(registerResourceRoutes);
+  await fastify.register(registerPromptRoutes);
 
   // Zod .parse() throws ZodError on bad input; without this handler Fastify
   // would surface it as a 500. Map it to 400 with the first issue message.
