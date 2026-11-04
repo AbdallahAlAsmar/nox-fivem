@@ -169,7 +169,7 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
             disabled={disabled || listening}
             placeholder={placeholder}
             aria-describedby={voiceError ? 'prompt-input-error' : 'prompt-input-hint'}
-            className="block max-h-40 min-h-[112px] w-full resize-none bg-transparent px-4 pb-14 pt-2 text-[16px] leading-7 text-[#F4F1E9] outline-none placeholder:text-[#68665F] disabled:cursor-not-allowed sm:px-5"
+            className="prompt-studio-textarea block max-h-40 min-h-[112px] w-full resize-none bg-transparent px-4 pb-14 pt-2 text-[16px] leading-7 text-[#F4F1E9] outline-none placeholder:text-[#68665F] disabled:cursor-not-allowed sm:px-5"
           />
 
           <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 sm:inset-x-4">

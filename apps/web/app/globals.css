@@ -100,6 +100,12 @@ body {
   outline-offset: 2px;
 }
 
+/* The composer uses its enclosing surface as the focus indicator. Applying the
+   global outline to the nested textarea leaves a clipped orange rule. */
+.prompt-studio-textarea:focus-visible {
+  outline: none;
+}
+
 .prompt-enter,
 .prompt-message {
   animation: prompt-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
