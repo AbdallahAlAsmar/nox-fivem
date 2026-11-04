@@ -18,6 +18,11 @@ const suggestions = [
   'Design an onboarding email sequence for a small SaaS launch',
 ];
 
+const promptStudioRedirect = {
+  forceRedirectUrl: '/prompt',
+  signUpForceRedirectUrl: '/prompt',
+} as const;
+
 export default function PromptStudio() {
   const { isLoaded, isSignedIn } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -190,7 +195,7 @@ export default function PromptStudio() {
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs text-[#B6B0A4]">Your chat stays in this session.</span>
-                <SignInButton mode="modal"><button className="brand-button-secondary min-h-10 shrink-0 px-3 text-xs">Sign in</button></SignInButton>
+                <SignInButton mode="modal" {...promptStudioRedirect}><button className="brand-button-secondary min-h-10 shrink-0 px-3 text-xs">Sign in</button></SignInButton>
               </div>
             )}
           </div>
@@ -207,7 +212,7 @@ export default function PromptStudio() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {isLoaded && !isSignedIn && <SignInButton mode="modal"><button className="brand-button-secondary min-h-10 px-3 text-xs">Sign in</button></SignInButton>}
+            {isLoaded && !isSignedIn && <SignInButton mode="modal" {...promptStudioRedirect}><button className="brand-button-secondary min-h-10 px-3 text-xs">Sign in</button></SignInButton>}
             {isLoaded && isSignedIn && <UserButton />}
           </div>
         </header>
@@ -235,7 +240,7 @@ export default function PromptStudio() {
                 </article>
               ))}
               {busy && <div className="mb-8 flex items-center gap-3 text-sm text-[#B6B0A4]"><LoaderCircle size={16} className="animate-spin text-[#E83708]" /> Lyra is shaping your prompt…</div>}
-              {error && <div role="alert" className="mb-6 border-l-2 border-[#E83708] px-4 py-2 text-sm leading-6 text-[#F4F1E9]">{error}{error.includes('Sign in') && <SignInButton mode="modal"><button className="ml-2 underline underline-offset-4">Sign in</button></SignInButton>}</div>}
+              {error && <div role="alert" className="mb-6 border-l-2 border-[#E83708] px-4 py-2 text-sm leading-6 text-[#F4F1E9]">{error}{error.includes('Sign in') && <SignInButton mode="modal" {...promptStudioRedirect}><button className="ml-2 underline underline-offset-4">Sign in</button></SignInButton>}</div>}
             </div>
           )}
         </div>
@@ -280,14 +285,14 @@ function PromptOutput({ result, signedIn, conversationId, activeFile, setActiveF
       </section>
 
       {result.notes && <p className="text-sm leading-6 text-[#B6B0A4]">{result.notes}</p>}
-      {!signedIn && <div className="flex flex-wrap items-center justify-between gap-3 border border-[#414548] px-4 py-4"><div><p className="text-sm text-[#F4F1E9]">Need project files for this prompt?</p><p className="mt-1 text-xs leading-5 text-[#B6B0A4]">Sign in to generate documentation, keep prompt history, and download a ZIP.</p></div><SignInButton mode="modal"><button className="brand-button-secondary min-h-11 shrink-0 px-4 text-xs">Sign in</button></SignInButton></div>}
+      {!signedIn && <div className="flex flex-wrap items-center justify-between gap-3 border border-[#414548] px-4 py-4"><div><p className="text-sm text-[#F4F1E9]">Need project files for this prompt?</p><p className="mt-1 text-xs leading-5 text-[#B6B0A4]">Sign in to generate documentation, keep prompt history, and download a ZIP.</p></div><SignInButton mode="modal" {...promptStudioRedirect}><button className="brand-button-secondary min-h-11 shrink-0 px-4 text-xs">Sign in</button></SignInButton></div>}
       {signedIn && result.files.length === 0 && <button onClick={onGenerateFiles} className="brand-button-secondary min-h-11 px-4 text-xs">Generate supporting files</button>}
       {result.files.length > 0 && (
         <section className="border border-[#414548]">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#414548] px-4 py-3">
             <div><h2 className="text-sm font-medium text-[#F4F1E9]">Project files <span className="ml-1 text-xs text-[#B6B0A4]">{result.files.length}</span></h2><p className="mt-1 text-xs text-[#B6B0A4]">Markdown documents for your target AI.</p></div>
             {signedIn && conversationId ? <a href={`/api/prompt/conversations/${encodeURIComponent(conversationId)}/download`} className="brand-button-secondary min-h-11 px-3 text-xs"><Download size={14} /> Download ZIP</a>
-              : <SignInButton mode="modal"><button className="brand-button-secondary min-h-11 px-3 text-xs">Sign in to view files</button></SignInButton>}
+              : <SignInButton mode="modal" {...promptStudioRedirect}><button className="brand-button-secondary min-h-11 px-3 text-xs">Sign in to view files</button></SignInButton>}
           </div>
           {signedIn && <div className="divide-y divide-[#414548]">
             {result.files.map((file) => <div key={file.path}>

@@ -55,8 +55,10 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
     const recognitionRef = useRef<SpeechRecognizer | null>(null);
     const speechBaseRef = useRef('');
     const speechFinalRef = useRef('');
+    const textareaHeightRef = useRef(112);
     const [listening, setListening] = useState(false);
     const [voiceError, setVoiceError] = useState('');
+    const [textareaHeight, setTextareaHeight] = useState(112);
     const hasValue = value.trim().length > 0;
 
     React.useImperativeHandle(forwardedRef, () => textareaRef.current as HTMLTextAreaElement, []);
@@ -64,13 +66,30 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
     const resizeTextarea = useCallback(() => {
       const textarea = textareaRef.current;
       if (!textarea) return;
+
+      // Measure the content at its natural size, then let React animate from
+      // the previous explicit height to the next one. This keeps the text,
+      // helper, and action button in one continuous motion.
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 48), 160)}px`;
+      const viewportLimit = Math.floor(window.innerHeight * 0.45);
+      const maxHeight = Math.min(480, Math.max(240, viewportLimit));
+      const nextHeight = Math.min(Math.max(textarea.scrollHeight, 112), maxHeight);
+      textarea.style.height = `${textareaHeightRef.current}px`;
+
+      if (nextHeight !== textareaHeightRef.current) {
+        textareaHeightRef.current = nextHeight;
+        setTextareaHeight(nextHeight);
+      }
     }, []);
 
     useEffect(() => {
       resizeTextarea();
     }, [hasValue, resizeTextarea, value]);
+
+    useEffect(() => {
+      window.addEventListener('resize', resizeTextarea);
+      return () => window.removeEventListener('resize', resizeTextarea);
+    }, [resizeTextarea]);
 
     const stopVoiceInput = useCallback(() => {
       recognitionRef.current?.stop();
@@ -169,10 +188,11 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
             disabled={disabled || listening}
             placeholder={placeholder}
             aria-describedby={voiceError ? 'prompt-input-error' : 'prompt-input-hint'}
-            className="prompt-studio-textarea block max-h-40 min-h-[112px] w-full resize-none bg-transparent px-4 pb-14 pt-2 text-[16px] leading-7 text-[#F4F1E9] outline-none placeholder:text-[#68665F] disabled:cursor-not-allowed sm:px-5"
+            style={{ height: `${textareaHeight}px` }}
+            className="prompt-studio-textarea block w-full resize-none overflow-y-auto bg-transparent px-4 pb-2 pt-2 text-[16px] leading-7 text-[#F4F1E9] outline-none transition-[height] duration-200 ease-out placeholder:text-[#68665F] disabled:cursor-not-allowed motion-reduce:transition-none sm:px-5"
           />
 
-          <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 sm:inset-x-4">
+          <div className="flex min-h-14 items-center justify-between gap-3 px-3 pb-3 sm:px-4">
             <p id="prompt-input-hint" className="min-w-0 text-xs leading-5 text-[#B6B0A4]">
               {listening ? 'Listening… select stop when you’re done.' : 'Enter to send · Shift + Enter for a new line'}
             </p>
