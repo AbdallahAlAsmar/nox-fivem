@@ -18,6 +18,7 @@ import {
   ScrollText,
   Sun,
   Moon,
+  Shield,
 } from 'lucide-react';
 import { SignedIn, SignedOut, SignInButton, useClerk, useUser } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
@@ -28,6 +29,7 @@ import { NotificationBell } from '@/components/notifications';
 
 const navItems = [
   { href: '/dashboard', label: 'Servers', icon: Server },
+  { href: '/dashboard/admin/projects', label: 'Admin', icon: Shield },
   { href: '/dashboard/resources', label: 'Resources', icon: Package },
   { href: '/dashboard/changes', label: 'Changes', icon: FileDiff },
   { href: '/dashboard/audit', label: 'Audit Log', icon: ScrollText },

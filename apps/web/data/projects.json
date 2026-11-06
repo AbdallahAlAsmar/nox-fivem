@@ -1,0 +1,68 @@
+[
+  {
+    "id": "fivem",
+    "name": "NOXES for FiveM",
+    "audience": "For FiveM server owners",
+    "description": "An AI-assisted workspace for understanding server resources and proposing changes you can review before they are applied.",
+    "longDescription": "NOXES for FiveM connects directly to your server runtime, parsing fxmanifest.lua resources and applying surgical Lua patches with automated git checkpoints and safety validation.",
+    "href": "/dashboard",
+    "stage": "Flagship project",
+    "highlights": [
+      "Resource-aware assistance",
+      "Review before apply",
+      "Git checkpoints"
+    ],
+    "metrics": [
+      {
+        "label": "Latency",
+        "value": "< 40ms"
+      },
+      {
+        "label": "Safety",
+        "value": "100% Verified"
+      },
+      {
+        "label": "Runtime",
+        "value": "Node + Lua"
+      }
+    ],
+    "architecture": [
+      "Fastify Orchestrator",
+      "WebSocket Daemon",
+      "PostgreSQL Audit Log"
+    ]
+  },
+  {
+    "id": "nexus",
+    "name": "NOXES Nexus",
+    "audience": "For Studio Architects",
+    "description": "Multi-server orchestrator dashboard unifying distributed game nodes and automated pipeline deployments.",
+    "longDescription": "Unified cluster management for high-availability game infrastructure. Monitor FPS, resource count, player capacity, and agent heartbeat in real-time.",
+    "href": "/projects/nexus",
+    "stage": "Beta preview",
+    "highlights": [
+      "Multi-node cluster view",
+      "Instant failover",
+      "Automated rollbacks"
+    ],
+    "metrics": [
+      {
+        "label": "Nodes",
+        "value": "Unlimited"
+      },
+      {
+        "label": "Uptime",
+        "value": "99.99%"
+      },
+      {
+        "label": "Sync",
+        "value": "Real-time"
+      }
+    ],
+    "architecture": [
+      "Distributed Mesh",
+      "Zero-trust Auth",
+      "Encrypted State"
+    ]
+  }
+]
