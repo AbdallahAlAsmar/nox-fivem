@@ -4,6 +4,7 @@ import type { NextFetchEvent, NextRequest } from 'next/server';
 
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/projects(.*)',
   '/prompt(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',

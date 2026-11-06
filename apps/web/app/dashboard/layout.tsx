@@ -53,7 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen overflow-hidden bg-[#111315] text-[#F4F1E9]">
       <SidebarNav />
-      <main className="flex-1 flex flex-col overflow-hidden ml-[48px] transition-all duration-300">
+      <main className="flex-1 flex flex-col overflow-hidden ml-[72px] transition-all duration-300">
         {children}
       </main>
       <OnboardingTour />

@@ -12,9 +12,8 @@ export function OnboardingTour() {
   useEffect(() => {
     const lastRun = localStorage.getItem('nox-tour-last-run');
     const now = Date.now();
-    if (!lastRun || now - parseInt(lastRun) > 7 * 24 * 60 * 60 * 1000) {
-      setRun(true);
-    }
+    const skip = lastRun && now - parseInt(lastRun) < 24 * 60 * 60 * 1000;
+    if (!skip) setRun(true);
   }, []);
 
   const steps: Step[] = [

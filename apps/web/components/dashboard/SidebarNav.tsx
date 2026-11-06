@@ -175,7 +175,8 @@ export default function SidebarNav() {
         onMouseLeave={() => setHovered(false)}
       >
         <motion.div
-          animate={{ width: hovered ? 224 : 48 }}
+          initial={false}
+          animate={{ width: hovered ? 224 : 72 }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
           className="h-full flex flex-col"
         >

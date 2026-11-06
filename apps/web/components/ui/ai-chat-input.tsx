@@ -59,9 +59,18 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
     const [listening, setListening] = useState(false);
     const [voiceError, setVoiceError] = useState('');
     const [textareaHeight, setTextareaHeight] = useState(112);
+    const [isMobileInput, setIsMobileInput] = useState(false);
     const hasValue = value.trim().length > 0;
 
     React.useImperativeHandle(forwardedRef, () => textareaRef.current as HTMLTextAreaElement, []);
+
+    useEffect(() => {
+      const mediaQuery = window.matchMedia('(max-width: 767px), (pointer: coarse)');
+      const updateInputMode = () => setIsMobileInput(mediaQuery.matches);
+      updateInputMode();
+      mediaQuery.addEventListener?.('change', updateInputMode);
+      return () => mediaQuery.removeEventListener?.('change', updateInputMode);
+    }, []);
 
     const resizeTextarea = useCallback(() => {
       const textarea = textareaRef.current;
@@ -178,7 +187,22 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
             onChange={(event) => onChange(event.target.value.slice(0, maxLength))}
             onFocus={() => setVoiceError('')}
             onKeyDown={(event) => {
+              // On touch/coarse-pointer devices, Enter must insert a newline
+              // instead of submitting; Send button handles submission.
+              const isTouchDevice = isMobileInput || 'ontouchstart' in window;
               if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                if (isTouchDevice) {
+                  event.preventDefault();
+                  const el = event.currentTarget;
+                  const { selectionStart, selectionEnd } = el;
+                  const next = value.slice(0, selectionStart) + '\n' + value.slice(selectionEnd);
+                  onChange(next);
+                  // Restore caret after the inserted newline
+                  requestAnimationFrame(() => {
+                    el.selectionStart = el.selectionEnd = selectionStart + 1;
+                  });
+                  return;
+                }
                 event.preventDefault();
                 handleSubmit();
               }
@@ -194,7 +218,7 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
 
           <div className="flex min-h-14 items-center justify-between gap-3 px-3 pb-3 sm:px-4">
             <p id="prompt-input-hint" className="min-w-0 text-xs leading-5 text-[#B6B0A4]">
-              {listening ? 'Listening… select stop when you’re done.' : 'Enter to send · Shift + Enter for a new line'}
+              {listening ? 'Listening… select stop when you’re done.' : isMobileInput ? 'New line with Enter · Send with the arrow button' : 'Enter to send · Shift + Enter for a new line'}
             </p>
             <button
               type="button"

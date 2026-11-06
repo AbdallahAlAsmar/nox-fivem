@@ -8,7 +8,7 @@ export default function AgentStatusBadge() {
   const { status, isConnected, isChecking } = useAgentStatus();
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm border border-white/10 bg-white/5">
+    <div className="flex items-center gap-2 px-2 py-1.5 rounded-sm border border-[#414548] bg-[#202326]">
       <AnimatePresence mode="wait">
         {isChecking ? (
           <motion.div
