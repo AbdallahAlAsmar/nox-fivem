@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, Check, GitBranch, ScanSearch, Plus, Sparkles, X, Terminal, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@clerk/nextjs';
 
 export type NoxesProject = {
   id: string;
@@ -54,16 +55,19 @@ export const NOXES_PROJECTS: NoxesProject[] = [
 ];
 
 export default function Projects() {
+  const { isSignedIn, isLoaded } = useAuth();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<NoxesProject | null>(null);
   const [addingModal, setAddingModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [projectsList, setProjectsList] = useState<NoxesProject[]>(NOXES_PROJECTS);
 
+  if (!isLoaded) return null;
+
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
-    const newProj: NoxesProject = {
+    const newProj = {
       id: newProjectName.toLowerCase().replace(/\s+/g, '-'),
       name: newProjectName,
       audience: 'Custom Creator Ecosystem',
@@ -94,12 +98,14 @@ export default function Projects() {
             <p className="max-w-md text-sm leading-relaxed text-[#B6B0A4] md:text-base">
               NOXES is an umbrella for creator-centric systems. Explore live projects or author a new ecosystem below.
             </p>
-            <button
-              onClick={() => setAddingModal(true)}
-              className="flex-shrink-0 flex items-center gap-2 rounded-sm bg-[#E83708] px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-[#F4F1E9] transition-all hover:bg-[#d43106]"
-            >
-              <Plus className="w-4 h-4" /> Add Project
-            </button>
+            {isSignedIn && (
+              <button
+                onClick={() => setAddingModal(true)}
+                className="flex-shrink-0 flex items-center gap-2 rounded-sm bg-[#E83708] px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-[#F4F1E9] transition-all hover:bg-[#d43106]"
+              >
+                <Plus className="w-4 h-4" /> Add Project
+              </button>
+            )}
           </div>
         </div>
 
@@ -121,7 +127,7 @@ export default function Projects() {
                   scale: isHovered ? 1.02 : 1,
                 }}
                 transition={{ duration: 0.25, ease: 'easeInOut' }}
-                className={`relative cursor-pointer overflow-hidden rounded-sm border p-7 md:p-9 transition-colors duration-300 ${
+                className={`relative cursor-pointer overflow-hidden rounded-sm border p-7 md:p-9 transition-colors duration-300 $\{
                   isHovered
                     ? 'border-[#E83708] bg-[#1a1c20] shadow-[0_0_30px_rgba(232,55,8,0.15)]'
                     : 'border-[#414548] bg-[#202326]'
@@ -164,23 +170,24 @@ export default function Projects() {
             );
           })}
 
-          {/* Add New Project Card */}
-          <div
-            onClick={() => setAddingModal(true)}
-            className="flex min-h-[320px] cursor-pointer flex-col justify-between rounded-sm border border-dashed border-[#414548] bg-[#181A1D]/60 p-7 md:p-9 transition-colors hover:border-[#E83708] hover:bg-[#181A1D]"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-sm border border-[#414548] bg-[#202326] text-xl font-light text-[#E83708]" aria-hidden="true">+</span>
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#68665F]">Future Offerings</p>
-              <h3 className="brand-display mt-2 text-2xl font-bold uppercase tracking-tight text-[#F4F1E9]">Author a new ecosystem.</h3>
-              <p className="mt-3 max-w-md text-sm leading-relaxed text-[#B6B0A4]">
-                Click to initialize a new project workspace. Seamlessly scaffolded with secure orchestrator hooks and automated checkpoints.
-              </p>
+          {isSignedIn && (
+            <div
+              onClick={() => setAddingModal(true)}
+              className="flex min-h-[320px] cursor-pointer flex-col justify-between rounded-sm border border-dashed border-[#414548] bg-[#181A1D]/60 p-7 md:p-9 transition-colors hover:border-[#E83708] hover:bg-[#181A1D]"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-sm border border-[#414548] bg-[#202326] text-xl font-light text-[#E83708]" aria-hidden="true">+</span>
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#68665F]">Future Offerings</p>
+                <h3 className="brand-display mt-2 text-2xl font-bold uppercase tracking-tight text-[#F4F1E9]">Author a new ecosystem.</h3>
+                <p className="mt-3 max-w-md text-sm leading-relaxed text-[#B6B0A4]">
+                  Click to initialize a new project workspace. Seamlessly scaffolded with secure orchestrator hooks and automated checkpoints.
+                </p>
+              </div>
+              <div className="font-mono text-xs text-[#E83708] flex items-center gap-1.5 font-bold">
+                <Plus className="w-3.5 h-3.5" /> Create Project Workspace
+              </div>
             </div>
-            <div className="font-mono text-xs text-[#E83708] flex items-center gap-1.5 font-bold">
-              <Plus className="w-3.5 h-3.5" /> Create Project Workspace
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

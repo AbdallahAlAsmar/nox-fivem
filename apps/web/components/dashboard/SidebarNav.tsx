@@ -98,7 +98,6 @@ export default function SidebarNav() {
               <div className="flex items-center justify-between px-5 h-14 border-b border-[#414548]" data-tour="dashboard-header">
                 <div className="flex items-center gap-2.5 font-mono">
                                   <img src="/brand/noxes-wordmark.svg" alt="NOXES" className="h-5 w-auto" />
-                                  <span className="text-[#F4F1E9] font-mono text-sm font-bold tracking-[0.2em]">NOXES</span>
                                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => setMobileOpen(false)} className="text-[#68665F] hover:text-[#F4F1E9] transition-colors">
@@ -181,21 +180,13 @@ export default function SidebarNav() {
           className="h-full flex flex-col"
         >
           {/* Logo */}
-          <div className="h-14 flex items-center border-b border-[#414548] flex-shrink-0">
-            <div className="flex items-center justify-between w-full px-3" data-tour="dashboard-header">
-              <div className="flex items-center gap-3">
-                              <img src="/brand/noxes-wordmark.svg" alt="NOXES" className="h-6 w-auto flex-shrink-0" />
-                <motion.span
-                  initial={false}
-                  animate={{ opacity: hovered ? 1 : 0, width: hovered ? 'auto' : 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="font-mono text-[#F4F1E9] font-bold text-sm tracking-[0.2em] whitespace-nowrap overflow-hidden"
-                >
-                  NOXES
-                </motion.span>
-              </div>
-            </div>
-          </div>
+                    <div className="h-14 flex items-center border-b border-[#414548] flex-shrink-0">
+                      <div className="flex items-center justify-between w-full px-3" data-tour="dashboard-header">
+                        <div className="flex items-center gap-3">
+                                        <img src="/brand/noxes-wordmark.svg" alt="NOXES" className="h-6 w-auto flex-shrink-0" />
+                        </div>
+                      </div>
+                    </div>
 
           {/* Agent Status */}
           <div className="px-3 py-2 border-b border-[#414548]/50">
