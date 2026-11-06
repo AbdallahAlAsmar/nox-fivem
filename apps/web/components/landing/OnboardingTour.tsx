@@ -11,9 +11,16 @@ export function OnboardingTour() {
 
   useEffect(() => {
     const lastRun = localStorage.getItem('nox-tour-last-run');
+    const onboardingComplete = localStorage.getItem('nox-onboarding-complete');
     const now = Date.now();
     const skip = lastRun && now - parseInt(lastRun) < 24 * 60 * 60 * 1000;
-    if (!skip) setRun(true);
+    // Auto-start tour if onboarding was just completed
+    if (!skip && (onboardingComplete === 'true')) {
+      setRun(true);
+      localStorage.removeItem('nox-onboarding-complete');
+    } else if (!skip) {
+      setRun(true);
+    }
   }, []);
 
   const steps: Step[] = [
@@ -72,11 +79,11 @@ export function OnboardingTour() {
       onEvent={handleEvent}
       styles={{
         beacon: {
-          background: '#E83708',
-          border: '2px solid #202326',
+          background: 'transparent',
+          border: 'none',
           borderRadius: '50%',
-          height: 36,
-          width: 36,
+          height: 0,
+          width: 0,
         },
         overlay: {
           background: 'rgba(0, 0, 0, 0.5)',
